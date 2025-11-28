@@ -65,7 +65,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               <input
                 type="text"
                 className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all text-gray-900"
-                placeholder="Ex: HSP-1001 ou gabriel"
+                placeholder="Ex:digite seu usuário"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoFocus
