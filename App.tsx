@@ -51,6 +51,16 @@ export default function App() {
     }
   };
 
+  const handleLogout = () => {
+    // 1. Clear Session Data
+    StorageService.clearSession();
+    
+    // 2. Reset Application State
+    setUserPermissions(null);
+    setIsAuthenticated(false);
+    setCurrentView('dashboard'); // Reset view for next login
+  };
+
   const handleChangeView = (view: string) => {
     if (userPermissions && userPermissions[view as keyof HospitalPermissions]) {
       setCurrentView(view);
@@ -86,6 +96,7 @@ export default function App() {
     <Layout 
       currentView={currentView} 
       onChangeView={handleChangeView} 
+      onLogout={handleLogout}
       permissions={userPermissions || undefined}
       isKiosk={false} 
     >

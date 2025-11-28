@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   Users, 
@@ -20,15 +19,17 @@ interface LayoutProps {
   children: React.ReactNode;
   currentView: string;
   onChangeView: (view: string) => void;
+  onLogout: () => void; // Added prop for state-driven logout
   isKiosk?: boolean;
   kioskHospital?: Hospital;
-  permissions?: HospitalPermissions; // Add permissions prop
+  permissions?: HospitalPermissions; 
 }
 
 export const Layout: React.FC<LayoutProps> = ({ 
   children, 
   currentView, 
   onChangeView, 
+  onLogout,
   isKiosk = false,
   kioskHospital,
   permissions
@@ -60,10 +61,9 @@ export const Layout: React.FC<LayoutProps> = ({
     window.location.search = '';
   };
 
-  const handleLogout = () => {
-    StorageService.clearSession();
-    // Redirect to login (App.tsx checks session on load)
-    window.location.reload();
+  const handleLogoutClick = () => {
+    // Trigger the state reset in App.tsx
+    onLogout();
   };
 
   if (isKiosk) {
@@ -146,7 +146,7 @@ export const Layout: React.FC<LayoutProps> = ({
 
         <div className="p-4 border-t border-primary-800">
           <button 
-            onClick={handleLogout}
+            onClick={handleLogoutClick}
             className="flex items-center space-x-2 text-primary-200 hover:text-white transition-colors text-sm w-full"
           >
             <LogOut className="h-4 w-4" />
@@ -188,7 +188,7 @@ export const Layout: React.FC<LayoutProps> = ({
             ))}
             <div className="border-t border-primary-800 pt-2 mt-2">
                 <button 
-                    onClick={handleLogout}
+                    onClick={handleLogoutClick}
                     className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-primary-200 hover:text-white"
                 >
                     <LogOut className="h-5 w-5" />
