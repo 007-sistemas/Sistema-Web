@@ -46,8 +46,8 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           <div className="bg-primary-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
             <Lock className="h-8 w-8 text-primary-600" />
           </div>
-          <h2 className="text-3xl font-bold text-gray-800">Acesso Restrito</h2>
-          <p className="text-gray-500 mt-2">Sistema de Gestão & Biometria</p>
+          <h2 className="text-3xl font-bold text-gray-800">DigitAll</h2>
+          <p className="text-gray-500 mt-2">Acesso Restrito</p>
         </div>
 
         {error && (
@@ -65,7 +65,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               <input
                 type="text"
                 className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all text-gray-900"
-                placeholder="Ex:digite seu usuário"
+                placeholder="digite seu usuário"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoFocus
@@ -104,14 +104,14 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               </span>
             ) : (
               <span className="flex items-center">
-                Acessar Sistema <ArrowRight className="ml-2 h-5 w-5" />
+                Acessar <ArrowRight className="ml-2 h-5 w-5" />
               </span>
             )}
           </button>
         </form>
 
         <div className="mt-8 text-center text-xs text-gray-400">
-          COOPEN-CE &bull; Sistema Integrado de Produção
+          DigitAll &bull; Controle de Produção
         </div>
       </div>
     </div>

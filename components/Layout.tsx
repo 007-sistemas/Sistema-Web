@@ -12,7 +12,7 @@ import {
   XCircle,
   FileText,
   Briefcase,
-  Cpu
+  FileClock
 } from 'lucide-react';
 import { Hospital, HospitalPermissions } from '../types';
 import { StorageService } from '../services/storage';
@@ -43,13 +43,12 @@ export const Layout: React.FC<LayoutProps> = ({
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, permissionKey: 'dashboard' },
     { id: 'ponto', label: 'Registrar Produção', icon: ClipboardCheck, permissionKey: 'ponto' },
     { id: 'relatorio', label: 'Relatório Detalhado', icon: FileText, permissionKey: 'relatorio' },
+    { id: 'espelho', label: 'Espelho da Biometria', icon: FileClock, permissionKey: 'espelho' },
     { id: 'cadastro', label: 'Cooperados', icon: Users, permissionKey: 'cadastro' },
     { id: 'hospitais', label: 'Hospitais & Setores', icon: Building2, permissionKey: 'hospitais' },
     { id: 'biometria', label: 'Biometria', icon: Fingerprint, permissionKey: 'biometria' },
     { id: 'auditoria', label: 'Auditoria & Logs', icon: ShieldCheck, permissionKey: 'auditoria' },
     { id: 'gestao', label: 'Gestão de Usuários', icon: Briefcase, permissionKey: 'gestao' },
-    // Item de teste técnico - visível para quem tem acesso a biometria ou gestão
-    { id: 'biometric-test', label: 'Teste SDK', icon: Cpu, permissionKey: 'gestao' }, 
   ];
 
   // Filter items based on permissions
@@ -58,11 +57,6 @@ export const Layout: React.FC<LayoutProps> = ({
     // OR verify the specific key
     if (!permissions) return true;
     
-    // Special case for Test Page: Allow if user has gestao OR biometria
-    if (item.id === 'biometric-test') {
-        return permissions.gestao || permissions.biometria;
-    }
-
     return permissions[item.permissionKey as keyof HospitalPermissions] === true;
   });
 
@@ -86,7 +80,7 @@ export const Layout: React.FC<LayoutProps> = ({
                <ClipboardCheck className="h-8 w-8 text-primary-800" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-wide">COOPEN-CE</h1>
+              <h1 className="text-2xl font-bold tracking-wide">DigitAll</h1>
               {kioskHospital && (
                 <div className="flex items-center space-x-2 text-primary-200">
                   <Building2 className="h-4 w-4" />
@@ -117,7 +111,7 @@ export const Layout: React.FC<LayoutProps> = ({
         
         {/* Footer for Kiosk */}
         <footer className="p-4 text-center text-gray-400 text-xs">
-          Sistema de Controle de Produção &bull; COOPEN-CE &bull; Modo Quiosque
+          Sistema de Controle de Produção &bull; DigitAll &bull; Modo Quiosque
         </footer>
       </div>
     );
@@ -132,8 +126,8 @@ export const Layout: React.FC<LayoutProps> = ({
             <ClipboardCheck className="h-6 w-6 text-primary-700" />
           </div>
           <div>
-            <h1 className="text-lg font-bold">COOPEN-CE</h1>
-            <p className="text-xs text-primary-300">Gestão de Cooperados</p>
+            <h1 className="text-lg font-bold">DigitAll</h1>
+            <p className="text-xs text-primary-300">Controle de Produção</p>
           </div>
         </div>
         
@@ -171,7 +165,7 @@ export const Layout: React.FC<LayoutProps> = ({
         <header className="bg-white shadow-sm md:hidden flex items-center justify-between p-4">
           <div className="flex items-center space-x-2">
             <ClipboardCheck className="h-6 w-6 text-primary-700" />
-            <span className="font-bold text-gray-800">COOPEN-CE</span>
+            <span className="font-bold text-gray-800">DigitAll</span>
           </div>
           <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-gray-600">
             <Menu className="h-6 w-6" />

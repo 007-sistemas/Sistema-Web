@@ -25,7 +25,8 @@ const seedData = () => {
         hospitais: true,
         biometria: true,
         auditoria: true,
-        gestao: true
+        gestao: true,
+        espelho: false // Admins usually look at general reports, but can set true if needed
       }
     };
     localStorage.setItem(MANAGERS_KEY, JSON.stringify([masterUser]));
@@ -85,7 +86,8 @@ const seedData = () => {
           hospitais: false,
           biometria: true,
           auditoria: false,
-          gestao: false
+          gestao: false,
+          espelho: false
         },
         setores: [
           { id: 's1', nome: 'UTI Adulto' },
@@ -115,7 +117,8 @@ const seedData = () => {
           hospitais: false,
           biometria: true,
           auditoria: false,
-          gestao: false
+          gestao: false,
+          espelho: false
         },
         setores: [
           { id: 's4', nome: 'Clínica Médica' },
@@ -144,7 +147,8 @@ const seedData = () => {
           hospitais: false,
           biometria: true,
           auditoria: false,
-          gestao: false
+          gestao: false,
+          espelho: false
         },
         setores: [
           { id: 's6', nome: 'Neurologia' },
@@ -174,7 +178,7 @@ export const StorageService = {
 
   // --- AUTHENTICATION & SESSION ---
   
-  authenticate: (usernameOrCode: string, password: string): { type: 'MANAGER' | 'HOSPITAL', user: any, permissions: HospitalPermissions } | null => {
+  authenticate: (usernameOrCode: string, password: string): { type: 'MANAGER' | 'HOSPITAL' | 'COOPERADO', user: any, permissions: HospitalPermissions } | null => {
     // 1. Check Managers
     const managers: Manager[] = JSON.parse(localStorage.getItem(MANAGERS_KEY) || '[]');
     const manager = managers.find(m => m.username === usernameOrCode && m.password === password);
@@ -197,6 +201,30 @@ export const StorageService = {
         user: hospital,
         permissions: hospital.permissoes 
       };
+    }
+
+    // 3. Check Cooperados (Simulated Login: Matrícula + Password '123')
+    const cooperados: Cooperado[] = JSON.parse(localStorage.getItem(COOPERADOS_KEY) || '[]');
+    // Allow login via Matricula or Email
+    const cooperado = cooperados.find(c => (c.matricula === usernameOrCode || c.email === usernameOrCode) && password === '123');
+
+    if (cooperado) {
+        return {
+            type: 'COOPERADO',
+            user: cooperado,
+            permissions: {
+                dashboard: false,
+                ponto: false,
+                relatorio: false,
+                cadastro: false,
+                hospitais: false,
+                biometria: false,
+                auditoria: false,
+                gestao: false,
+                testes: false,
+                espelho: true // Only access to Mirror
+            }
+        };
     }
 
     return null;
@@ -370,7 +398,7 @@ export const StorageService = {
   logAudit: (action: string, details: string) => {
     const logs: AuditLog[] = JSON.parse(localStorage.getItem(AUDIT_KEY) || '[]');
     const session = StorageService.getSession();
-    const username = session?.user?.username || session?.user?.usuarioAcesso || 'SYSTEM';
+    const username = session?.user?.username || session?.user?.usuarioAcesso || session?.user?.matricula || 'SYSTEM';
     
     logs.unshift({
       id: crypto.randomUUID(),

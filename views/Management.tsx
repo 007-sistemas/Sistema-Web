@@ -20,7 +20,8 @@ export const Management: React.FC = () => {
       hospitais: true,
       biometria: true,
       auditoria: true,
-      gestao: true
+      gestao: true,
+      espelho: true // Admins generally have access
     }
   };
   
@@ -76,6 +77,7 @@ export const Management: React.FC = () => {
     { key: 'dashboard', label: 'Dashboard' },
     { key: 'ponto', label: 'Registrar Produção' },
     { key: 'relatorio', label: 'Relatório Detalhado' },
+    { key: 'espelho', label: 'Espelho de Ponto' },
     { key: 'cadastro', label: 'Cooperados' },
     { key: 'hospitais', label: 'Hospitais & Setores' },
     { key: 'biometria', label: 'Biometria' },
@@ -147,7 +149,7 @@ export const Management: React.FC = () => {
                   value={formData.password}
                   onChange={e => setFormData({...formData, password: e.target.value})}
                   placeholder="Digite a senha..."
-                />
+               />
               </div>
             </div>
 

@@ -2,7 +2,19 @@
 import React, { useState, useEffect } from 'react';
 import { StorageService } from '../services/storage';
 import { RegistroPonto, Cooperado, Hospital, TipoPonto } from '../types';
-import { Search, Save, Trash2, Clock, Filter, X } from 'lucide-react';
+import { Search, Save, Trash2, Clock, Filter, X, ArrowRight } from 'lucide-react';
+
+// Interface auxiliar para exibição
+interface ShiftRow {
+  id: string; // ID da Entrada (ou da saída se for órfã)
+  cooperadoNome: string;
+  local: string;
+  setorNome: string;
+  data: string;
+  entry?: RegistroPonto;
+  exit?: RegistroPonto;
+  status: string;
+}
 
 export const RelatorioProducao: React.FC = () => {
   const [logs, setLogs] = useState<RegistroPonto[]>([]);
@@ -43,7 +55,7 @@ export const RelatorioProducao: React.FC = () => {
     setCooperados(StorageService.getCooperados());
     setHospitais(StorageService.getHospitais());
     const allPontos = StorageService.getPontos();
-    // Order: Ascending (Oldest top, Newest bottom) as per requirement
+    // Order: Ascending (Oldest top, Newest bottom)
     const sorted = allPontos.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
     setLogs(sorted);
   };
@@ -77,6 +89,7 @@ export const RelatorioProducao: React.FC = () => {
   const filteredLogs = getFilteredLogs();
 
   // Helper to get sectors based on selected HOSPITAL FILTER
+  // MUST BE DEFINED BEFORE getShiftRows
   const getAvailableSetoresForForm = () => {
     const h = hospitais.find(hp => hp.id === filterHospital);
     return h ? h.setores : [];
@@ -87,24 +100,93 @@ export const RelatorioProducao: React.FC = () => {
     return h ? h.setores : [];
   };
 
-  const handleSelectRow = (ponto: RegistroPonto) => {
-    setSelectedPontoId(ponto.id);
+  // --- PAIRING LOGIC (Shift View) ---
+  const getShiftRows = (): ShiftRow[] => {
+    const shifts: ShiftRow[] = [];
+    const processedExits = new Set<string>();
+
+    const setoresDisponiveis = getAvailableSetoresForFilter();
+
+    // 1. Process Entries
+    filteredLogs.forEach(log => {
+      if (log.tipo === TipoPonto.ENTRADA) {
+        // Try to find matching exit in the filtered logs
+        // Logic: Find an exit that points to this entry via relatedId
+        const matchingExit = filteredLogs.find(l => l.tipo === TipoPonto.SAIDA && l.relatedId === log.id);
+        
+        if (matchingExit) {
+          processedExits.add(matchingExit.id);
+        }
+
+        shifts.push({
+          id: log.id,
+          cooperadoNome: log.cooperadoNome,
+          local: log.local,
+          setorNome: log.setorId && filterHospital ? (setoresDisponiveis.find(s => s.id === log.setorId)?.nome || log.local) : log.local,
+          data: new Date(log.timestamp).toLocaleDateString(),
+          entry: log,
+          exit: matchingExit,
+          status: matchingExit ? 'Fechado' : 'Em Aberto'
+        });
+      }
+    });
+
+    // 2. Process Orphan Exits (Exits without Entry in the current view)
+    filteredLogs.forEach(log => {
+      if (log.tipo === TipoPonto.SAIDA && !processedExits.has(log.id)) {
+        // Only add if we haven't processed this exit paired with an entry above
+        // This happens if the Entry was deleted OR if the Entry is outside the current filter date range
+        shifts.push({
+          id: log.id,
+          cooperadoNome: log.cooperadoNome,
+          local: log.local,
+          setorNome: log.setorId && filterHospital ? (setoresDisponiveis.find(s => s.id === log.setorId)?.nome || log.local) : log.local,
+          data: new Date(log.timestamp).toLocaleDateString(),
+          entry: undefined,
+          exit: log,
+          status: 'Fechado (S/E)' // Fechado sem entrada vinculada
+        });
+      }
+    });
+
+    // Sort by Date/Time descending (Newest first usually better for reports, but keeping Ascending per logic)
+    // Re-sorting based on the Entry time (or Exit time if orphan)
+    return shifts.sort((a, b) => {
+      const timeA = a.entry ? new Date(a.entry.timestamp).getTime() : new Date(a.exit!.timestamp).getTime();
+      const timeB = b.entry ? new Date(b.entry.timestamp).getTime() : new Date(b.exit!.timestamp).getTime();
+      return timeB - timeA; // Changed to DESCENDING for better UX (latest first)
+    });
+  };
+
+  const shiftRows = getShiftRows();
+
+  const handleSelectRow = (row: ShiftRow) => {
+    // Prefer loading Entry data for editing/viewing
+    const ponto = row.entry || row.exit;
+    if (!ponto) return;
+
+    setSelectedPontoId(row.entry ? row.entry.id : row.exit?.id || null);
     
-    // Populate form just for visual reference or editing (limited editing)
     setFormCooperadoId(ponto.cooperadoId);
-    setFormCooperadoInput(ponto.cooperadoNome); // Fill text input
+    setFormCooperadoInput(ponto.cooperadoNome); 
     setFormSetorId(ponto.setorId || '');
     
     const d = new Date(ponto.timestamp);
     setFormData(d.toISOString().split('T')[0]);
     setFormHora(d.toTimeString().substring(0,5));
     
-    setFormTipo(ponto.tipo);
-    // If selecting an Entry, fill the code input to facilitate creating an Exit
-    if (ponto.tipo === TipoPonto.ENTRADA) {
-        setFormInputCodigo(ponto.codigo);
+    // If it's a closed cycle, defaulting to Entry info is usually safer for "viewing"
+    // If user wants to add an exit, we set type to SAIDA
+    if (row.entry && !row.exit) {
+       setFormTipo(TipoPonto.SAIDA); // Suggest closing it
+       setFormInputCodigo(row.entry.codigo);
     } else {
-        setFormInputCodigo('');
+       setFormTipo(ponto.tipo);
+       if (ponto.tipo === TipoPonto.ENTRADA) {
+          setFormInputCodigo(ponto.codigo);
+       } else {
+          setFormInputCodigo('');
+       }
     }
   };
 
@@ -124,26 +206,24 @@ export const RelatorioProducao: React.FC = () => {
   };
 
   const handleSalvar = () => {
-    // Validation: Hospital must be selected in the FILTER to know where to save
     if (!filterHospital) {
         alert("Selecione uma Unidade Hospitalar no filtro acima para realizar lançamentos.");
         return;
     }
 
     if (!formCooperadoId || !formSetorId || !formData || !formHora) {
-        alert("Preencha todos os campos obrigatórios. Certifique-se de selecionar um cooperado da lista.");
+        alert("Preencha todos os campos obrigatórios.");
         return;
     }
 
     const timestamp = new Date(`${formData}T${formHora}:00`).toISOString();
     const cooperado = cooperados.find(c => c.id === formCooperadoId);
-    const hospital = hospitais.find(h => h.id === filterHospital); // Uses Filter Context
+    const hospital = hospitais.find(h => h.id === filterHospital);
     const setor = hospital?.setores.find(s => s.id === formSetorId);
 
     if (!cooperado || !hospital || !setor) return;
 
     if (formTipo === TipoPonto.ENTRADA) {
-        // --- REGISTER ENTRY ---
         const newCode = generateRandomCode();
         const novoPonto: RegistroPonto = {
             id: crypto.randomUUID(),
@@ -160,34 +240,28 @@ export const RelatorioProducao: React.FC = () => {
             validadoPor: 'Admin'
         };
         StorageService.savePonto(novoPonto);
-        alert(`Entrada registrada com sucesso! Código: ${newCode}`);
+        alert(`Entrada registrada! Código: ${newCode}`);
     } 
     else {
-        // --- REGISTER EXIT ---
         if (!formInputCodigo) {
             alert("Para registrar SAÍDA, informe o Código de Registro da Entrada.");
             return;
         }
-
-        // 1. Find the entry by code
         const entryPonto = logs.find(p => p.codigo === formInputCodigo && p.tipo === TipoPonto.ENTRADA);
 
         if (!entryPonto) {
             alert("Código de entrada não encontrado.");
             return;
         }
-
         if (entryPonto.status === 'Fechado') {
-            alert("Este registro de entrada já foi fechado.");
+            alert("Este registro já foi fechado.");
             return;
         }
-
         if (entryPonto.cooperadoId !== cooperado.id) {
-            alert("O código informado pertence a outro cooperado.");
+            alert("O código pertence a outro cooperado.");
             return;
         }
 
-        // 2. Create Exit Record
         const exitPonto: RegistroPonto = {
             id: crypto.randomUUID(),
             codigo: entryPonto.codigo,
@@ -201,16 +275,15 @@ export const RelatorioProducao: React.FC = () => {
             isManual: true,
             status: 'Fechado',
             validadoPor: 'Admin',
-            relatedId: entryPonto.id // Link to Entry
+            relatedId: entryPonto.id
         };
 
-        // 3. Update Entry to Fechado
         const updatedEntry = { ...entryPonto, status: 'Fechado' as const };
         
         StorageService.savePonto(exitPonto);
         StorageService.updatePonto(updatedEntry);
         
-        alert("Saída registrada e ciclo fechado com sucesso!");
+        alert("Saída registrada!");
     }
 
     loadData();
@@ -295,7 +368,7 @@ export const RelatorioProducao: React.FC = () => {
                         value={filterCooperadoInput}
                         onChange={e => {
                             setFilterCooperadoInput(e.target.value);
-                            setFilterCooperado(''); // Clear ID if typing to force selection or search
+                            setFilterCooperado(''); 
                             setShowFilterCooperadoSuggestions(true);
                         }}
                         onFocus={() => setShowFilterCooperadoSuggestions(true)}
@@ -373,53 +446,65 @@ export const RelatorioProducao: React.FC = () => {
 
       {/* TABLE SECTION */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="max-h-[400px] overflow-y-auto">
+        <div className="max-h-[500px] overflow-y-auto">
           <table className="w-full text-left text-sm text-gray-600">
-            <thead className="bg-amber-500 text-white font-bold sticky top-0 z-10">
+            <thead className="bg-primary-600 text-white font-bold sticky top-0 z-10">
               <tr>
                 <th className="px-4 py-3">Selecionar</th>
                 <th className="px-4 py-3">Setor</th>
                 <th className="px-4 py-3">Cooperado</th>
                 <th className="px-4 py-3">Data</th>
-                <th className="px-4 py-3">Hora</th>
-                <th className="px-4 py-3">Tipo</th>
-                <th className="px-4 py-3">A/F</th>
+                <th className="px-4 py-3 text-center">Entrada</th>
+                <th className="px-4 py-3 text-center">Saída</th>
+                <th className="px-4 py-3 text-center">Status</th>
                 <th className="px-4 py-3">Código</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 bg-amber-50/30">
-              {filteredLogs.map((log) => (
+            <tbody className="divide-y divide-gray-100 bg-gray-50">
+              {shiftRows.map((row) => (
                 <tr 
-                    key={log.id} 
-                    onClick={() => handleSelectRow(log)}
-                    className={`cursor-pointer hover:bg-amber-100 transition-colors ${selectedPontoId === log.id ? 'bg-blue-100 ring-1 ring-blue-300' : ''}`}
+                    key={row.id} 
+                    onClick={() => handleSelectRow(row)}
+                    className={`cursor-pointer hover:bg-primary-50 transition-colors ${
+                        (selectedPontoId === row.entry?.id || selectedPontoId === row.exit?.id) ? 'bg-primary-100 ring-1 ring-primary-300' : ''
+                    }`}
                 >
-                  <td className="px-4 py-2">
-                    <button className="text-xs text-blue-600 underline">Selecionar</button>
+                  <td className="px-4 py-3">
+                    <button className="text-xs text-primary-600 underline font-medium">Selecionar</button>
                   </td>
-                  <td className="px-4 py-2 truncate max-w-[200px]" title={log.local}>
-                    {log.setorId && filterHospital ? (getAvailableSetoresForFilter().find(s => s.id === log.setorId)?.nome || log.local) : log.local}
+                  <td className="px-4 py-3 truncate max-w-[200px]" title={row.local}>
+                    {row.setorNome}
                   </td>
-                  <td className="px-4 py-2 font-medium text-gray-900">{log.cooperadoNome}</td>
-                  <td className="px-4 py-2">{new Date(log.timestamp).toLocaleDateString()}</td>
-                  <td className="px-4 py-2">{new Date(log.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</td>
-                  <td className="px-4 py-2">
-                    <span className={`font-bold ${log.tipo === 'ENTRADA' ? 'text-gray-800' : 'text-gray-800'}`}>
-                        {log.tipo === 'ENTRADA' ? 'Entrada' : 'Saída'}
+                  <td className="px-4 py-3 font-medium text-gray-900">{row.cooperadoNome}</td>
+                  <td className="px-4 py-3">{row.data}</td>
+                  
+                  {/* Coluna Entrada */}
+                  <td className="px-4 py-3 text-center font-mono font-bold text-green-700 bg-green-50/50">
+                    {row.entry ? new Date(row.entry.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--'}
+                  </td>
+
+                  {/* Coluna Saída */}
+                  <td className="px-4 py-3 text-center font-mono font-bold text-red-700 bg-red-50/50">
+                    {row.exit ? new Date(row.exit.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--'}
+                  </td>
+
+                  <td className="px-4 py-3 text-center">
+                    <span className={`px-2 py-1 text-xs rounded-full text-white font-bold shadow-sm ${row.status.includes('Aberto') ? 'bg-amber-500' : 'bg-green-600'}`}>
+                        {row.status === 'Aberto' ? 'Em Aberto' : row.status}
                     </span>
                   </td>
-                  <td className="px-4 py-2">
-                    <span className={`px-2 py-0.5 text-xs rounded text-white font-bold ${log.status === 'Aberto' ? 'bg-red-500' : 'bg-green-600'}`}>
-                        {log.status}
-                    </span>
+                  <td className="px-4 py-3 font-mono text-xs text-gray-500">
+                    {row.entry?.codigo || row.exit?.codigo}
                   </td>
-                  <td className="px-4 py-2 font-mono text-xs">{log.codigo}</td>
                 </tr>
               ))}
-              {filteredLogs.length === 0 && (
+              {shiftRows.length === 0 && (
                 <tr>
-                    <td colSpan={8} className="text-center py-8 text-gray-400">
-                        Nenhum registro encontrado com os filtros atuais.
+                    <td colSpan={8} className="text-center py-12 text-gray-400">
+                        <div className="flex flex-col items-center">
+                            <Clock className="h-8 w-8 mb-2 opacity-30" />
+                            <span>Nenhum registro encontrado.</span>
+                        </div>
                     </td>
                 </tr>
               )}
@@ -436,7 +521,7 @@ export const RelatorioProducao: React.FC = () => {
         </h3>
         
         {/* Info Box about Hospital Context */}
-        <div className="mb-4 bg-blue-50 border border-blue-200 text-blue-800 px-4 py-2 rounded text-sm flex items-center">
+        <div className="mb-4 bg-primary-50 border border-primary-100 text-primary-800 px-4 py-2 rounded text-sm flex items-center">
             <Filter className="h-4 w-4 mr-2" />
             {filterHospital 
                 ? <span>Unidade Selecionada: <strong>{hospitais.find(h => h.id === filterHospital)?.nome}</strong></span>
@@ -457,11 +542,11 @@ export const RelatorioProducao: React.FC = () => {
                         value={formCooperadoInput}
                         onChange={e => {
                             setFormCooperadoInput(e.target.value);
-                            setFormCooperadoId(''); // Reset ID when typing to force valid selection
+                            setFormCooperadoId(''); 
                             setShowCooperadoSuggestions(true);
                         }}
                         onFocus={() => setShowCooperadoSuggestions(true)}
-                        onBlur={() => setTimeout(() => setShowCooperadoSuggestions(false), 200)} // Delay to allow click
+                        onBlur={() => setTimeout(() => setShowCooperadoSuggestions(false), 200)}
                     />
                     {showCooperadoSuggestions && formCooperadoInput && (
                         <div className="absolute z-20 w-full bg-white border border-gray-200 rounded-b-lg shadow-lg max-h-60 overflow-y-auto mt-1">
@@ -506,12 +591,8 @@ export const RelatorioProducao: React.FC = () => {
                 </select>
             </div>
 
-            <div className="space-y-1">
-               {/* Spacer */}
-            </div>
-            <div className="space-y-1">
-               {/* Spacer */}
-            </div>
+            <div className="space-y-1 lg:block hidden"></div>
+            <div className="space-y-1 lg:block hidden"></div>
 
             {/* Row 2 */}
             <div className="space-y-1">
@@ -525,7 +606,7 @@ export const RelatorioProducao: React.FC = () => {
             </div>
 
             <div className="space-y-1">
-                <label className="text-sm font-bold text-gray-700">Hora Inicial</label>
+                <label className="text-sm font-bold text-gray-700">Hora</label>
                 <input 
                     type="time" 
                     className="w-full bg-white text-gray-900 border border-gray-300 rounded p-2 outline-none"
@@ -535,13 +616,13 @@ export const RelatorioProducao: React.FC = () => {
             </div>
 
             <div className="space-y-1">
-                <label className="text-sm font-bold text-gray-700 block mb-2">Tipo</label>
+                <label className="text-sm font-bold text-gray-700 block mb-2">Tipo de Registro</label>
                 <div className="flex items-center space-x-6">
                     <label className="flex items-center cursor-pointer">
                         <input 
                             type="radio" 
                             name="tipoPonto" 
-                            className="w-4 h-4 text-primary-600"
+                            className="w-4 h-4 text-primary-600 focus:ring-primary-500"
                             checked={formTipo === TipoPonto.ENTRADA}
                             onChange={() => setFormTipo(TipoPonto.ENTRADA)}
                         />
@@ -551,7 +632,7 @@ export const RelatorioProducao: React.FC = () => {
                         <input 
                             type="radio" 
                             name="tipoPonto" 
-                            className="w-4 h-4 text-primary-600"
+                            className="w-4 h-4 text-primary-600 focus:ring-primary-500"
                             checked={formTipo === TipoPonto.SAIDA}
                             onChange={() => setFormTipo(TipoPonto.SAIDA)}
                         />
@@ -578,16 +659,16 @@ export const RelatorioProducao: React.FC = () => {
         <div className="flex flex-wrap gap-4 mt-8 pt-4 border-t border-gray-100">
             <button 
                 onClick={handleSalvar}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded shadow transition-colors"
+                className="bg-primary-600 hover:bg-primary-700 text-white font-bold py-2 px-6 rounded shadow transition-colors"
             >
-                Salvar Plantão
+                Salvar Registro
             </button>
             
             <button 
                 onClick={handleNovoPlantao}
-                className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded shadow transition-colors"
+                className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded shadow transition-colors"
             >
-                Novo Plantão
+                Limpar Campos
             </button>
 
             <div className="flex-1"></div>
@@ -602,7 +683,7 @@ export const RelatorioProducao: React.FC = () => {
                 }`}
             >
                 <Trash2 className="w-4 h-4 mr-2" />
-                Excluir Plantão
+                Excluir Registro
             </button>
         </div>
       </div>

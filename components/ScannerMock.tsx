@@ -45,7 +45,7 @@ export const ScannerMock: React.FC<ScannerMockProps> = ({
         }
       } else if (attempts >= maxAttempts) {
         clearInterval(checkGlobalSdk);
-        console.error("Timeout: SDK não encontrado no objeto window.");
+        console.warn("Timeout: SDK não encontrado no objeto window. (Modo Simulação Ativo)");
       }
     }, 100);
 

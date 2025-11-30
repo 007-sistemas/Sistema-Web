@@ -27,7 +27,8 @@ export const HospitalRegister: React.FC = () => {
       hospitais: false,
       biometria: true,
       auditoria: false,
-      gestao: false
+      gestao: false,
+      espelho: false // Default to false for hospitals
     },
     setores: []
   };
@@ -110,6 +111,7 @@ export const HospitalRegister: React.FC = () => {
     { key: 'dashboard', label: 'Dashboard' },
     { key: 'ponto', label: 'Registrar Produção' },
     { key: 'relatorio', label: 'Relatório Detalhado' },
+    { key: 'espelho', label: 'Espelho de Ponto' },
     { key: 'cadastro', label: 'Cooperados' },
     { key: 'hospitais', label: 'Hospitais & Setores' },
     { key: 'biometria', label: 'Biometria' },
@@ -304,7 +306,7 @@ export const HospitalRegister: React.FC = () => {
                   type="text" 
                   className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none"
                   value={formData.senha}
-                  onChange={e => setFormData({...formData, senha: e.target.value})}
+                  onChange={e => setFormData({...formData,senha: e.target.value})}
                   placeholder="Digite a senha..."
                />
             </div>

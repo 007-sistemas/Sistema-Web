@@ -11,7 +11,7 @@ import { HospitalRegister } from './views/HospitalRegister';
 import { RelatorioProducao } from './views/RelatorioProducao';
 import { Management } from './views/Management';
 import { Login } from './views/Login';
-import { BiometricCapture } from './views/BiometricCapture';
+import { EspelhoBiometria } from './views/EspelhoBiometria'; 
 import { HospitalPermissions } from './types';
 
 export default function App() {
@@ -30,9 +30,7 @@ export default function App() {
       setUserPermissions(session.permissions);
       
       // If current view is not allowed, redirect to first allowed view
-      // Note: 'biometric-test' is typically not in standard permissions, so we allow it for dev if needed
-      // or assume master has it.
-      if (currentView !== 'biometric-test' && !session.permissions[currentView as keyof HospitalPermissions]) {
+      if (!session.permissions[currentView as keyof HospitalPermissions]) {
         // Find first true permission
         const firstAllowed = Object.keys(session.permissions).find(k => session.permissions[k as keyof HospitalPermissions]);
         if (firstAllowed) {
@@ -66,8 +64,8 @@ export default function App() {
   };
 
   const handleChangeView = (view: string) => {
-    // Allow biometric-test bypass for development or add a specific permission
-    if (view === 'biometric-test' || (userPermissions && userPermissions[view as keyof HospitalPermissions])) {
+    // Permission check
+    if (userPermissions && userPermissions[view as keyof HospitalPermissions]) {
       setCurrentView(view);
     } else {
       alert("Acesso negado a este módulo.");
@@ -80,7 +78,7 @@ export default function App() {
 
   const renderView = () => {
     // Route Guard
-    if (currentView !== 'biometric-test' && userPermissions && !userPermissions[currentView as keyof HospitalPermissions]) {
+    if (userPermissions && !userPermissions[currentView as keyof HospitalPermissions]) {
         return <div className="p-10 text-center text-gray-500">Acesso não autorizado.</div>;
     }
 
@@ -88,12 +86,12 @@ export default function App() {
       case 'dashboard': return <Dashboard />;
       case 'ponto': return <PontoMachine />;
       case 'relatorio': return <RelatorioProducao />;
+      case 'espelho': return <EspelhoBiometria />; 
       case 'cadastro': return <CooperadoRegister />;
       case 'hospitais': return <HospitalRegister />;
       case 'biometria': return <BiometriaManager />;
       case 'auditoria': return <AuditLogViewer />;
       case 'gestao': return <Management />;
-      case 'biometric-test': return <BiometricCapture />;
       default: return <Dashboard />;
     }
   };

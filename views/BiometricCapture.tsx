@@ -13,7 +13,7 @@ export const BiometricCapture: React.FC = () => {
   const [format, setFormat] = useState<number>(5); // PngImage = 5
 
   // Referência para a instância do leitor (para não recriar a cada render)
-  const readerRef = useRef<Fingerprint.WebApi | null>(null);
+  const readerRef = useRef<any>(null);
 
   useEffect(() => {
     // 1. Verifica se os scripts globais foram carregados (injetados pelo index.html)
@@ -47,20 +47,20 @@ export const BiometricCapture: React.FC = () => {
       }
 
       // Configuração dos Event Listeners do SDK
-      reader.onDeviceConnected = (e) => {
+      reader.onDeviceConnected = (e: any) => {
         setDeviceConnected(true);
         setStatus('Leitor Conectado (Pronto)');
         console.log("Device Connected:", e);
       };
 
-      reader.onDeviceDisconnected = (e) => {
+      reader.onDeviceDisconnected = (e: any) => {
         setDeviceConnected(false);
         setIsCapturing(false);
         setStatus('Leitor Desconectado');
         console.log("Device Disconnected:", e);
       };
 
-      reader.onSamplesAcquired = (e) => {
+      reader.onSamplesAcquired = (e: any) => {
         console.log("Samples Acquired:", e);
         setStatus('Amostra Capturada');
         
@@ -74,11 +74,11 @@ export const BiometricCapture: React.FC = () => {
         }
       };
 
-      reader.onQualityReported = (e) => {
+      reader.onQualityReported = (e: any) => {
         setQuality(window.Fingerprint.QualityCode[e.quality] || `Q:${e.quality}`);
       };
 
-      reader.onErrorOccurred = (e) => {
+      reader.onErrorOccurred = (e: any) => {
         console.error("SDK Error:", e);
         setIsCapturing(false);
         setStatus(`Erro no Leitor: ${e.error}`);
@@ -87,14 +87,14 @@ export const BiometricCapture: React.FC = () => {
       setStatus('SDK Carregado. Aguardando conexão...');
       
       // Tenta listar dispositivos para forçar checagem
-      reader.enumerateDevices().then((devices) => {
+      reader.enumerateDevices().then((devices: any) => {
           if (devices.length > 0) {
               setDeviceConnected(true);
               setStatus(`Leitor Encontrado (${devices.length})`);
           } else {
               setStatus('Nenhum leitor detectado. Verifique o USB.');
           }
-      }).catch(err => {
+      }).catch((err: any) => {
           setStatus('Erro ao listar dispositivos. O serviço está rodando?');
       });
 
