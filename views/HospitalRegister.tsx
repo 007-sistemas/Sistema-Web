@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Hospital, HospitalPermissions } from '../types';
 import { StorageService } from '../services/storage';
-import { Plus, Save, Trash2, Building2, Layers, X, Edit2, MapPin, Lock, Shield } from 'lucide-react';
+import { Plus, Save, Trash2, Building2, Layers, X, Edit2, Lock, Shield, User } from 'lucide-react';
 
 export const HospitalRegister: React.FC = () => {
   const [hospitais, setHospitais] = useState<Hospital[]>([]);
@@ -14,11 +14,7 @@ export const HospitalRegister: React.FC = () => {
     slug: '',
     usuarioAcesso: '',
     senha: '',
-    endereco: {
-      cep: '',
-      logradouro: '',
-      numero: ''
-    },
+    // Endereço removido conforme solicitação
     permissoes: {
       dashboard: true,
       ponto: true,
@@ -46,19 +42,23 @@ export const HospitalRegister: React.FC = () => {
   };
 
   const handleNewHospital = () => {
-    const generatedCode = `HSP-${Math.floor(1000 + Math.random() * 9000)}`;
-    setFormData({
-      ...initialFormState,
-      usuarioAcesso: generatedCode
-    });
+    // Usuário agora é manual, não geramos mais o código automaticamente
+    setFormData(initialFormState);
     setIsFormOpen(true);
   };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.nome) return alert('Nome do hospital é obrigatório');
+    if (!formData.usuarioAcesso) return alert('Usuário de acesso é obrigatório');
     if (!formData.senha) return alert('Senha de acesso é obrigatória');
     
+    // Check if username exists (if new or changing username)
+    const existing = hospitais.find(h => h.usuarioAcesso === formData.usuarioAcesso && h.id !== formData.id);
+    if (existing) {
+        return alert('Este usuário de acesso já está em uso.');
+    }
+
     const slug = formData.slug || formData.nome.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 10);
 
     const newHospital: Hospital = {
@@ -74,11 +74,10 @@ export const HospitalRegister: React.FC = () => {
   };
 
   const handleEdit = (h: Hospital) => {
-    // Merge with default structure to ensure new fields exist if editing old records
+    // Merge with default structure
     setFormData({
       ...initialFormState,
       ...h,
-      endereco: h.endereco || initialFormState.endereco,
       permissoes: { ...initialFormState.permissoes, ...h.permissoes }
     });
     setIsFormOpen(true);
@@ -113,7 +112,7 @@ export const HospitalRegister: React.FC = () => {
     { key: 'ponto', label: 'Registrar Produção' },
     { key: 'relatorio', label: 'Relatório Detalhado' },
     { key: 'espelho', label: 'Espelho de Ponto' },
-    { key: 'autorizacao', label: 'Aprovação de Ponto' },
+    { key: 'autorizacao', label: 'Justificativa de Plantão' },
     { key: 'cadastro', label: 'Cooperados' },
     { key: 'hospitais', label: 'Hospitais & Setores' },
     { key: 'biometria', label: 'Biometria' },
@@ -128,15 +127,6 @@ export const HospitalRegister: React.FC = () => {
         ...prev.permissoes,
         [key]: !prev.permissoes[key]
       }
-    }));
-  };
-
-  // Mask CEP
-  const handleCepChange = (value: string) => {
-    const formatted = value.replace(/\D/g, '').replace(/^(\d{5})(\d)/, '$1-$2').substring(0, 9);
-    setFormData(prev => ({
-      ...prev,
-      endereco: { ...prev.endereco!, cep: formatted }
     }));
   };
 
@@ -185,53 +175,16 @@ export const HospitalRegister: React.FC = () => {
 
               <div className="space-y-1">
                 <label className="text-sm font-medium text-gray-700 flex items-center gap-1">
-                  <Lock className="h-3 w-3" /> Usuário de Acesso
+                  <User className="h-3 w-3" /> Usuário de Acesso
                 </label>
                 <input 
+                  required
                   type="text" 
-                  readOnly
-                  className="w-full bg-gray-100 text-gray-600 border border-gray-300 rounded-lg px-3 py-2 outline-none font-mono font-bold"
+                  className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none"
                   value={formData.usuarioAcesso}
+                  onChange={e => setFormData({...formData, usuarioAcesso: e.target.value})}
+                  placeholder="Crie um usuário para login"
                 />
-              </div>
-            </div>
-
-            {/* Address Section */}
-            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-              <div className="flex items-center gap-2 mb-3 text-gray-700 font-semibold border-b border-gray-200 pb-2">
-                <MapPin className="h-4 w-4" /> Endereço
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="md:col-span-1 space-y-1">
-                  <label className="text-xs font-medium text-gray-500 uppercase">CEP</label>
-                  <input 
-                    type="text" 
-                    className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none"
-                    value={formData.endereco?.cep}
-                    onChange={e => handleCepChange(e.target.value)}
-                    placeholder="00000-000"
-                  />
-                </div>
-                <div className="md:col-span-2 space-y-1">
-                  <label className="text-xs font-medium text-gray-500 uppercase">Endereço (Logradouro)</label>
-                  <input 
-                    type="text" 
-                    className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none"
-                    value={formData.endereco?.logradouro}
-                    onChange={e => setFormData({...formData, endereco: {...formData.endereco!, logradouro: e.target.value}})}
-                    placeholder="Rua, Avenida..."
-                  />
-                </div>
-                <div className="md:col-span-1 space-y-1">
-                  <label className="text-xs font-medium text-gray-500 uppercase">Número</label>
-                  <input 
-                    type="text" 
-                    className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none"
-                    value={formData.endereco?.numero}
-                    onChange={e => setFormData({...formData, endereco: {...formData.endereco!, numero: e.target.value}})}
-                    placeholder="123"
-                  />
-                </div>
               </div>
             </div>
 
@@ -302,7 +255,9 @@ export const HospitalRegister: React.FC = () => {
 
             {/* Password Section */}
             <div className="pt-4 border-t border-gray-100">
-               <label className="text-sm font-medium text-gray-700 block mb-1">Definir Senha de Acesso</label>
+               <label className="text-sm font-medium text-gray-700 block mb-1 flex items-center gap-1">
+                  <Lock className="h-3 w-3" /> Definir Senha de Acesso
+               </label>
                <input 
                   required
                   type="text" 
@@ -372,13 +327,6 @@ export const HospitalRegister: React.FC = () => {
                   ))}
                 </div>
               </div>
-              
-              {h.endereco && (
-                 <div className="text-xs text-gray-400 pt-3 border-t border-gray-100 flex items-center">
-                    <MapPin className="h-3 w-3 mr-1" />
-                    <span className="truncate">{h.endereco.logradouro}, {h.endereco.numero}</span>
-                 </div>
-              )}
             </div>
           ))}
           
