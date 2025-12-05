@@ -207,10 +207,23 @@ export const StorageService = {
       };
     }
 
-    // 3. Check Cooperados (Simulated Login: Matrícula + Password '123')
+    // 3. Check Cooperados (Login: CPF + Password: First 4 digits of CPF)
     const cooperados: Cooperado[] = JSON.parse(localStorage.getItem(COOPERADOS_KEY) || '[]');
-    // Allow login via Matricula or Email
-    const cooperado = cooperados.find(c => (c.matricula === usernameOrCode || c.email === usernameOrCode) && password === '123');
+    
+    // Helper to remove non-numeric characters for comparison
+    const cleanStr = (str: string) => str.replace(/\D/g, '');
+    const inputUsernameClean = cleanStr(usernameOrCode);
+
+    const cooperado = cooperados.find(c => {
+        const dbCpfClean = cleanStr(c.cpf);
+        // Check Username (CPF)
+        if (dbCpfClean === inputUsernameClean) {
+            // Check Password (First 4 digits of DB CPF)
+            const expectedPassword = dbCpfClean.substring(0, 4);
+            return password === expectedPassword;
+        }
+        return false;
+    });
 
     if (cooperado) {
         return {
