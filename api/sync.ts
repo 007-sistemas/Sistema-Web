@@ -17,13 +17,19 @@ export default async function handler(req: any, res: any) {
     // Parse body defensivamente: em produção o Vercel já entrega JSON, mas
     // chamadas manuais (curl) podem chegar como string.
     let parsed = req.body;
+
+    // Vercel (Node) pode entregar req.body já parseado, string ou stream.
+    if (!parsed) {
+      parsed = await new Promise((resolve) => {
+        let body = '';
+        req.on('data', (chunk: any) => { body += chunk; });
+        req.on('end', () => resolve(body));
+        req.on('error', () => resolve(null));
+      });
+    }
+
     if (typeof parsed === 'string') {
       try { parsed = JSON.parse(parsed); } catch (err) {
-        return res.status(400).json({ error: "Invalid JSON" });
-      }
-    }
-    if (!parsed && req.rawBody) {
-      try { parsed = JSON.parse(req.rawBody.toString()); } catch (err) {
         return res.status(400).json({ error: "Invalid JSON" });
       }
     }
