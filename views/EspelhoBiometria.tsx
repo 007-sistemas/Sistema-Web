@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { StorageService } from '../services/storage';
-import { RegistroPonto, Hospital, TipoPonto } from '../types';
+import { RegistroPonto, Hospital, TipoPonto, Justificativa } from '../types';
 import { Calendar, Building2, Filter, FileClock, Clock, AlertTriangle, X, CheckCircle, AlertCircle } from 'lucide-react';
 
 // Interface auxiliar para exibição (Mesma do Relatório)
@@ -171,27 +171,44 @@ export const EspelhoBiometria: React.FC = () => {
     const entryDate = new Date(entry.timestamp).toISOString().split('T')[0];
     const newTimestamp = new Date(`${entryDate}T${justificationTime}:00`).toISOString();
 
+    // Criar justificativa na tabela separada
+    const novaJustificativa: Justificativa = {
+        id: crypto.randomUUID(),
+        cooperadoId: cooperadoData.id,
+        cooperadoNome: cooperadoData.nome,
+        pontoId: undefined, // Será criado após aprovação
+        motivo: justificationReason,
+        descricao: justificationDesc,
+        dataSolicitacao: new Date().toISOString(),
+        status: 'Pendente',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+    };
+
+    StorageService.saveJustificativa(novaJustificativa);
+
+    // Criar ponto vinculado à justificativa
     const novoPonto: RegistroPonto = {
         id: crypto.randomUUID(),
-        codigo: entry.codigo, // Same shift code
+        codigo: entry.codigo,
         cooperadoId: cooperadoData.id,
         cooperadoNome: cooperadoData.nome,
         timestamp: newTimestamp,
-        tipo: justificationTarget.type === 'SAIDA' ? TipoPonto.SAIDA : TipoPonto.ENTRADA, // Currently mostly SAIDA
+        tipo: justificationTarget.type === 'SAIDA' ? TipoPonto.SAIDA : TipoPonto.ENTRADA,
         local: entry.local,
         hospitalId: entry.hospitalId,
         setorId: entry.setorId,
         isManual: true,
         status: 'Pendente',
-        relatedId: entry.id, // Link to the entry
-        justificativa: {
-            motivo: justificationReason,
-            descricao: justificationDesc,
-            dataSolicitacao: new Date().toISOString()
-        }
+        relatedId: entry.id
     };
 
     StorageService.savePonto(novoPonto);
+    
+    // Vincular ponto à justificativa
+    novaJustificativa.pontoId = novoPonto.id;
+    StorageService.saveJustificativa(novaJustificativa);
+
     setIsModalOpen(false);
     loadData();
     alert('Justificativa enviada com sucesso! Aguarde a aprovação do gestor.');

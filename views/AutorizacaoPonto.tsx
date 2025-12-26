@@ -1,70 +1,82 @@
 
 import React, { useState, useEffect } from 'react';
 import { StorageService } from '../services/storage';
-import { RegistroPonto } from '../types';
+import { Justificativa } from '../types';
 import { CheckCircle, XCircle, AlertCircle, Calendar, Clock, MapPin, User, CheckSquare } from 'lucide-react';
 
 export const AutorizacaoPonto: React.FC = () => {
-  const [pendingLogs, setPendingLogs] = useState<RegistroPonto[]>([]);
+  const [pendingJustificativas, setPendingJustificativas] = useState<Justificativa[]>([]);
 
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = () => {
-    const allPontos = StorageService.getPontos();
-    // Filter for 'Pendente' status
-    const pending = allPontos.filter(p => p.status === 'Pendente');
+    const pending = StorageService.getJustificativasByStatus('Pendente');
     // Sort oldest first (FIFO)
-    setPendingLogs(pending.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()));
+    setPendingJustificativas(pending.sort((a, b) => 
+      new Date(a.dataSolicitacao).getTime() - new Date(b.dataSolicitacao).getTime()
+    ));
   };
 
-  const handleApprove = (log: RegistroPonto) => {
-    if (!confirm('Confirmar autorização deste registro?')) return;
+  const handleApprove = (justificativa: Justificativa) => {
+    if (!confirm('Confirmar autorização desta justificativa?')) return;
 
     try {
-        // 1. Approve the Justification Record (Changes Pending to Fechado)
-        const approvedLog = { 
-            ...log, 
-            status: 'Fechado' as const, 
-            validadoPor: 'Gestor' 
-        };
-        StorageService.updatePonto(approvedLog);
+        const session = StorageService.getSession();
+        const aprovador = session?.user?.username || session?.user?.nome || 'Gestor';
+        
+        StorageService.aprovarJustificativa(justificativa.id, aprovador);
 
-        // 2. If it's an Exit linked to an Entry, ensure Entry is closed
-        if (log.relatedId && log.tipo === 'SAIDA') {
-            const allPontos = StorageService.getPontos();
-            const entryLog = allPontos.find(p => p.id === log.relatedId);
+        // Se a justificativa referencia um ponto específico, atualizar o status do ponto também
+        if (justificativa.pontoId) {
+            const pontos = StorageService.getPontos();
+            const ponto = pontos.find(p => p.id === justificativa.pontoId);
             
-            // Only update if found and not already closed
-            if (entryLog && entryLog.status !== 'Fechado') {
-                const updatedEntry = { ...entryLog, status: 'Fechado' as const };
-                StorageService.updatePonto(updatedEntry);
+            if (ponto && ponto.status === 'Pendente') {
+                const updatedPonto = { ...ponto, status: 'Fechado' as const, validadoPor: aprovador };
+                StorageService.updatePonto(updatedPonto);
             }
         }
 
-        alert('Registro autorizado com sucesso!');
+        alert('Justificativa aprovada com sucesso!');
         loadData();
     } catch (error) {
-        console.error("Erro ao autorizar:", error);
-        alert("Erro ao processar autorização.");
+        console.error("Erro ao aprovar:", error);
+        alert("Erro ao processar aprovação.");
     }
   };
 
-  const handleReject = (log: RegistroPonto) => {
-    const reason = prompt("Motivo da rejeição (Opcional):");
+  const handleReject = (justificativa: Justificativa) => {
+    const reason = prompt("Motivo da rejeição:");
     if (reason === null) return; // Cancelled by user
+    if (!reason.trim()) {
+        alert("Por favor, informe o motivo da rejeição.");
+        return;
+    }
 
     try {
-        // Update to Rejected
-        const updatedLog = { 
-            ...log, 
-            status: 'Rejeitado' as const, 
-            observacao: `Rejeitado pelo Gestor: ${reason || 'Sem motivo'}` 
-        };
-        StorageService.updatePonto(updatedLog);
+        const session = StorageService.getSession();
+        const aprovador = session?.user?.username || session?.user?.nome || 'Gestor';
         
-        alert('Registro recusado.');
+        StorageService.rejeitarJustificativa(justificativa.id, aprovador, reason);
+
+        // Se a justificativa referencia um ponto, marcar como rejeitado
+        if (justificativa.pontoId) {
+            const pontos = StorageService.getPontos();
+            const ponto = pontos.find(p => p.id === justificativa.pontoId);
+            
+            if (ponto && ponto.status === 'Pendente') {
+                const updatedPonto = { 
+                    ...ponto, 
+                    status: 'Rejeitado' as const, 
+                    observacao: `Rejeitado: ${reason}`
+                };
+                StorageService.updatePonto(updatedPonto);
+            }
+        }
+        
+        alert('Justificativa rejeitada.');
         loadData();
     } catch (error) {
         console.error("Erro ao rejeitar:", error);
@@ -85,7 +97,7 @@ export const AutorizacaoPonto: React.FC = () => {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        {pendingLogs.length === 0 ? (
+        {pendingJustificativas.length === 0 ? (
             <div className="p-12 text-center text-gray-400 flex flex-col items-center">
                 <CheckCircle className="h-16 w-16 mb-4 text-green-100" />
                 <span className="text-lg font-medium text-gray-600">Tudo em dia!</span>
@@ -98,71 +110,55 @@ export const AutorizacaoPonto: React.FC = () => {
                   <tr>
                     <th className="px-6 py-4">Data Solicitação</th>
                     <th className="px-6 py-4">Cooperado</th>
-                    <th className="px-6 py-4">Local</th>
-                    <th className="px-6 py-4">Registro Justificado</th>
                     <th className="px-6 py-4">Motivo</th>
+                    <th className="px-6 py-4">Descrição</th>
                     <th className="px-6 py-4 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {pendingLogs.map((log) => (
-                    <tr key={log.id} className="hover:bg-amber-50/30 transition-colors group">
+                  {pendingJustificativas.map((just) => (
+                    <tr key={just.id} className="hover:bg-amber-50/30 transition-colors group">
                       <td className="px-6 py-4">
                         <div className="flex flex-col text-xs">
                             <span className="font-bold text-gray-800">
-                                {log.justificativa?.dataSolicitacao ? new Date(log.justificativa.dataSolicitacao).toLocaleDateString() : '-'}
+                                {new Date(just.dataSolicitacao).toLocaleDateString()}
                             </span>
                             <span className="text-gray-400">
-                                {log.justificativa?.dataSolicitacao ? new Date(log.justificativa.dataSolicitacao).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '-'}
+                                {new Date(just.dataSolicitacao).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
                             </span>
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                             <User className="h-4 w-4 text-gray-400" />
-                            <span className="font-medium text-gray-900">{log.cooperadoNome}</span>
+                            <span className="font-medium text-gray-900">{just.cooperadoNome}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex items-center gap-2 text-xs" title={log.local}>
-                            <MapPin className="h-3 w-3 text-gray-400" />
-                            <span className="truncate max-w-[150px]">{log.local.split(' - ')[1] || log.local}</span>
-                        </div>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
+                            {just.motivo}
+                        </span>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex flex-col">
-                            <span className="font-bold text-amber-600 flex items-center gap-1">
-                                {log.tipo === 'ENTRADA' ? 'Entrada' : 'Saída'}
-                                <Clock className="h-3 w-3" />
+                        {just.descricao ? (
+                            <span className="text-xs text-gray-600 italic truncate max-w-[300px] block" title={just.descricao}>
+                                "{just.descricao}"
                             </span>
-                            <span className="text-sm font-mono text-gray-800">
-                                {new Date(log.timestamp).toLocaleDateString()} - {new Date(log.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
-                            </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col gap-1">
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200 w-fit">
-                                {log.justificativa?.motivo || 'Não informado'}
-                            </span>
-                            {log.justificativa?.descricao && (
-                                <span className="text-xs text-gray-500 italic truncate max-w-[200px]" title={log.justificativa.descricao}>
-                                    "{log.justificativa.descricao}"
-                                </span>
-                            )}
-                        </div>
+                        ) : (
+                            <span className="text-xs text-gray-400">-</span>
+                        )}
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                             <button 
-                                onClick={() => handleReject(log)}
+                                onClick={() => handleReject(just)}
                                 className="p-2 bg-white border border-red-200 text-red-600 rounded-lg hover:bg-red-50 hover:border-red-300 transition-colors shadow-sm"
                                 title="Rejeitar"
                             >
                                 <XCircle className="h-5 w-5" />
                             </button>
                             <button 
-                                onClick={() => handleApprove(log)}
+                                onClick={() => handleApprove(just)}
                                 className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm font-medium text-sm"
                                 title="Autorizar"
                             >
