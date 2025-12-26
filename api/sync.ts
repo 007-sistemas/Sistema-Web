@@ -118,6 +118,13 @@ export default async function handler(req: any, res: any) {
       console.log('[SYNC] Sincronizando ponto:', data.id);
       const { id, codigo, cooperadoId, cooperadoNome, timestamp, tipo, local, hospitalId, setorId, observacao, relatedId, status, isManual, validadoPor, justificativa } = data;
       
+      // Verificar se cooperado existe antes de inserir
+      const cooperadoExists = await sql`SELECT id FROM cooperados WHERE id = ${cooperadoId}`;
+      if (!cooperadoExists || cooperadoExists.length === 0) {
+        console.warn(`[SYNC] Cooperado ${cooperadoId} não encontrado, ignorando ponto ${id}`);
+        return res.status(200).json({ ok: true, skipped: true });
+      }
+      
       await sql`
         INSERT INTO pontos (id, codigo, cooperado_id, cooperado_nome, timestamp, tipo, local, hospital_id, setor_id, observacao, related_id, status, is_manual, validado_por, justificativa, created_at)
         VALUES (${id}, ${codigo}, ${cooperadoId}, ${cooperadoNome}, ${timestamp}, ${tipo}, ${local}, ${hospitalId}, ${setorId}, ${observacao}, ${relatedId}, ${status}, ${isManual}, ${validadoPor}, ${justificativa ? JSON.stringify(justificativa) : null}, NOW())
@@ -163,6 +170,7 @@ export default async function handler(req: any, res: any) {
       await sql`
         INSERT INTO audit_logs (id, action, details, timestamp, user_id)
         VALUES (${id}, ${auditAction}, ${details}, ${timestamp}, ${user})
+        ON CONFLICT (id) DO NOTHING
       `;
 
       return res.status(200).json({ ok: true });
