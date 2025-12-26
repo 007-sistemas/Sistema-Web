@@ -290,6 +290,9 @@ export const StorageService = {
     const newList = list.filter(m => m.id !== id);
     localStorage.setItem(MANAGERS_KEY, JSON.stringify(newList));
     StorageService.logAudit('REMOCAO_GESTOR', `Gestor ID ${id} removido.`);
+
+    // Sincronizar exclusão com Neon
+    syncToNeon('delete_manager', { id });
   },
 
   // --- COOPERADOS ---
@@ -329,6 +332,9 @@ export const StorageService = {
     const newList = list.filter(c => String(c.id) !== String(id));
     localStorage.setItem(COOPERADOS_KEY, JSON.stringify(newList));
     StorageService.logAudit('REMOCAO_CADASTRO', `Cooperado ID ${id} removido.`);
+
+    // Sincronizar exclusão com Neon
+    syncToNeon('delete_cooperado', { id });
   },
 
   getPontos: (): RegistroPonto[] => {
@@ -430,6 +436,9 @@ export const StorageService = {
     const newList = list.filter(h => h.id !== id);
     localStorage.setItem(HOSPITAIS_KEY, JSON.stringify(newList));
     StorageService.logAudit('REMOCAO_HOSPITAL', `Hospital ID ${id} removido.`);
+
+    // Sincronizar exclusão com Neon
+    syncToNeon('delete_hospital', { id });
   },
 
   // Category Management

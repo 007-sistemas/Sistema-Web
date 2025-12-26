@@ -162,6 +162,30 @@ export default async function handler(req: any, res: any) {
       return res.status(200).json({ ok: true });
     }
 
+    // Delete Manager
+    if (action === "delete_manager") {
+      console.log('[SYNC] Excluindo manager:', data.id);
+      await sql`DELETE FROM managers WHERE id = ${data.id}`;
+      console.log('[SYNC] Manager excluído com sucesso');
+      return res.status(200).json({ ok: true });
+    }
+
+    // Delete Cooperado
+    if (action === "delete_cooperado") {
+      console.log('[SYNC] Excluindo cooperado:', data.id);
+      await sql`DELETE FROM cooperados WHERE id = ${data.id}`;
+      console.log('[SYNC] Cooperado excluído com sucesso');
+      return res.status(200).json({ ok: true });
+    }
+
+    // Delete Hospital
+    if (action === "delete_hospital") {
+      console.log('[SYNC] Excluindo hospital:', data.id);
+      await sql`DELETE FROM hospitals WHERE id = ${data.id}`;
+      console.log('[SYNC] Hospital excluído com sucesso');
+      return res.status(200).json({ ok: true });
+    }
+
     return res.status(400).json({ error: "Unknown action" });
   } catch (err: any) {
     console.error("[SYNC ERROR]", err);
