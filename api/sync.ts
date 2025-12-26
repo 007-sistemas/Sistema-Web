@@ -20,12 +20,14 @@ export default async function handler(req: any, res: any) {
 
     // Vercel (Node) pode entregar req.body já parseado, string ou stream.
     if (!parsed) {
-      parsed = await new Promise((resolve) => {
-        let body = '';
-        req.on('data', (chunk: any) => { body += chunk; });
-        req.on('end', () => resolve(body));
-        req.on('error', () => resolve(null));
-      });
+      // Ler stream manualmente (Node runtime)
+      const chunks: any[] = [];
+      for await (const chunk of req) {
+        chunks.push(chunk);
+      }
+      if (chunks.length) {
+        parsed = Buffer.concat(chunks).toString();
+      }
     }
 
     if (typeof parsed === 'string') {
