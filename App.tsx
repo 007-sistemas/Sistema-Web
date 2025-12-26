@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Layout } from './components/Layout';
 import { StorageService } from './services/storage';
+import { syncInitialData } from './services/syncInitial';
 import { CooperadoRegister } from './views/CooperadoRegister';
 import { BiometriaManager } from './views/BiometriaManager';
 import { PontoMachine } from './views/PontoMachine';
@@ -34,6 +35,10 @@ export default function App() {
 
   useEffect(() => {
     StorageService.init();
+    
+    // Sincronizar dados seed (cooperados e hospitais) com Neon
+    syncInitialData();
+    
     const session = StorageService.getSession();
     if (session) {
       setIsAuthenticated(true);
