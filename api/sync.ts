@@ -90,7 +90,9 @@ export default async function handler(req: any, res: any) {
 
     // Sync Hospital
     if (action === "sync_hospital") {
+      console.log('[SYNC] Sincronizando hospital:', data.id);
       const { id, nome, slug, usuarioAcesso, senha, endereco, permissoes, setores } = data;
+      
       await sql`
         INSERT INTO hospitals (id, nome, slug, usuario_acesso, senha, endereco, permissoes, setores)
         VALUES (${id}, ${nome}, ${slug}, ${usuarioAcesso}, ${senha}, ${endereco ? JSON.stringify(endereco) : null}, ${permissoes ? JSON.stringify(permissoes) : null}, ${setores ? JSON.stringify(setores) : null})
@@ -101,9 +103,10 @@ export default async function handler(req: any, res: any) {
           senha = ${senha},
           endereco = ${endereco ? JSON.stringify(endereco) : null},
           permissoes = ${permissoes ? JSON.stringify(permissoes) : null},
-          setores = ${setores ? JSON.stringify(setores) : null};
+          setores = ${setores ? JSON.stringify(setores) : null}
       `;
 
+      console.log('[SYNC] Hospital sincronizado com sucesso');
       return res.status(200).json({ ok: true });
     }
 
