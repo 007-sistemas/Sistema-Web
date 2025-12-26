@@ -141,11 +141,15 @@ export default async function handler(req: any, res: any) {
       console.log('[SYNC] Sincronizando ponto:', data.id);
       const { id, codigo, cooperadoId, cooperadoNome, timestamp, tipo, local, hospitalId, setorId, observacao, relatedId, status, isManual, validadoPor, justificativa } = data;
       
-      // Verificar se cooperado existe antes de inserir
+      // Garantir que o cooperado exista (cria mínimo se necessário)
       const cooperadoExists = await sql`SELECT id FROM cooperados WHERE id = ${cooperadoId}`;
       if (!cooperadoExists || cooperadoExists.length === 0) {
-        console.warn(`[SYNC] Cooperado ${cooperadoId} não encontrado, ignorando ponto ${id}`);
-        return res.status(200).json({ ok: true, skipped: true });
+        console.warn(`[SYNC] Cooperado ${cooperadoId} não encontrado. Criando registro mínimo.`);
+        await sql`
+          INSERT INTO cooperados (id, name, created_at, updated_at)
+          VALUES (${cooperadoId}, ${cooperadoNome || 'Sem Nome'}, NOW(), NOW())
+          ON CONFLICT (id) DO UPDATE SET name = ${cooperadoNome || 'Sem Nome'}, updated_at = NOW()
+        `;
       }
       
       await sql`
