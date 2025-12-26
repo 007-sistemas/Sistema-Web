@@ -84,6 +84,22 @@ export interface JustificativaData {
   dataSolicitacao: string;
 }
 
+export interface Justificativa {
+  id: string;
+  cooperadoId: string;
+  cooperadoNome: string;
+  pontoId?: string; // Pode referenciar um ponto específico ou null
+  motivo: string;
+  descricao?: string;
+  dataSolicitacao: string;
+  status: 'Pendente' | 'Aprovada' | 'Rejeitada';
+  aprovadoPor?: string;
+  dataAprovacao?: string;
+  motivoRejeicao?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface RegistroPonto {
   id: string;
   codigo: string; // Legacy numeric code (e.g. 248834)

@@ -1,5 +1,5 @@
 
-import { Cooperado, RegistroPonto, AuditLog, StatusCooperado, Hospital, Manager, HospitalPermissions } from '../types';
+import { Cooperado, RegistroPonto, AuditLog, StatusCooperado, Hospital, Manager, HospitalPermissions, Justificativa } from '../types';
 import { syncToNeon } from './api';
 
 const COOPERADOS_KEY = 'biohealth_cooperados';
@@ -8,6 +8,7 @@ const AUDIT_KEY = 'biohealth_audit';
 const HOSPITAIS_KEY = 'biohealth_hospitais';
 const MANAGERS_KEY = 'biohealth_managers';
 const CATEGORIAS_KEY = 'biohealth_categorias';
+const JUSTIFICATIVAS_KEY = 'biohealth_justificativas';
 const SESSION_KEY = 'biohealth_session';
 
 // Initial Seed Data
@@ -493,5 +494,80 @@ export const StorageService = {
 
   clearConfiguredHospital: () => {
     localStorage.removeItem('APP_HOSPITAL_ID');
+  },
+
+  // --- JUSTIFICATIVAS ---
+  
+  getJustificativas: (): Justificativa[] => {
+    const data = localStorage.getItem(JUSTIFICATIVAS_KEY);
+    return data ? JSON.parse(data) : [];
+  },
+
+  getJustificativasByStatus: (status: 'Pendente' | 'Aprovada' | 'Rejeitada'): Justificativa[] => {
+    return StorageService.getJustificativas().filter(j => j.status === status);
+  },
+
+  getJustificativasByCooperado: (cooperadoId: string): Justificativa[] => {
+    return StorageService.getJustificativas().filter(j => j.cooperadoId === cooperadoId);
+  },
+
+  saveJustificativa: (justificativa: Justificativa): void => {
+    const list = StorageService.getJustificativas();
+    const index = list.findIndex(j => j.id === justificativa.id);
+    
+    if (index >= 0) {
+      list[index] = { ...justificativa, updatedAt: new Date().toISOString() };
+    } else {
+      list.push(justificativa);
+    }
+    
+    localStorage.setItem(JUSTIFICATIVAS_KEY, JSON.stringify(list));
+    StorageService.logAudit('JUSTIFICATIVA_SALVA', `Justificativa ${justificativa.id} - ${justificativa.status}`);
+
+    // Sincronizar com Neon
+    syncToNeon('sync_justificativa', justificativa);
+  },
+
+  aprovarJustificativa: (id: string, aprovadoPor: string): void => {
+    const list = StorageService.getJustificativas();
+    const index = list.findIndex(j => j.id === id);
+    
+    if (index >= 0) {
+      list[index] = {
+        ...list[index],
+        status: 'Aprovada',
+        aprovadoPor,
+        dataAprovacao: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      localStorage.setItem(JUSTIFICATIVAS_KEY, JSON.stringify(list));
+      StorageService.logAudit('JUSTIFICATIVA_APROVADA', `Justificativa ${id} aprovada por ${aprovadoPor}`);
+      
+      // Sincronizar com Neon
+      syncToNeon('sync_justificativa', list[index]);
+    }
+  },
+
+  rejeitarJustificativa: (id: string, aprovadoPor: string, motivoRejeicao: string): void => {
+    const list = StorageService.getJustificativas();
+    const index = list.findIndex(j => j.id === id);
+    
+    if (index >= 0) {
+      list[index] = {
+        ...list[index],
+        status: 'Rejeitada',
+        aprovadoPor,
+        motivoRejeicao,
+        dataAprovacao: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      localStorage.setItem(JUSTIFICATIVAS_KEY, JSON.stringify(list));
+      StorageService.logAudit('JUSTIFICATIVA_REJEITADA', `Justificativa ${id} rejeitada por ${aprovadoPor}: ${motivoRejeicao}`);
+      
+      // Sincronizar com Neon
+      syncToNeon('sync_justificativa', list[index]);
+    }
   }
 };

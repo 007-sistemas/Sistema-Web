@@ -165,6 +165,26 @@ export default async function handler(req: any, res: any) {
       return res.status(200).json({ ok: true });
     }
 
+    // Sync Justificativa
+    if (action === "sync_justificativa") {
+      console.log('[SYNC] Sincronizando justificativa:', data.id);
+      const { id, cooperadoId, cooperadoNome, pontoId, motivo, descricao, dataSolicitacao, status, aprovadoPor, dataAprovacao, motivoRejeicao } = data;
+      
+      await sql`
+        INSERT INTO justificativas (id, cooperado_id, cooperado_nome, ponto_id, motivo, descricao, data_solicitacao, status, aprovado_por, data_aprovacao, motivo_rejeicao, updated_at)
+        VALUES (${id}, ${cooperadoId}, ${cooperadoNome}, ${pontoId}, ${motivo}, ${descricao}, ${dataSolicitacao}, ${status}, ${aprovadoPor}, ${dataAprovacao}, ${motivoRejeicao}, NOW())
+        ON CONFLICT (id) DO UPDATE SET
+          status = ${status},
+          aprovado_por = ${aprovadoPor},
+          data_aprovacao = ${dataAprovacao},
+          motivo_rejeicao = ${motivoRejeicao},
+          updated_at = NOW()
+      `;
+
+      console.log('[SYNC] Justificativa sincronizada com sucesso');
+      return res.status(200).json({ ok: true });
+    }
+
     // Delete Manager
     if (action === "delete_manager") {
       console.log('[SYNC] Excluindo manager:', data.id);

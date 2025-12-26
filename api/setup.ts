@@ -112,6 +112,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       );
     `;
 
+    await sql`
+      CREATE TABLE justificativas (
+        id TEXT PRIMARY KEY,
+        cooperado_id TEXT NOT NULL REFERENCES cooperados(id) ON DELETE CASCADE,
+        cooperado_nome TEXT NOT NULL,
+        ponto_id TEXT REFERENCES pontos(id) ON DELETE SET NULL,
+        motivo TEXT NOT NULL,
+        descricao TEXT,
+        data_solicitacao TIMESTAMPTZ NOT NULL,
+        status TEXT DEFAULT 'Pendente',
+        aprovado_por TEXT,
+        data_aprovacao TIMESTAMPTZ,
+        motivo_rejeicao TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `;
+
     res.status(200).json({ ok: true });
   } catch (err: any) {
     res.status(500).json({ error: err?.message || "Unknown error" });
