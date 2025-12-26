@@ -38,34 +38,10 @@ const seedData = () => {
     localStorage.setItem(MANAGERS_KEY, JSON.stringify([masterUser]));
   }
 
+  // Não carrega seed data de cooperados aqui; deixa vazio para que
+  // refreshCooperadosFromRemote() preencha com dados do Neon no login
   if (!localStorage.getItem(COOPERADOS_KEY)) {
-    const initialCooperados: Cooperado[] = [
-      {
-        id: '1',
-        nome: 'Dra. Ana Silva',
-        cpf: '123.456.789-00',
-        matricula: 'MED-2024-001',
-        especialidade: 'Cardiologia',
-        telefone: '(11) 99999-9999',
-        email: 'ana.silva@coop.com',
-        status: StatusCooperado.ATIVO,
-        biometrias: [{ id: 'bio-1', fingerIndex: 1, hash: 'simulated_hash_xyz', createdAt: new Date().toISOString() }],
-        updatedAt: new Date().toISOString()
-      },
-      {
-        id: '2',
-        nome: 'Enf. Carlos Souza',
-        cpf: '321.654.987-00',
-        matricula: 'ENF-2024-055',
-        especialidade: 'Enfermeiro',
-        telefone: '(11) 98888-8888',
-        email: 'carlos.souza@coop.com',
-        status: StatusCooperado.ATIVO,
-        biometrias: [],
-        updatedAt: new Date().toISOString()
-      }
-    ];
-    localStorage.setItem(COOPERADOS_KEY, JSON.stringify(initialCooperados));
+    localStorage.setItem(COOPERADOS_KEY, JSON.stringify([]));
   }
 
   if (!localStorage.getItem(HOSPITAIS_KEY)) {
@@ -381,7 +357,10 @@ export const StorageService = {
         updatedAt: row.updated_at || new Date().toISOString()
       }));
 
+      // Substitui completamente o localStorage com dados do Neon
+      // Garante que IDs, deletados, etc. fiquem sincronizados
       localStorage.setItem(COOPERADOS_KEY, JSON.stringify(mapped));
+      console.log('[COOPERADOS] Sincronizado:', mapped.length, 'registros do Neon');
     } catch (err) {
       console.warn('[COOPERADOS] Erro ao atualizar do Neon:', err);
     }
