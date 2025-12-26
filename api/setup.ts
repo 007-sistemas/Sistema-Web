@@ -24,7 +24,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     await sql`DROP TABLE IF EXISTS biometrics CASCADE;`;
     await sql`DROP TABLE IF EXISTS pontos CASCADE;`;
     await sql`DROP TABLE IF EXISTS hospitals CASCADE;`;
+    await sql`DROP TABLE IF EXISTS managers CASCADE;`;
     await sql`DROP TABLE IF EXISTS cooperados CASCADE;`;
+    await sql`DROP TABLE IF EXISTS users CASCADE;`;
 
     await sql`CREATE EXTENSION IF NOT EXISTS pgcrypto;`;
 
