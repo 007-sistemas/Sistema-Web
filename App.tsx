@@ -37,8 +37,10 @@ export default function App() {
   useEffect(() => {
     StorageService.init();
     
-    // Sincronizar dados seed (cooperados e hospitais) com Neon
-    syncInitialData();
+    // Nota: não sincronizar dados seed para Neon.
+    // Dados agora vêm DO Neon (refreshCooperadosFromRemote no login),
+    // não o contrário. syncInitialData() pode criar duplicatas/órfãos.
+    // syncInitialData();
     
     const session = StorageService.getSession();
     if (session) {
