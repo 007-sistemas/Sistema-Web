@@ -1,5 +1,22 @@
+const isLocalHost = () => {
+  if (typeof window === 'undefined') return false;
+  const host = window.location.hostname;
+  return host === 'localhost' || host === '127.0.0.1';
+};
+
+const API_BASE =
+  (import.meta.env.DEV && isLocalHost())
+    ? (import.meta.env.VITE_API_BASE || 'https://bypass-lime.vercel.app')
+    : (import.meta.env.VITE_API_BASE || '');
+
+const buildUrl = (path: string) => {
+  const trimmedBase = API_BASE.replace(/\/$/, '');
+  const trimmedPath = path.replace(/^\//, '');
+  return `${trimmedBase}/api/${trimmedPath}`;
+};
+
 export async function apiGet<T>(path: string): Promise<T> {
-  const res = await fetch(`/api/${path}`, {
+  const res = await fetch(buildUrl(path), {
     method: "GET",
     headers: { "Content-Type": "application/json" }
   });
@@ -8,7 +25,7 @@ export async function apiGet<T>(path: string): Promise<T> {
 }
 
 export async function apiPost<T>(path: string, body: any): Promise<T> {
-  const res = await fetch(`/api/${path}`, {
+  const res = await fetch(buildUrl(path), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)

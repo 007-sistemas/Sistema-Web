@@ -16,6 +16,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const sql = neon(connectionString);
+
+    // Garante colunas esperadas em bases antigas
+    await sql`ALTER TABLE managers ADD COLUMN IF NOT EXISTS cpf text`;
+    await sql`ALTER TABLE managers ADD COLUMN IF NOT EXISTS email text`;
+    await sql`ALTER TABLE managers ADD COLUMN IF NOT EXISTS permissoes jsonb DEFAULT '{}'::jsonb`;
+
     const rows = await sql`SELECT id, username, password, cpf, email, permissoes FROM managers ORDER BY created_at DESC`;
     res.status(200).json(rows);
   } catch (err: any) {

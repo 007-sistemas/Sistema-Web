@@ -1,6 +1,6 @@
 
 import { Cooperado, RegistroPonto, AuditLog, StatusCooperado, Hospital, Manager, HospitalPermissions, Justificativa } from '../types';
-import { syncToNeon } from './api';
+import { apiGet, syncToNeon } from './api';
 
 const COOPERADOS_KEY = 'biohealth_cooperados';
 const PONTOS_KEY = 'biohealth_pontos';
@@ -280,9 +280,7 @@ export const StorageService = {
 
   refreshManagersFromRemote: async () => {
     try {
-      const resp = await fetch('/api/managers');
-      if (!resp.ok) return;
-      const rows = await resp.json();
+      const rows = await apiGet<any[]>('managers');
       if (!Array.isArray(rows)) return;
 
       const defaultPerms: HospitalPermissions = {
