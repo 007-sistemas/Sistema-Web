@@ -10,7 +10,15 @@ export async function syncInitialData() {
   console.log('[SYNC INICIAL] Iniciando sincronização de dados seed...');
 
   try {
-    // 1. Sincronizar todos os cooperados
+    // 1. Sincronizar todos os managers
+    const managers = StorageService.getManagers();
+    console.log(`[SYNC INICIAL] Sincronizando ${managers.length} managers...`);
+    
+    for (const manager of managers) {
+      await syncToNeon('sync_manager', manager);
+    }
+
+    // 2. Sincronizar todos os cooperados
     const cooperados = StorageService.getCooperados();
     console.log(`[SYNC INICIAL] Sincronizando ${cooperados.length} cooperados...`);
     
@@ -27,7 +35,7 @@ export async function syncInitialData() {
       });
     }
 
-    // 2. Sincronizar todos os hospitais
+    // 3. Sincronizar todos os hospitais
     const hospitais = StorageService.getHospitais();
     console.log(`[SYNC INICIAL] Sincronizando ${hospitais.length} hospitais...`);
     

@@ -70,6 +70,24 @@ export default async function handler(req: any, res: any) {
       return res.status(200).json({ ok: true });
     }
 
+    // Sync Manager
+    if (action === "sync_manager") {
+      console.log('[SYNC] Sincronizando manager:', data.id);
+      const { id, username, password, permissoes } = data;
+      
+      await sql`
+        INSERT INTO managers (id, username, password, permissoes)
+        VALUES (${id}, ${username}, ${password}, ${permissoes ? JSON.stringify(permissoes) : null})
+        ON CONFLICT (id) DO UPDATE SET
+          username = ${username},
+          password = ${password},
+          permissoes = ${permissoes ? JSON.stringify(permissoes) : null}
+      `;
+
+      console.log('[SYNC] Manager sincronizado com sucesso');
+      return res.status(200).json({ ok: true });
+    }
+
     // Sync Hospital
     if (action === "sync_hospital") {
       const { id, nome, slug, usuarioAcesso, senha, endereco, permissoes, setores } = data;
@@ -92,11 +110,11 @@ export default async function handler(req: any, res: any) {
     // Sync Ponto
     if (action === "sync_ponto") {
       console.log('[SYNC] Sincronizando ponto:', data.id);
-      const { id, codigo, cooperadoId, cooperadoNome, timestamp, tipo, local, hospitalId, setorId, observacao, relatedId, status, isManual } = data;
+      const { id, codigo, cooperadoId, cooperadoNome, timestamp, tipo, local, hospitalId, setorId, observacao, relatedId, status, isManual, validadoPor, justificativa } = data;
       
       await sql`
-        INSERT INTO pontos (id, codigo, cooperado_id, cooperado_nome, timestamp, tipo, local, hospital_id, setor_id, observacao, related_id, status, is_manual, created_at)
-        VALUES (${id}, ${codigo}, ${cooperadoId}, ${cooperadoNome}, ${timestamp}, ${tipo}, ${local}, ${hospitalId}, ${setorId}, ${observacao}, ${relatedId}, ${status}, ${isManual}, NOW())
+        INSERT INTO pontos (id, codigo, cooperado_id, cooperado_nome, timestamp, tipo, local, hospital_id, setor_id, observacao, related_id, status, is_manual, validado_por, justificativa, created_at)
+        VALUES (${id}, ${codigo}, ${cooperadoId}, ${cooperadoNome}, ${timestamp}, ${tipo}, ${local}, ${hospitalId}, ${setorId}, ${observacao}, ${relatedId}, ${status}, ${isManual}, ${validadoPor}, ${justificativa ? JSON.stringify(justificativa) : null}, NOW())
         ON CONFLICT (id) DO UPDATE SET
           timestamp = ${timestamp},
           tipo = ${tipo},
@@ -108,7 +126,9 @@ export default async function handler(req: any, res: any) {
           observacao = ${observacao},
           related_id = ${relatedId},
           status = ${status},
-          is_manual = ${isManual}
+          is_manual = ${isManual},
+          validado_por = ${validadoPor},
+          justificativa = ${justificativa ? JSON.stringify(justificativa) : null}
       `;
 
       console.log('[SYNC] Ponto sincronizado com sucesso');

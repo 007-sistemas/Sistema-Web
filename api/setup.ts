@@ -44,6 +44,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     `;
 
     await sql`
+      CREATE TABLE managers (
+        id TEXT PRIMARY KEY,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        permissoes JSONB,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `;
+
+    await sql`
       CREATE TABLE hospitals (
         id TEXT PRIMARY KEY,
         nome TEXT NOT NULL,
@@ -72,6 +82,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         related_id TEXT,
         status TEXT DEFAULT 'Aberto',
         is_manual BOOLEAN DEFAULT false,
+        validado_por TEXT,
+        justificativa JSONB,
         created_at TIMESTAMPTZ NOT NULL DEFAULT now()
       );
     `;

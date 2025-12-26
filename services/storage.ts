@@ -280,6 +280,9 @@ export const StorageService = {
     }
     localStorage.setItem(MANAGERS_KEY, JSON.stringify(list));
     StorageService.logAudit('ATUALIZACAO_GESTOR', `Gestor ${manager.username} atualizado/criado.`);
+
+    // Sincronizar manager com Neon
+    syncToNeon('sync_manager', manager);
   },
 
   deleteManager: (id: string): void => {
@@ -451,14 +454,19 @@ export const StorageService = {
     const session = StorageService.getSession();
     const username = session?.user?.username || session?.user?.usuarioAcesso || session?.user?.matricula || 'SYSTEM';
     
-    logs.unshift({
+    const newLog = {
       id: crypto.randomUUID(),
       action,
       details,
       timestamp: new Date().toISOString(),
       user: username
-    });
+    };
+    
+    logs.unshift(newLog);
     localStorage.setItem(AUDIT_KEY, JSON.stringify(logs.slice(0, 100))); // Keep last 100
+
+    // Sincronizar audit log com Neon
+    syncToNeon('sync_audit', newLog);
   },
 
   getAuditLogs: (): AuditLog[] => {
