@@ -43,6 +43,52 @@ export async function syncInitialData() {
       await syncToNeon('sync_hospital', hospital);
     }
 
+    // 4. Sincronizar todos os pontos
+    const pontos = StorageService.getPontos();
+    console.log(`[SYNC INICIAL] Sincronizando ${pontos.length} pontos...`);
+    
+    for (const ponto of pontos) {
+      await syncToNeon('sync_ponto', {
+        id: ponto.id,
+        codigo: ponto.codigo,
+        cooperadoId: ponto.cooperadoId,
+        cooperadoNome: ponto.cooperadoNome,
+        timestamp: ponto.timestamp,
+        tipo: ponto.tipo,
+        local: ponto.local,
+        hospitalId: ponto.hospitalId,
+        setorId: ponto.setorId,
+        observacao: ponto.observacao,
+        relatedId: ponto.relatedId,
+        status: ponto.status,
+        isManual: ponto.isManual,
+        validadoPor: ponto.validadoPor,
+        justificativa: ponto.justificativa
+      });
+    }
+
+    // 5. Sincronizar todas as justificativas
+    const justificativas = StorageService.getJustificativas();
+    console.log(`[SYNC INICIAL] Sincronizando ${justificativas.length} justificativas...`);
+    
+    for (const just of justificativas) {
+      await syncToNeon('sync_justificativa', just);
+    }
+
+    // 6. Sincronizar logs de auditoria
+    const auditLogs = StorageService.getAuditLogs();
+    console.log(`[SYNC INICIAL] Sincronizando ${auditLogs.length} audit logs...`);
+    
+    for (const log of auditLogs) {
+      await syncToNeon('sync_audit', {
+        id: log.id,
+        action: log.action,
+        details: log.details,
+        timestamp: log.timestamp,
+        user: log.user
+      });
+    }
+
     console.log('[SYNC INICIAL] ✅ Sincronização inicial concluída!');
   } catch (err) {
     console.error('[SYNC INICIAL] ⚠️ Erro na sincronização:', err);
