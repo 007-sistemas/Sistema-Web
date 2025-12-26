@@ -56,6 +56,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     `;
 
     await sql`ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS slug TEXT;`;
+    await sql`ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS nome TEXT;`;
     await sql`ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS usuario_acesso TEXT;`;
     await sql`ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS senha TEXT;`;
     await sql`ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS endereco JSONB;`;
