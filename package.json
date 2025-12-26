@@ -15,7 +15,8 @@
     "recharts": "^3.5.1",
     "vite": "^7.2.4",
     "@vitejs/plugin-react": "^5.1.1",
-    "path": "^0.12.7"
+    "path": "^0.12.7",
+    "@neondatabase/serverless": "^0.10.4"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
