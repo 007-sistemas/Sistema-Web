@@ -13,7 +13,22 @@ export default async function handler(req: any, res: any) {
 
   try {
     const sql = neon(connectionString);
-    const { action, data } = req.body;
+
+    // Parse body defensivamente: em produção o Vercel já entrega JSON, mas
+    // chamadas manuais (curl) podem chegar como string.
+    let parsed = req.body;
+    if (typeof parsed === 'string') {
+      try { parsed = JSON.parse(parsed); } catch (err) {
+        return res.status(400).json({ error: "Invalid JSON" });
+      }
+    }
+    if (!parsed && req.rawBody) {
+      try { parsed = JSON.parse(req.rawBody.toString()); } catch (err) {
+        return res.status(400).json({ error: "Invalid JSON" });
+      }
+    }
+
+    const { action, data } = parsed || {};
 
     if (!action || !data) {
       return res.status(400).json({ error: "Missing action or data" });
