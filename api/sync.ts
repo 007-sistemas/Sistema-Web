@@ -3,6 +3,8 @@ import { neon } from "@neondatabase/serverless";
 const connectionString = process.env.DATABASE_URL;
 
 export default async function handler(req: any, res: any) {
+  console.log('[SYNC] Requisição recebida:', req.method);
+  
   if (!connectionString) {
     return res.status(500).json({ error: "Missing DATABASE_URL env var" });
   }
@@ -32,18 +34,22 @@ export default async function handler(req: any, res: any) {
 
     if (typeof parsed === 'string') {
       try { parsed = JSON.parse(parsed); } catch (err) {
+        console.error('[SYNC] Erro ao parsear JSON:', err);
         return res.status(400).json({ error: "Invalid JSON" });
       }
     }
 
     const { action, data } = parsed || {};
+    console.log('[SYNC] Action:', action, 'Data keys:', data ? Object.keys(data) : 'none');
 
     if (!action || !data) {
+      console.error('[SYNC] Missing action or data');
       return res.status(400).json({ error: "Missing action or data" });
     }
 
     // Sync Cooperados
     if (action === "sync_cooperado") {
+      console.log('[SYNC] Sincronizando cooperado:', data.id);
       const { id, nome, cpf, email, telefone, especialidade, matricula, status } = data;
       
       await sql`
@@ -60,6 +66,7 @@ export default async function handler(req: any, res: any) {
           updated_at = NOW()
       `;
 
+      console.log('[SYNC] Cooperado sincronizado com sucesso');
       return res.status(200).json({ ok: true });
     }
 
@@ -84,6 +91,7 @@ export default async function handler(req: any, res: any) {
 
     // Sync Ponto
     if (action === "sync_ponto") {
+      console.log('[SYNC] Sincronizando ponto:', data.id);
       const { id, codigo, cooperadoId, cooperadoNome, timestamp, tipo, local, hospitalId, setorId, observacao, relatedId, status, isManual } = data;
       
       await sql`
@@ -103,6 +111,7 @@ export default async function handler(req: any, res: any) {
           is_manual = ${isManual}
       `;
 
+      console.log('[SYNC] Ponto sincronizado com sucesso');
       return res.status(200).json({ ok: true });
     }
 
