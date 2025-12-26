@@ -18,11 +18,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const sql = neon(connectionString);
 
-    // Create tables if they do not exist
+    // Drop existing tables to recreate with correct schema
+    await sql`DROP TABLE IF EXISTS audit_logs CASCADE;`;
+    await sql`DROP TABLE IF EXISTS biometrias CASCADE;`;
+    await sql`DROP TABLE IF EXISTS biometrics CASCADE;`;
+    await sql`DROP TABLE IF EXISTS pontos CASCADE;`;
+    await sql`DROP TABLE IF EXISTS hospitals CASCADE;`;
+    await sql`DROP TABLE IF EXISTS cooperados CASCADE;`;
+
     await sql`CREATE EXTENSION IF NOT EXISTS pgcrypto;`;
 
     await sql`
-      CREATE TABLE IF NOT EXISTS cooperados (
+      CREATE TABLE cooperados (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         cpf TEXT UNIQUE,
@@ -36,13 +43,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       );
     `;
 
-    // Garantir colunas novas
-    await sql`ALTER TABLE cooperados ADD COLUMN IF NOT EXISTS matricula TEXT;`;
-    await sql`ALTER TABLE cooperados ADD COLUMN IF NOT EXISTS specialty TEXT;`;
-    await sql`ALTER TABLE cooperados ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'ATIVO';`;
-
     await sql`
-      CREATE TABLE IF NOT EXISTS hospitals (
+      CREATE TABLE hospitals (
         id TEXT PRIMARY KEY,
         nome TEXT NOT NULL,
         slug TEXT UNIQUE,
@@ -55,16 +57,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       );
     `;
 
-    await sql`ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS slug TEXT;`;
-    await sql`ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS nome TEXT;`;
-    await sql`ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS usuario_acesso TEXT;`;
-    await sql`ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS senha TEXT;`;
-    await sql`ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS endereco JSONB;`;
-    await sql`ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS permissoes JSONB;`;
-    await sql`ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS setores JSONB;`;
-
     await sql`
-      CREATE TABLE IF NOT EXISTS pontos (
+      CREATE TABLE pontos (
         id TEXT PRIMARY KEY,
         codigo TEXT,
         cooperado_id TEXT NOT NULL REFERENCES cooperados(id) ON DELETE CASCADE,
@@ -82,15 +76,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       );
     `;
 
-    await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS codigo TEXT;`;
-    await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS cooperado_nome TEXT;`;
-    await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS hospital_id TEXT;`;
-    await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS setor_id TEXT;`;
-    await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS observacao TEXT;`;
-    await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS related_id TEXT;`;
-
     await sql`
-      CREATE TABLE IF NOT EXISTS biometrias (
+      CREATE TABLE biometrias (
         id TEXT PRIMARY KEY,
         cooperado_id TEXT NOT NULL REFERENCES cooperados(id) ON DELETE CASCADE,
         finger_index INTEGER,
@@ -101,7 +88,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     `;
 
     await sql`
-      CREATE TABLE IF NOT EXISTS audit_logs (
+      CREATE TABLE audit_logs (
         id TEXT PRIMARY KEY,
         action TEXT NOT NULL,
         details TEXT,
