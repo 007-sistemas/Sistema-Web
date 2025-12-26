@@ -93,6 +93,9 @@ export default async function handler(req: any, res: any) {
       console.log('[SYNC] Sincronizando hospital:', data.id);
       const { id, nome, slug, usuarioAcesso, senha, endereco, permissoes, setores } = data;
       
+      // Primeiro tenta deletar se existir com slug diferente
+      await sql`DELETE FROM hospitals WHERE slug = ${slug} AND id != ${id}`;
+      
       await sql`
         INSERT INTO hospitals (id, nome, slug, usuario_acesso, senha, endereco, permissoes, setores)
         VALUES (${id}, ${nome}, ${slug}, ${usuarioAcesso}, ${senha}, ${endereco ? JSON.stringify(endereco) : null}, ${permissoes ? JSON.stringify(permissoes) : null}, ${setores ? JSON.stringify(setores) : null})

@@ -3,6 +3,9 @@ import { syncToNeon } from './api';
 
 let syncExecuted = false;
 
+// Helper para aguardar entre batches
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export async function syncInitialData() {
   if (syncExecuted) return;
   syncExecuted = true;
@@ -17,6 +20,7 @@ export async function syncInitialData() {
     for (const manager of managers) {
       await syncToNeon('sync_manager', manager);
     }
+    await delay(500); // Aguardar para garantir persistência
 
     // 2. Sincronizar todos os cooperados
     const cooperados = StorageService.getCooperados();
@@ -34,6 +38,7 @@ export async function syncInitialData() {
         status: cooperado.status
       });
     }
+    await delay(500); // Aguardar para garantir persistência
 
     // 3. Sincronizar todos os hospitais
     const hospitais = StorageService.getHospitais();
@@ -42,6 +47,7 @@ export async function syncInitialData() {
     for (const hospital of hospitais) {
       await syncToNeon('sync_hospital', hospital);
     }
+    await delay(500); // Aguardar para garantir persistência
 
     // 4. Sincronizar todos os pontos
     const pontos = StorageService.getPontos();
