@@ -1,5 +1,6 @@
 
 import { Cooperado, RegistroPonto, AuditLog, StatusCooperado, Hospital, Manager, HospitalPermissions } from '../types';
+import { syncToNeon } from './api';
 
 const COOPERADOS_KEY = 'biohealth_cooperados';
 const PONTOS_KEY = 'biohealth_pontos';
@@ -305,6 +306,17 @@ export const StorageService = {
     }
     localStorage.setItem(COOPERADOS_KEY, JSON.stringify(list));
     StorageService.logAudit('ATUALIZACAO_CADASTRO', `Cooperado ${cooperado.nome} atualizado/criado.`);
+    
+    // Sincronizar com Neon (assíncrono)
+    syncToNeon('sync_cooperado', {
+      id: cooperado.id,
+      nome: cooperado.nome,
+      cpf: cooperado.cpf,
+      email: cooperado.email,
+      telefone: cooperado.telefone,
+      especialidade: cooperado.especialidade,
+      status: cooperado.status
+    });
   },
 
   deleteCooperado: (id: string): void => {
@@ -325,6 +337,17 @@ export const StorageService = {
     list.push(ponto);
     localStorage.setItem(PONTOS_KEY, JSON.stringify(list));
     StorageService.logAudit('REGISTRO_PRODUCAO', `Produção (${ponto.tipo}) registrada para ${ponto.cooperadoNome}. Status: ${ponto.status}`);
+    
+    // Sincronizar com Neon (assíncrono)
+    syncToNeon('sync_ponto', {
+      id: ponto.id,
+      cooperadoId: ponto.cooperadoId,
+      timestamp: ponto.timestamp,
+      tipo: ponto.tipo,
+      local: ponto.local,
+      status: ponto.status,
+      isManual: ponto.isManual
+    });
   },
 
   updatePonto: (ponto: RegistroPonto): void => {

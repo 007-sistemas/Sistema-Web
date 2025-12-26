@@ -43,12 +43,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     await sql`
       CREATE TABLE IF NOT EXISTS cooperados (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         cpf TEXT UNIQUE,
         email TEXT,
         phone TEXT,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        specialty TEXT,
+        status TEXT DEFAULT 'ATIVO',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
       );
     `;
 
@@ -60,6 +63,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         device_id TEXT,
         captured_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         UNIQUE (cooperado_id)
+      );
+    `;
+
+    await sql`
+      CREATE TABLE IF NOT EXISTS pontos (
+        id TEXT PRIMARY KEY,
+        cooperado_id TEXT NOT NULL REFERENCES cooperados(id) ON DELETE CASCADE,
+        timestamp TEXT NOT NULL,
+        tipo TEXT NOT NULL,
+        local TEXT,
+        status TEXT DEFAULT 'Aberto',
+        is_manual BOOLEAN DEFAULT false,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `;
+
+    await sql`
+      CREATE TABLE IF NOT EXISTS biometrias (
+        id TEXT PRIMARY KEY,
+        cooperado_id TEXT NOT NULL REFERENCES cooperados(id) ON DELETE CASCADE,
+        finger_index INTEGER,
+        hash TEXT NOT NULL,
+        created_at TEXT,
+        created_at_db TIMESTAMPTZ NOT NULL DEFAULT now()
       );
     `;
 

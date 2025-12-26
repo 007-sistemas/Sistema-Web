@@ -1,7 +1,4 @@
 {
-  "functions": {
-    "api/**/*.ts": {
-      "runtime": "@vercel/node@latest"
-    }
-  }
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist"
 }

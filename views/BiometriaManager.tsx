@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Cooperado, Biometria } from '../types';
 import { StorageService } from '../services/storage';
+import { syncToNeon } from '../services/api';
 import { ScannerMock } from '../components/ScannerMock';
 import { BiometricCapture } from './BiometricCapture'; // Importando a view de diagnóstico como componente
 import { Trash2, AlertTriangle, Fingerprint, Users, Activity } from 'lucide-react';
@@ -34,6 +35,15 @@ export const BiometriaManager: React.FC = () => {
 
     StorageService.saveCooperado(updatedCooperado);
     StorageService.logAudit('CADASTRO_BIOMETRIA', `Biometria adicionada para ${updatedCooperado.nome}`);
+    
+    // Sincronizar biometria com Neon
+    syncToNeon('sync_biometria', {
+      id: newBiometria.id,
+      cooperadoId: updatedCooperado.id,
+      fingerIndex: newBiometria.fingerIndex,
+      hash: newBiometria.hash,
+      createdAt: newBiometria.createdAt
+    });
     
     // Refresh local state
     setCooperados(prev => prev.map(c => c.id === updatedCooperado.id ? updatedCooperado : c));
