@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Cooperado, StatusCooperado } from '../types';
 import { StorageService } from '../services/storage';
 import { Plus, Save, Search, Edit2, Trash2, X, Fingerprint, Briefcase, AlertCircle, Upload, Download, CheckCircle, AlertTriangle } from 'lucide-react';
-import { parseCSV, validateAndPrepareImport, importCooperados } from '../services/csvParser';
+import { parseCSV, validateAndPrepareImport, importCooperados, parseExcelFile } from '../services/csvParser';
 
 export const CooperadoRegister: React.FC = () => {
   const [cooperados, setCooperados] = useState<Cooperado[]>([]);
@@ -120,11 +120,27 @@ export const CooperadoRegister: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const text = await file.text();
-    const rows = parseCSV(text);
-    const result = validateAndPrepareImport(rows);
-    setCsvPreview(result);
-    setImportResult(null);
+    try {
+      let rows;
+      
+      // Detectar tipo de arquivo
+      if (file.name.endsWith('.csv')) {
+        const text = await file.text();
+        rows = parseCSV(text);
+      } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || file.name.endsWith('.xlsm')) {
+        rows = await parseExcelFile(file);
+      } else {
+        alert('Formato de arquivo não suportado. Use CSV ou Excel (xlsx, xls, xlsm)');
+        return;
+      }
+
+      const result = validateAndPrepareImport(rows);
+      setCsvPreview(result);
+      setImportResult(null);
+    } catch (error) {
+      console.error('Erro ao ler arquivo:', error);
+      alert('Erro ao ler arquivo. Verifique se o arquivo está válido.');
+    }
   };
 
   const handleImportCSV = async () => {
@@ -155,7 +171,8 @@ export const CooperadoRegister: React.FC = () => {
   };
 
   const downloadTemplate = () => {
-    const template = 'nome,cpf,matricula,especialidade,telefone,email,status\nExemplo,12345678901,MAT001,Médico,11999999999,email@example.com,ATIVO';
+    // Template com linhas vazias para preenchimento
+    const template = 'nome,cpf,matricula,especialidade,telefone,email,status\n\n\n\n\n';
     const blob = new Blob([template], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -271,21 +288,25 @@ export const CooperadoRegister: React.FC = () => {
                 <div className="border-2 border-dashed border-blue-300 rounded-lg p-8 bg-blue-50 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-100 transition-colors">
                   <input 
                     type="file"
-                    accept=".csv"
+                    accept=".csv,.xlsx,.xls,.xlsm"
                     onChange={handleCSVFileChange}
                     className="hidden"
                     id="csvFileInput"
                   />
                   <label htmlFor="csvFileInput" className="cursor-pointer flex flex-col items-center gap-2">
                     <Upload className="h-8 w-8 text-blue-500" />
-                    <span className="text-sm font-medium text-blue-600">Clique para selecionar arquivo CSV</span>
-                    <span className="text-xs text-gray-500">ou arraste o arquivo aqui</span>
+                    <span className="text-sm font-medium text-blue-600">Clique para selecionar arquivo</span>
+                    <span className="text-xs text-gray-500">CSV, Excel (xlsx, xls, xlsm)</span>
                   </label>
                 </div>
 
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <p className="text-xs font-semibold text-gray-700 mb-2">Formato esperado:</p>
-                  <p className="text-xs text-gray-600 font-mono">nome,cpf,matricula,especialidade,telefone,email,status</p>
+                  <p className="text-xs text-gray-600 font-mono mb-3">nome,cpf,matricula,especialidade,telefone,email,status</p>
+                  <div className="text-xs text-gray-600 space-y-1">
+                    <p><span className="font-semibold">Exemplo:</span></p>
+                    <p className="font-mono">João Silva,12345678901,MAT001,Cardiologia,11999999999,joao@email.com,ATIVO</p>
+                  </div>
                 </div>
               </div>
             ) : importResult?.success ? (

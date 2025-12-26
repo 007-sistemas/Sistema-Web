@@ -14,6 +14,7 @@ import { Management } from './views/Management';
 import { Login } from './views/Login';
 import { EspelhoBiometria } from './views/EspelhoBiometria'; 
 import { AutorizacaoPonto } from './views/AutorizacaoPonto';
+import { UserProfile } from './views/UserProfile';
 import { HospitalPermissions } from './types';
 
 export default function App() {
@@ -92,6 +93,7 @@ export default function App() {
       case 'biometria': return <BiometriaManager />;
       case 'auditoria': return <AuditLogViewer />;
       case 'gestao': return <Management />;
+      case 'perfil': return <UserProfile />;
       default: return <Dashboard />;
     }
   };

@@ -31,7 +31,8 @@ export const Management: React.FC = () => {
       auditoria: true,
       gestao: true,
       espelho: true,
-      autorizacao: true
+      autorizacao: true,
+      perfil: true
     }
   };
   

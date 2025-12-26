@@ -31,7 +31,8 @@ const seedData = () => {
         auditoria: true,
         gestao: true,
         espelho: false, // Admins usually look at general reports, but can set true if needed
-        autorizacao: true // Master has access to authorization
+        autorizacao: true, // Master has access to authorization
+        perfil: true
       }
     };
     localStorage.setItem(MANAGERS_KEY, JSON.stringify([masterUser]));
@@ -93,7 +94,8 @@ const seedData = () => {
           auditoria: false,
           gestao: false,
           espelho: false,
-          autorizacao: false
+          autorizacao: false,
+          perfil: true
         },
         setores: [
           { id: 's1', nome: 'UTI Adulto' },
@@ -125,7 +127,8 @@ const seedData = () => {
           auditoria: false,
           gestao: false,
           espelho: false,
-          autorizacao: false
+          autorizacao: false,
+          perfil: true
         },
         setores: [
           { id: 's4', nome: 'Clínica Médica' },
@@ -156,7 +159,8 @@ const seedData = () => {
           auditoria: false,
           gestao: false,
           espelho: false,
-          autorizacao: false
+          autorizacao: false,
+          perfil: true
         },
         setores: [
           { id: 's6', nome: 'Neurologia' },
@@ -244,7 +248,8 @@ export const StorageService = {
                 gestao: false,
                 testes: false,
                 espelho: true, // Only access to Mirror
-                autorizacao: false
+                autorizacao: false,
+                perfil: true
             }
         };
     }
@@ -612,6 +617,37 @@ export const StorageService = {
       
       // Sincronizar com Neon
       syncToNeon('sync_justificativa', list[index]);
+    }
+  },
+
+  // USER PREFERENCES
+  getUserPreferences: () => {
+    const session = StorageService.getSession();
+    if (!session?.user?.id) return null;
+
+    const managers = StorageService.getManagers();
+    const manager = managers.find(m => m.id === session.user.id);
+    
+    return manager?.preferences || {
+      theme: 'auto',
+      primaryColor: '#2563eb', // Default blue
+      visibleTabs: ['dashboard', 'ponto', 'relatorio', 'cooperados', 'biometria', 'auditoria'],
+      tabOrder: ['dashboard', 'ponto', 'relatorio', 'cooperados', 'biometria', 'auditoria']
+    };
+  },
+
+  saveUserPreferences: (preferences: any) => {
+    const session = StorageService.getSession();
+    if (!session?.user?.id) return;
+
+    const managers = StorageService.getManagers();
+    const index = managers.findIndex(m => m.id === session.user.id);
+    
+    if (index >= 0) {
+      managers[index].preferences = preferences;
+      localStorage.setItem(MANAGERS_KEY, JSON.stringify(managers));
+      StorageService.logAudit('PREFERENCIAS_ATUALIZADAS', `Preferências de tema e abas atualizadas`);
+      syncToNeon('sync_manager', managers[index]);
     }
   }
 };

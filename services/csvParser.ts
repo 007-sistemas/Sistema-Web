@@ -1,5 +1,6 @@
 import { Cooperado, StatusCooperado } from '../types';
 import { StorageService } from './storage';
+import * as XLSX from 'xlsx';
 
 export interface CsvRow {
   id?: string;
@@ -157,5 +158,49 @@ export const validateAndPrepareImport = (csvRows: CsvRow[]): ImportResult => {
 export const importCooperados = (cooperados: Cooperado[]): void => {
   cooperados.forEach(c => {
     StorageService.saveCooperado(c);
+  });
+};
+
+/**
+ * Parse Excel file (xlsx, xls, xlsm) into array of rows
+ */
+export const parseExcelFile = async (file: File): Promise<CsvRow[]> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = (event) => {
+      try {
+        const data = new Uint8Array(event.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        
+        // Get first sheet
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        
+        // Convert to JSON (headers as keys)
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+        
+        // Convert to CsvRow format
+        const rows: CsvRow[] = jsonData.map((row: any) => ({
+          nome: String(row.nome || '').trim(),
+          cpf: String(row.cpf || '').trim(),
+          matricula: String(row.matricula || '').trim(),
+          especialidade: String(row.especialidade || '').trim(),
+          telefone: String(row.telefone || '').trim(),
+          email: String(row.email || '').trim(),
+          status: String(row.status || '').trim(),
+        }));
+        
+        resolve(rows);
+      } catch (error) {
+        reject(error);
+      }
+    };
+    
+    reader.onerror = () => {
+      reject(new Error('Erro ao ler arquivo'));
+    };
+    
+    reader.readAsArrayBuffer(file);
   });
 };

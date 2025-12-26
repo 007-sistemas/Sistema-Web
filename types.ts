@@ -58,6 +58,7 @@ export interface HospitalPermissions {
   testes?: boolean; // Permissão opcional para área de testes
   espelho: boolean; // New permission for Cooperado View
   autorizacao: boolean; // New permission for Justification Approval
+  perfil: boolean; // New permission for User Profile
 }
 
 export interface Hospital {
@@ -71,6 +72,13 @@ export interface Hospital {
   setores: Setor[];
 }
 
+export interface UserPreferences {
+  theme: 'light' | 'dark' | 'auto';
+  primaryColor: string; // Hex color (e.g., '#2563eb')
+  visibleTabs: string[]; // Array of visible tab/view keys
+  tabOrder: string[]; // Custom order of tabs
+}
+
 export interface Manager {
   id: string;
   username: string;
@@ -78,6 +86,7 @@ export interface Manager {
   cpf: string;
   email: string;
   permissoes: HospitalPermissions;
+  preferences?: UserPreferences; // User theme/color preferences
 }
 
 export interface JustificativaData {
