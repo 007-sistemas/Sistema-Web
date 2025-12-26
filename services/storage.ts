@@ -278,6 +278,48 @@ export const StorageService = {
     return data ? JSON.parse(data) : [];
   },
 
+  refreshManagersFromRemote: async () => {
+    try {
+      const resp = await fetch('/api/managers');
+      if (!resp.ok) return;
+      const rows = await resp.json();
+      if (!Array.isArray(rows)) return;
+
+      const defaultPerms: HospitalPermissions = {
+        dashboard: false,
+        ponto: false,
+        relatorio: false,
+        cadastro: false,
+        hospitais: false,
+        biometria: false,
+        auditoria: false,
+        gestao: false,
+        espelho: false,
+        autorizacao: false,
+        perfil: false,
+      };
+
+      const mapped: Manager[] = rows.map((row: any) => {
+        let perms = row.permissoes;
+        if (typeof perms === 'string') {
+          try { perms = JSON.parse(perms); } catch (err) { perms = {}; }
+        }
+        return {
+          id: row.id,
+          username: row.username,
+          password: row.password,
+          cpf: row.cpf || '',
+          email: row.email || '',
+          permissoes: { ...defaultPerms, ...(perms || {}) },
+        };
+      });
+
+      localStorage.setItem(MANAGERS_KEY, JSON.stringify(mapped));
+    } catch (err) {
+      console.error('[AUTH] Erro ao atualizar gestores do Neon:', err);
+    }
+  },
+
   checkDuplicateCpf: (cpf: string, excludeId?: string): Manager | null => {
     const list = StorageService.getManagers();
     const clean = (s: string) => (s || '').replace(/\D/g, '');

@@ -14,17 +14,18 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    // Simulate network delay
-    setTimeout(() => {
+    try {
+      // Atualiza gestores a partir do Neon antes de autenticar
+      await StorageService.refreshManagersFromRemote();
+
       const authResult = StorageService.authenticate(username, password);
 
       if (authResult) {
-        // Create session
         const sessionData = {
           user: authResult.user,
           type: authResult.type,
@@ -37,7 +38,11 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         setError('Usuário ou senha incorretos.');
         setLoading(false);
       }
-    }, 800);
+    } catch (err) {
+      console.error('Erro no login:', err);
+      setError('Falha ao autenticar. Tente novamente.');
+      setLoading(false);
+    }
   };
 
   return (
