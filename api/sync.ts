@@ -44,16 +44,17 @@ export default async function handler(req: any, res: any) {
 
     // Sync Cooperados
     if (action === "sync_cooperado") {
-      const { id, nome, cpf, email, telefone, especialidade, status } = data;
+      const { id, nome, cpf, email, telefone, especialidade, matricula, status } = data;
       
       await sql`
-        INSERT INTO cooperados (id, name, cpf, email, phone, specialty, status, updated_at)
-        VALUES (${id}, ${nome}, ${cpf}, ${email}, ${telefone}, ${especialidade}, ${status}, NOW())
+        INSERT INTO cooperados (id, name, cpf, email, phone, specialty, matricula, status, updated_at)
+        VALUES (${id}, ${nome}, ${cpf}, ${email}, ${telefone}, ${especialidade}, ${matricula}, ${status}, NOW())
         ON CONFLICT (id) DO UPDATE SET
           name = ${nome},
           cpf = ${cpf},
           email = ${email},
           phone = ${telefone},
+          matricula = ${matricula},
           specialty = ${especialidade},
           status = ${status},
           updated_at = NOW()
@@ -62,17 +63,42 @@ export default async function handler(req: any, res: any) {
       return res.status(200).json({ ok: true });
     }
 
+    // Sync Hospital
+    if (action === "sync_hospital") {
+      const { id, nome, slug, usuarioAcesso, senha, endereco, permissoes, setores } = data;
+      await sql`
+        INSERT INTO hospitals (id, nome, slug, usuario_acesso, senha, endereco, permissoes, setores)
+        VALUES (${id}, ${nome}, ${slug}, ${usuarioAcesso}, ${senha}, ${endereco ? JSON.stringify(endereco) : null}, ${permissoes ? JSON.stringify(permissoes) : null}, ${setores ? JSON.stringify(setores) : null})
+        ON CONFLICT (id) DO UPDATE SET
+          nome = ${nome},
+          slug = ${slug},
+          usuario_acesso = ${usuarioAcesso},
+          senha = ${senha},
+          endereco = ${endereco ? JSON.stringify(endereco) : null},
+          permissoes = ${permissoes ? JSON.stringify(permissoes) : null},
+          setores = ${setores ? JSON.stringify(setores) : null};
+      `;
+
+      return res.status(200).json({ ok: true });
+    }
+
     // Sync Ponto
     if (action === "sync_ponto") {
-      const { id, cooperadoId, timestamp, tipo, local, status, isManual } = data;
+      const { id, codigo, cooperadoId, cooperadoNome, timestamp, tipo, local, hospitalId, setorId, observacao, relatedId, status, isManual } = data;
       
       await sql`
-        INSERT INTO pontos (id, cooperado_id, timestamp, tipo, local, status, is_manual, created_at)
-        VALUES (${id}, ${cooperadoId}, ${timestamp}, ${tipo}, ${local}, ${status}, ${isManual}, NOW())
+        INSERT INTO pontos (id, codigo, cooperado_id, cooperado_nome, timestamp, tipo, local, hospital_id, setor_id, observacao, related_id, status, is_manual, created_at)
+        VALUES (${id}, ${codigo}, ${cooperadoId}, ${cooperadoNome}, ${timestamp}, ${tipo}, ${local}, ${hospitalId}, ${setorId}, ${observacao}, ${relatedId}, ${status}, ${isManual}, NOW())
         ON CONFLICT (id) DO UPDATE SET
           timestamp = ${timestamp},
           tipo = ${tipo},
           local = ${local},
+          codigo = ${codigo},
+          cooperado_nome = ${cooperadoNome},
+          hospital_id = ${hospitalId},
+          setor_id = ${setorId},
+          observacao = ${observacao},
+          related_id = ${relatedId},
           status = ${status},
           is_manual = ${isManual}
       `;
@@ -110,6 +136,6 @@ export default async function handler(req: any, res: any) {
     return res.status(400).json({ error: "Unknown action" });
   } catch (err: any) {
     console.error("[SYNC ERROR]", err);
-    return res.status(500).json({ error: err?.message || "Unknown error" });
+    return res.status(500).json({ error: err?.message || "Unknown error", detail: err?.stack || String(err) });
   }
 }

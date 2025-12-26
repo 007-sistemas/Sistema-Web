@@ -29,6 +29,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         email TEXT,
         phone TEXT,
         specialty TEXT,
+        matricula TEXT,
         status TEXT DEFAULT 'ATIVO',
         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -36,22 +37,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     `;
 
     await sql`
-      CREATE TABLE IF NOT EXISTS biometrics (
+      CREATE TABLE IF NOT EXISTS hospitals (
         id TEXT PRIMARY KEY,
-        cooperado_id TEXT NOT NULL REFERENCES cooperados(id) ON DELETE CASCADE,
-        template TEXT,
-        device_id TEXT,
-        captured_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        nome TEXT NOT NULL,
+        slug TEXT UNIQUE,
+        usuario_acesso TEXT,
+        senha TEXT,
+        endereco JSONB,
+        permissoes JSONB,
+        setores JSONB,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
       );
     `;
 
     await sql`
       CREATE TABLE IF NOT EXISTS pontos (
         id TEXT PRIMARY KEY,
+        codigo TEXT,
         cooperado_id TEXT NOT NULL REFERENCES cooperados(id) ON DELETE CASCADE,
+        cooperado_nome TEXT,
         timestamp TEXT NOT NULL,
         tipo TEXT NOT NULL,
         local TEXT,
+        hospital_id TEXT,
+        setor_id TEXT,
+        observacao TEXT,
+        related_id TEXT,
         status TEXT DEFAULT 'Aberto',
         is_manual BOOLEAN DEFAULT false,
         created_at TIMESTAMPTZ NOT NULL DEFAULT now()

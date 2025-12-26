@@ -314,6 +314,7 @@ export const StorageService = {
       cpf: cooperado.cpf,
       email: cooperado.email,
       telefone: cooperado.telefone,
+      matricula: cooperado.matricula,
       especialidade: cooperado.especialidade,
       status: cooperado.status
     });
@@ -341,10 +342,16 @@ export const StorageService = {
     // Sincronizar com Neon (assíncrono)
     syncToNeon('sync_ponto', {
       id: ponto.id,
+      codigo: ponto.codigo,
       cooperadoId: ponto.cooperadoId,
+      cooperadoNome: ponto.cooperadoNome,
       timestamp: ponto.timestamp,
       tipo: ponto.tipo,
       local: ponto.local,
+      hospitalId: ponto.hospitalId,
+      setorId: ponto.setorId,
+      observacao: ponto.observacao,
+      relatedId: ponto.relatedId,
       status: ponto.status,
       isManual: ponto.isManual
     });
@@ -410,6 +417,9 @@ export const StorageService = {
     }
     localStorage.setItem(HOSPITAIS_KEY, JSON.stringify(list));
     StorageService.logAudit('ATUALIZACAO_HOSPITAL', `Hospital ${hospital.nome} atualizado.`);
+
+    // Sincronizar hospital com Neon
+    syncToNeon('sync_hospital', hospital);
   },
 
   deleteHospital: (id: string): void => {
