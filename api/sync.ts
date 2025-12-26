@@ -74,17 +74,40 @@ export default async function handler(req: any, res: any) {
     if (action === "sync_manager") {
       console.log('[SYNC] Sincronizando manager:', data.id);
       const { id, username, password, permissoes } = data;
-      
+
+      // 1) Tenta atualizar pelo ID
+      const byId = await sql`SELECT id FROM managers WHERE id = ${id}`;
+      if (byId && byId.length > 0) {
+        await sql`
+          UPDATE managers
+          SET username = ${username},
+              password = ${password},
+              permissoes = ${permissoes ? JSON.stringify(permissoes) : null}
+          WHERE id = ${id}
+        `;
+        console.log('[SYNC] Manager atualizado por id');
+        return res.status(200).json({ ok: true });
+      }
+
+      // 2) Se não existe por ID, tenta atualizar pelo username (único)
+      const byUser = await sql`SELECT id FROM managers WHERE username = ${username}`;
+      if (byUser && byUser.length > 0) {
+        await sql`
+          UPDATE managers
+          SET password = ${password},
+              permissoes = ${permissoes ? JSON.stringify(permissoes) : null}
+          WHERE username = ${username}
+        `;
+        console.log('[SYNC] Manager atualizado por username');
+        return res.status(200).json({ ok: true });
+      }
+
+      // 3) Caso não exista, insere novo
       await sql`
         INSERT INTO managers (id, username, password, permissoes)
         VALUES (${id}, ${username}, ${password}, ${permissoes ? JSON.stringify(permissoes) : null})
-        ON CONFLICT (id) DO UPDATE SET
-          username = ${username},
-          password = ${password},
-          permissoes = ${permissoes ? JSON.stringify(permissoes) : null}
       `;
-
-      console.log('[SYNC] Manager sincronizado com sucesso');
+      console.log('[SYNC] Manager inserido');
       return res.status(200).json({ ok: true });
     }
 
