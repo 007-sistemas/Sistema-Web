@@ -3,6 +3,7 @@ import { Cooperado, StatusCooperado } from '../types';
 import { StorageService } from '../services/storage';
 import { Plus, Save, Search, Edit2, Trash2, X, Fingerprint, Briefcase, AlertCircle, Upload, Download, CheckCircle, AlertTriangle } from 'lucide-react';
 import { parseCSV, validateAndPrepareImport, importCooperados, parseExcelFile } from '../services/csvParser';
+import * as XLSX from 'xlsx';
 
 export const CooperadoRegister: React.FC = () => {
   const [cooperados, setCooperados] = useState<Cooperado[]>([]);
@@ -171,14 +172,36 @@ export const CooperadoRegister: React.FC = () => {
   };
 
   const downloadTemplate = () => {
-    // Template com linhas vazias para preenchimento
-    const template = 'nome,cpf,matricula,especialidade,telefone,email,status\n\n\n\n\n';
-    const blob = new Blob([template], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'cooperados_modelo.csv';
-    a.click();
+    // Criar template Excel vazio com 10 linhas para preenchimento
+    // Status sempre será ATIVO por padrão
+    const templateData = [
+      { nome: '', cpf: '', matricula: '', especialidade: '', telefone: '', email: '' },
+      { nome: '', cpf: '', matricula: '', especialidade: '', telefone: '', email: '' },
+      { nome: '', cpf: '', matricula: '', especialidade: '', telefone: '', email: '' },
+      { nome: '', cpf: '', matricula: '', especialidade: '', telefone: '', email: '' },
+      { nome: '', cpf: '', matricula: '', especialidade: '', telefone: '', email: '' },
+      { nome: '', cpf: '', matricula: '', especialidade: '', telefone: '', email: '' },
+      { nome: '', cpf: '', matricula: '', especialidade: '', telefone: '', email: '' },
+      { nome: '', cpf: '', matricula: '', especialidade: '', telefone: '', email: '' },
+      { nome: '', cpf: '', matricula: '', especialidade: '', telefone: '', email: '' },
+      { nome: '', cpf: '', matricula: '', especialidade: '', telefone: '', email: '' },
+    ];
+
+    const ws = XLSX.utils.json_to_sheet(templateData);
+    
+    // Ajustar largura das colunas
+    ws['!cols'] = [
+      { wch: 25 }, // nome
+      { wch: 15 }, // cpf
+      { wch: 15 }, // matricula
+      { wch: 20 }, // especialidade
+      { wch: 15 }, // telefone
+      { wch: 25 }  // email
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Cooperados');
+    XLSX.writeFile(wb, 'cooperados_modelo.xlsx');
   };
 
   const filteredCooperados = cooperados.filter(c => 
@@ -197,17 +220,17 @@ export const CooperadoRegister: React.FC = () => {
           <button 
             onClick={downloadTemplate}
             className="flex items-center justify-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors"
-            title="Baixar modelo CSV"
+            title="Baixar modelo em Excel"
           >
             <Download className="h-4 w-4" />
-            <span>Modelo CSV</span>
+            <span>Modelo Planilha</span>
           </button>
           <button 
             onClick={() => setShowCSVImport(true)}
             className="flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
           >
             <Upload className="h-4 w-4" />
-            <span>Importar CSV</span>
+            <span>Importar Planilha</span>
           </button>
           <button 
             onClick={() => { setFormData(initialFormState); setIsFormOpen(true); }}
@@ -260,14 +283,14 @@ export const CooperadoRegister: React.FC = () => {
         </div>
       )}
 
-      {/* CSV Import Modal */}
+      {/* Planilha Import Modal */}
       {showCSVImport && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-2xl animate-fade-in mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4 border-b pb-3">
               <div className="flex items-center gap-2">
                 <Upload className="h-6 w-6 text-blue-600" />
-                <h3 className="text-lg font-bold text-gray-800">Importar Cooperados via CSV</h3>
+                <h3 className="text-lg font-bold text-gray-800">Importar Cooperados via Planilha</h3>
               </div>
               <button 
                 onClick={() => {
@@ -283,7 +306,7 @@ export const CooperadoRegister: React.FC = () => {
 
             {!csvPreview && !importResult ? (
               <div className="space-y-4">
-                <p className="text-sm text-gray-600">Selecione um arquivo CSV com os dados dos cooperados a importar.</p>
+                <p className="text-sm text-gray-600">Selecione uma planilha com os dados dos cooperados a importar.</p>
                 
                 <div className="border-2 border-dashed border-blue-300 rounded-lg p-8 bg-blue-50 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-100 transition-colors">
                   <input 
@@ -296,16 +319,17 @@ export const CooperadoRegister: React.FC = () => {
                   <label htmlFor="csvFileInput" className="cursor-pointer flex flex-col items-center gap-2">
                     <Upload className="h-8 w-8 text-blue-500" />
                     <span className="text-sm font-medium text-blue-600">Clique para selecionar arquivo</span>
-                    <span className="text-xs text-gray-500">CSV, Excel (xlsx, xls, xlsm)</span>
+                    <span className="text-xs text-gray-500">Excel (xlsx, xls, xlsm) ou CSV</span>
                   </label>
                 </div>
 
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-xs font-semibold text-gray-700 mb-2">Formato esperado:</p>
-                  <p className="text-xs text-gray-600 font-mono mb-3">nome,cpf,matricula,especialidade,telefone,email,status</p>
+                  <p className="text-xs font-semibold text-gray-700 mb-2">Colunas obrigatórias:</p>
+                  <p className="text-xs text-gray-600 font-mono mb-3">nome | cpf | matricula | especialidade | telefone | email</p>
                   <div className="text-xs text-gray-600 space-y-1">
+                    <p><span className="font-semibold">Nota:</span> O status será sempre "ATIVO" por padrão</p>
                     <p><span className="font-semibold">Exemplo:</span></p>
-                    <p className="font-mono">João Silva,12345678901,MAT001,Cardiologia,11999999999,joao@email.com,ATIVO</p>
+                    <p className="font-mono">João Silva,12345678901,MAT001,Cardiologia,11999999999,joao@email.com</p>
                   </div>
                 </div>
               </div>
