@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Manager, HospitalPermissions } from '../types';
 import { StorageService } from '../services/storage';
-import { Plus, Save, Trash2, Edit2, Shield, Lock, X, Briefcase, RefreshCw, Wrench } from 'lucide-react';
+import { Plus, Save, Trash2, Edit2, Shield, Lock, X, Briefcase, RefreshCw, Wrench, AlertCircle } from 'lucide-react';
 import { apiGet, apiPost } from '../services/api';
 
 export const Management: React.FC = () => {
@@ -13,11 +13,14 @@ export const Management: React.FC = () => {
   const [auditDetails, setAuditDetails] = useState<any | null>(null);
   const [consolidateLoading, setConsolidateLoading] = useState(false);
   const [consolidateResult, setConsolidateResult] = useState<any | null>(null);
+  const [duplicateManager, setDuplicateManager] = useState<Manager | null>(null);
   
   const initialFormState: Manager = {
     id: '',
     username: '',
     password: '',
+    cpf: '',
+    email: '',
     permissoes: {
       dashboard: true,
       ponto: true,
@@ -81,7 +84,16 @@ export const Management: React.FC = () => {
     e.preventDefault();
     if (!formData.username) return alert('Nome de usuário é obrigatório');
     if (!formData.password) return alert('Senha é obrigatória');
+    if (!formData.cpf) return alert('CPF é obrigatório');
+    if (!formData.email) return alert('Email é obrigatório');
     
+    // Verificar se existe CPF duplicado
+    const duplicate = StorageService.checkDuplicateCpf(formData.cpf, formData.id);
+    if (duplicate) {
+      setDuplicateManager(duplicate);
+      return;
+    }
+
     const newManager: Manager = {
       ...formData,
       id: formData.id || crypto.randomUUID(),
@@ -91,6 +103,17 @@ export const Management: React.FC = () => {
     loadManagers();
     setIsFormOpen(false);
     setFormData(initialFormState);
+  };
+
+  const handleAccessDuplicate = () => {
+    if (duplicateManager) {
+      setFormData(duplicateManager);
+      setDuplicateManager(null);
+    }
+  };
+
+  const handleCloseDuplicateModal = () => {
+    setDuplicateManager(null);
   };
 
   const handleEdit = (m: Manager) => {
@@ -168,6 +191,42 @@ export const Management: React.FC = () => {
         </div>
       </div>
 
+      {/* Duplicate Manager Modal - Renderizado Fora */}
+      {duplicateManager && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm animate-fade-in mx-4">
+            <div className="flex items-center gap-2 mb-4 text-orange-600">
+              <AlertCircle className="h-6 w-6" />
+              <h3 className="text-lg font-bold text-gray-800">CPF Já Cadastrado</h3>
+            </div>
+            <p className="text-gray-600 text-sm mb-4">
+              Já existe um gestor registrado com este CPF:
+            </p>
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
+              <div className="space-y-2 text-sm">
+                <div><span className="font-semibold text-gray-700">Usuário:</span> {duplicateManager.username}</div>
+                <div><span className="font-semibold text-gray-700">Email:</span> {duplicateManager.email}</div>
+                <div><span className="font-semibold text-gray-700">CPF:</span> {duplicateManager.cpf}</div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={handleCloseDuplicateModal}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleAccessDuplicate}
+                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+              >
+                Acessar Cadastro
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isFormOpen ? (
         <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100 animate-fade-in max-w-3xl mx-auto">
           <div className="flex justify-between items-center mb-6">
@@ -207,6 +266,32 @@ export const Management: React.FC = () => {
                   onChange={e => setFormData({...formData, password: e.target.value})}
                   placeholder="Digite a senha..."
                />
+              </div>
+            </div>
+
+            {/* Identity Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">CPF</label>
+                <input
+                  required
+                  type="text"
+                  placeholder="000.000.000-00"
+                  className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none"
+                  value={formData.cpf}
+                  onChange={e => setFormData({...formData, cpf: e.target.value})}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">Email</label>
+                <input
+                  required
+                  type="email"
+                  placeholder="email@exemplo.com"
+                  className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none"
+                  value={formData.email}
+                  onChange={e => setFormData({...formData, email: e.target.value})}
+                />
               </div>
             </div>
 

@@ -19,6 +19,8 @@ const seedData = () => {
       id: 'master-001',
       username: 'gabriel',
       password: 'gabriel',
+        cpf: '000.000.000-00',
+        email: 'gabriel@coop.com',
       permissoes: {
         dashboard: true,
         ponto: true,
@@ -271,8 +273,26 @@ export const StorageService = {
     return data ? JSON.parse(data) : [];
   },
 
+  checkDuplicateCpf: (cpf: string, excludeId?: string): Manager | null => {
+    const list = StorageService.getManagers();
+    const clean = (s: string) => (s || '').replace(/\D/g, '');
+    const cpfLimpo = clean(cpf);
+    const duplicado = list.find(m => clean(m.cpf) === cpfLimpo && m.id !== excludeId);
+    return duplicado || null;
+  },
+
   saveManager: (manager: Manager): void => {
     const list = StorageService.getManagers();
+    const clean = (s: string) => (s || '').replace(/\D/g, '');
+    const cpfNovo = clean(manager.cpf);
+    if (!cpfNovo) {
+      alert('CPF é obrigatório para gestores.');
+      return;
+    }
+    const cpfDuplicado = StorageService.checkDuplicateCpf(manager.cpf, manager.id);
+    if (cpfDuplicado) {
+      return;
+    }
     const index = list.findIndex(m => m.id === manager.id);
     if (index >= 0) {
       list[index] = manager;
@@ -303,8 +323,32 @@ export const StorageService = {
     return data ? JSON.parse(data) : [];
   },
 
+  checkDuplicateCpfCooperado: (cpf: string, excludeId?: string): Cooperado | null => {
+    const list = StorageService.getCooperados();
+    const clean = (s: string) => (s || '').replace(/\D/g, '');
+    const cpfLimpo = clean(cpf);
+    const duplicado = list.find(c => clean(c.cpf || '') === cpfLimpo && c.id !== excludeId);
+    return duplicado || null;
+  },
+
+  checkDuplicateMatriculaCooperado: (matricula: string, excludeId?: string): Cooperado | null => {
+    const list = StorageService.getCooperados();
+    const duplicado = list.find(c => c.matricula === matricula && c.id !== excludeId);
+    return duplicado || null;
+  },
+
   saveCooperado: (cooperado: Cooperado): void => {
     const list = StorageService.getCooperados();
+    const clean = (s: string) => s.replace(/\D/g, '');
+    const cpfNovo = clean(cooperado.cpf || '');
+    const cpfDuplicado = StorageService.checkDuplicateCpfCooperado(cooperado.cpf, cooperado.id);
+    if (cpfDuplicado) {
+      return;
+    }
+    const matriculaDuplicada = StorageService.checkDuplicateMatriculaCooperado(cooperado.matricula, cooperado.id);
+    if (matriculaDuplicada) {
+      return;
+    }
     const index = list.findIndex(c => c.id === cooperado.id);
     if (index >= 0) {
       list[index] = cooperado;

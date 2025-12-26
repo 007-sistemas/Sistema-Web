@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Cooperado, StatusCooperado } from '../types';
 import { StorageService } from '../services/storage';
-import { Plus, Save, Search, Edit2, Trash2, X, Fingerprint, Briefcase } from 'lucide-react';
+import { Plus, Save, Search, Edit2, Trash2, X, Fingerprint, Briefcase, AlertCircle } from 'lucide-react';
 
 export const CooperadoRegister: React.FC = () => {
   const [cooperados, setCooperados] = useState<Cooperado[]>([]);
@@ -12,6 +12,10 @@ export const CooperadoRegister: React.FC = () => {
   // Category Modal State
   const [isCatModalOpen, setIsCatModalOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
+  
+  // Duplicate Cooperado Modal State
+  const [duplicateCooperado, setDuplicateCooperado] = useState<Cooperado | null>(null);
+  const [duplicateType, setDuplicateType] = useState<'cpf' | 'matricula' | null>(null);
 
   // Form State
   const initialFormState: Partial<Cooperado> = {
@@ -43,6 +47,22 @@ export const CooperadoRegister: React.FC = () => {
     e.preventDefault();
     if (!formData.nome || !formData.cpf) return alert('Campos obrigatórios faltando');
 
+    // Verificar se existe CPF duplicado
+    const duplicateCpf = StorageService.checkDuplicateCpfCooperado(formData.cpf, formData.id);
+    if (duplicateCpf) {
+      setDuplicateCooperado(duplicateCpf);
+      setDuplicateType('cpf');
+      return;
+    }
+
+    // Verificar se existe matrícula duplicada
+    const duplicateMatricula = StorageService.checkDuplicateMatriculaCooperado(formData.matricula, formData.id);
+    if (duplicateMatricula) {
+      setDuplicateCooperado(duplicateMatricula);
+      setDuplicateType('matricula');
+      return;
+    }
+
     const newCooperado: Cooperado = {
       ...formData as Cooperado,
       id: formData.id || crypto.randomUUID(),
@@ -54,6 +74,19 @@ export const CooperadoRegister: React.FC = () => {
     loadCooperados();
     setIsFormOpen(false);
     setFormData(initialFormState);
+  };
+
+  const handleAccessDuplicateCooperado = () => {
+    if (duplicateCooperado) {
+      setFormData(duplicateCooperado);
+      setDuplicateCooperado(null);
+      setDuplicateType(null);
+    }
+  };
+
+  const handleCloseDuplicateCooperadoModal = () => {
+    setDuplicateCooperado(null);
+    setDuplicateType(null);
   };
 
   const handleEdit = (c: Cooperado) => {
@@ -96,6 +129,47 @@ export const CooperadoRegister: React.FC = () => {
           <span>Novo Cooperado</span>
         </button>
       </div>
+
+      {/* Duplicate Cooperado Modal - Renderizado Fora */}
+      {duplicateCooperado && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm animate-fade-in mx-4">
+            <div className="flex items-center gap-2 mb-4 text-orange-600">
+              <AlertCircle className="h-6 w-6" />
+              <h3 className="text-lg font-bold text-gray-800">
+                {duplicateType === 'cpf' ? 'CPF Já Cadastrado' : 'Matrícula Já Cadastrada'}
+              </h3>
+            </div>
+            <p className="text-gray-600 text-sm mb-4">
+              {duplicateType === 'cpf' 
+                ? 'Já existe um cooperado registrado com este CPF:'
+                : 'Já existe um cooperado registrado com esta matrícula:'}
+            </p>
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
+              <div className="space-y-2 text-sm">
+                <div><span className="font-semibold text-gray-700">Nome:</span> {duplicateCooperado.nome}</div>
+                <div><span className="font-semibold text-gray-700">CPF:</span> {duplicateCooperado.cpf}</div>
+                <div><span className="font-semibold text-gray-700">Matrícula:</span> {duplicateCooperado.matricula}</div>
+                <div><span className="font-semibold text-gray-700">Email:</span> {duplicateCooperado.email}</div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={handleCloseDuplicateCooperadoModal}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleAccessDuplicateCooperado}
+                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+              >
+                Acessar Cadastro
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isFormOpen ? (
         <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100 animate-fade-in">

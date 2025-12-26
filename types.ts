@@ -75,6 +75,8 @@ export interface Manager {
   id: string;
   username: string;
   password: string;
+  cpf: string;
+  email: string;
   permissoes: HospitalPermissions;
 }
 

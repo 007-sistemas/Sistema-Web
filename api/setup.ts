@@ -50,6 +50,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         id TEXT PRIMARY KEY,
         username TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
+        cpf TEXT UNIQUE,
+        email TEXT,
         permissoes JSONB,
         created_at TIMESTAMPTZ NOT NULL DEFAULT now()
       );

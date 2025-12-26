@@ -73,7 +73,7 @@ export default async function handler(req: any, res: any) {
     // Sync Manager
     if (action === "sync_manager") {
       console.log('[SYNC] Sincronizando manager:', data.id);
-      const { id, username, password, permissoes } = data;
+      const { id, username, password, cpf, email, permissoes } = data;
 
       // 1) Tenta atualizar pelo ID
       const byId = await sql`SELECT id FROM managers WHERE id = ${id}`;
@@ -82,6 +82,8 @@ export default async function handler(req: any, res: any) {
           UPDATE managers
           SET username = ${username},
               password = ${password},
+              cpf = ${cpf},
+              email = ${email},
               permissoes = ${permissoes ? JSON.stringify(permissoes) : null}
           WHERE id = ${id}
         `;
@@ -95,6 +97,8 @@ export default async function handler(req: any, res: any) {
         await sql`
           UPDATE managers
           SET password = ${password},
+              cpf = ${cpf},
+              email = ${email},
               permissoes = ${permissoes ? JSON.stringify(permissoes) : null}
           WHERE username = ${username}
         `;
@@ -104,8 +108,8 @@ export default async function handler(req: any, res: any) {
 
       // 3) Caso não exista, insere novo
       await sql`
-        INSERT INTO managers (id, username, password, permissoes)
-        VALUES (${id}, ${username}, ${password}, ${permissoes ? JSON.stringify(permissoes) : null})
+        INSERT INTO managers (id, username, password, cpf, email, permissoes)
+        VALUES (${id}, ${username}, ${password}, ${cpf}, ${email}, ${permissoes ? JSON.stringify(permissoes) : null})
       `;
       console.log('[SYNC] Manager inserido');
       return res.status(200).json({ ok: true });
