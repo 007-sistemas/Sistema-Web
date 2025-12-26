@@ -20,8 +20,9 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     setLoading(true);
 
     try {
-      // Atualiza gestores a partir do Neon antes de autenticar
+      // Atualiza gestores e cooperados a partir do Neon antes de autenticar
       await StorageService.refreshManagersFromRemote();
+      await StorageService.refreshCooperadosFromRemote();
 
       const authResult = StorageService.authenticate(username, password);
 

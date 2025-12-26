@@ -363,6 +363,30 @@ export const StorageService = {
 
   // --- COOPERADOS ---
 
+  refreshCooperadosFromRemote: async () => {
+    try {
+      const rows = await apiGet<any[]>('cooperados');
+      if (!Array.isArray(rows)) return;
+
+      const mapped: Cooperado[] = rows.map((row: any) => ({
+        id: row.id,
+        nome: row.name || row.nome || '',
+        cpf: row.cpf || '',
+        matricula: row.matricula || '',
+        especialidade: row.specialty || row.especialidade || '',
+        telefone: row.phone || row.telefone || '',
+        email: row.email || '',
+        status: row.status || StatusCooperado.ATIVO,
+        biometrias: row.biometrias || [],
+        updatedAt: row.updated_at || new Date().toISOString()
+      }));
+
+      localStorage.setItem(COOPERADOS_KEY, JSON.stringify(mapped));
+    } catch (err) {
+      console.warn('[COOPERADOS] Erro ao atualizar do Neon:', err);
+    }
+  },
+
   getCooperados: (): Cooperado[] => {
     const data = localStorage.getItem(COOPERADOS_KEY);
     return data ? JSON.parse(data) : [];
