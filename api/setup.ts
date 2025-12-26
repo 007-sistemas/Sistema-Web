@@ -36,6 +36,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       );
     `;
 
+    // Garantir colunas novas
+    await sql`ALTER TABLE cooperados ADD COLUMN IF NOT EXISTS matricula TEXT;`;
+    await sql`ALTER TABLE cooperados ADD COLUMN IF NOT EXISTS specialty TEXT;`;
+    await sql`ALTER TABLE cooperados ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'ATIVO';`;
+
     await sql`
       CREATE TABLE IF NOT EXISTS hospitals (
         id TEXT PRIMARY KEY,
@@ -49,6 +54,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         created_at TIMESTAMPTZ NOT NULL DEFAULT now()
       );
     `;
+
+    await sql`ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS slug TEXT;`;
+    await sql`ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS usuario_acesso TEXT;`;
+    await sql`ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS senha TEXT;`;
+    await sql`ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS endereco JSONB;`;
+    await sql`ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS permissoes JSONB;`;
+    await sql`ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS setores JSONB;`;
 
     await sql`
       CREATE TABLE IF NOT EXISTS pontos (
@@ -68,6 +80,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         created_at TIMESTAMPTZ NOT NULL DEFAULT now()
       );
     `;
+
+    await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS codigo TEXT;`;
+    await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS cooperado_nome TEXT;`;
+    await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS hospital_id TEXT;`;
+    await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS setor_id TEXT;`;
+    await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS observacao TEXT;`;
+    await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS related_id TEXT;`;
 
     await sql`
       CREATE TABLE IF NOT EXISTS biometrias (
