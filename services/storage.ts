@@ -504,6 +504,47 @@ export const StorageService = {
     return data ? JSON.parse(data) : [];
   },
 
+  refreshHospitaisFromRemote: async () => {
+    try {
+      const rows = await apiGet<any[]>('hospitals');
+      if (!Array.isArray(rows)) return;
+
+      const defaultPerms: HospitalPermissions = {
+        dashboard: false,
+        ponto: false,
+        relatorio: false,
+        cadastro: false,
+        hospitais: false,
+        biometria: false,
+        auditoria: false,
+        gestao: false,
+        espelho: false,
+        autorizacao: false,
+        perfil: false,
+      };
+
+      const mapped: Hospital[] = rows.map((row: any) => {
+        const endereco = typeof row.endereco === 'string' ? (() => { try { return JSON.parse(row.endereco); } catch { return undefined; } })() : row.endereco;
+        const permissoes = typeof row.permissoes === 'string' ? (() => { try { return JSON.parse(row.permissoes); } catch { return {}; } })() : (row.permissoes || {});
+        const setores = typeof row.setores === 'string' ? (() => { try { return JSON.parse(row.setores); } catch { return []; } })() : (row.setores || []);
+        return {
+          id: row.id,
+          nome: row.nome,
+          slug: row.slug,
+          usuarioAcesso: row.usuario_acesso || '',
+          senha: row.senha || '',
+          endereco,
+          permissoes: { ...defaultPerms, ...permissoes },
+          setores,
+        } as Hospital;
+      });
+
+      localStorage.setItem(HOSPITAIS_KEY, JSON.stringify(mapped));
+    } catch (err) {
+      console.warn('[HOSPITAIS] Erro ao atualizar do Neon:', err);
+    }
+  },
+
   getHospitalBySlug: (slug: string): Hospital | undefined => {
     const list = StorageService.getHospitais();
     return list.find(h => h.slug === slug);
