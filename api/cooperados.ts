@@ -13,7 +13,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     if (req.method === "GET") {
-      const rows = await sql`SELECT id, name, cpf, email, phone, created_at FROM cooperados ORDER BY created_at DESC LIMIT 100`;
+      // Garantir colunas esperadas em bases antigas
+      await sql`ALTER TABLE cooperados ADD COLUMN IF NOT EXISTS matricula text`;
+      await sql`ALTER TABLE cooperados ADD COLUMN IF NOT EXISTS specialty text`;
+      await sql`ALTER TABLE cooperados ADD COLUMN IF NOT EXISTS status text`;
+      await sql`ALTER TABLE cooperados ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT NOW()`;
+
+      const rows = await sql`SELECT id, name, cpf, email, phone, specialty, matricula, status, updated_at FROM cooperados ORDER BY updated_at DESC LIMIT 200`;
       res.status(200).json(rows);
       return;
     }
