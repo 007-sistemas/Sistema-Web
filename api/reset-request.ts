@@ -5,6 +5,10 @@ import crypto from 'crypto';
 const connectionString = process.env.DATABASE_URL;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL = process.env.RESET_FROM_EMAIL || 'no-reply@digitall.app';
+const SMTP_HOST = process.env.SMTP_HOST;
+const SMTP_PORT = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 465;
+const SMTP_USER = process.env.SMTP_USER;
+const SMTP_PASS = process.env.SMTP_PASS;
 
 const hashCode = (code: string) => crypto.createHash('sha256').update(code).digest('hex');
 const generateCode = () => String(Math.floor(100000 + Math.random() * 900000));
@@ -17,8 +21,33 @@ function sendCors(res: VercelResponse) {
 
 async function sendEmail(to: string, code: string, username: string) {
   if (!RESEND_API_KEY) {
-    console.warn('[RESET] RESEND_API_KEY ausente. Código:', code);
-    return { sent: false, reason: 'RESEND_API_KEY missing' };
+    console.warn('[RESET] RESEND_API_KEY ausente. Tentando SMTP...');
+    // Fallback SMTP (ex.: Gmail)
+    if (SMTP_HOST && SMTP_USER && SMTP_PASS) {
+      try {
+        // @ts-ignore - módulo será resolvido em produção (Vercel)
+        const nodemailerMod: any = await import('nodemailer');
+        const transporter = nodemailerMod.createTransport({
+          host: SMTP_HOST,
+          port: SMTP_PORT,
+          secure: SMTP_PORT === 465,
+          auth: { user: SMTP_USER, pass: SMTP_PASS },
+        });
+        const info = await transporter.sendMail({
+          from: FROM_EMAIL || SMTP_USER,
+          to,
+          subject: 'DigitAll - Código de redefinição de senha',
+          text: `Olá ${username},\n\nUse este código para redefinir sua senha: ${code}\nEle expira em 15 minutos.\n\nSe não foi você, ignore este email.`,
+        });
+        console.log('[RESET] SMTP enviado. MessageId:', (info as any)?.messageId);
+        return { sent: true, smtp: true };
+      } catch (smtpErr: any) {
+        console.error('[RESET] Falha SMTP:', smtpErr?.message || smtpErr);
+        return { sent: false, reason: 'SMTP failed' };
+      }
+    }
+    console.warn('[RESET] SMTP não configurado. Código (dev):', code);
+    return { sent: false, reason: 'RESEND_API_KEY missing and SMTP not configured' };
   }
 
   const payload = {

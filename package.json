@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "nodemailer": "^6.9.8",
     "@neondatabase/serverless": "^0.10.4",
     "@vercel/node": "^5.5.16",
     "@vitejs/plugin-react": "^5.1.1",
