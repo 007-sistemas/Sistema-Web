@@ -2,7 +2,8 @@
 import React, { useState } from 'react';
 import { HospitalPermissions } from '../types';
 import { StorageService } from '../services/storage';
-import { Lock, User, AlertCircle, ArrowRight } from 'lucide-react';
+import { apiPost } from '../services/api';
+import { Lock, User, AlertCircle, ArrowRight, Mail, ShieldCheck } from 'lucide-react';
 
 interface LoginProps {
   onLoginSuccess: (permissions: HospitalPermissions) => void;
@@ -13,6 +14,14 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showReset, setShowReset] = useState(false);
+  const [resetStep, setResetStep] = useState<'request' | 'confirm'>('request');
+  const [identifier, setIdentifier] = useState('');
+  const [resetCode, setResetCode] = useState('');
+  const [newPass, setNewPass] = useState('');
+  const [confirmPass, setConfirmPass] = useState('');
+  const [resetInfo, setResetInfo] = useState('');
+  const [resetError, setResetError] = useState('');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,6 +53,44 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       console.error('Erro no login:', err);
       setError('Falha ao autenticar. Tente novamente.');
       setLoading(false);
+    }
+  };
+
+  const handleResetRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetError('');
+    setResetInfo('');
+    try {
+      const resp: any = await apiPost('reset-request', { identifier });
+      setResetInfo('Código enviado para o email cadastrado (se existir).');
+      if (resp?.devCode) {
+        setResetInfo(`Código enviado. (Dev: ${resp.devCode})`);
+      }
+      setResetStep('confirm');
+    } catch (err: any) {
+      setResetError(err?.message || 'Falha ao solicitar redefinição.');
+    }
+  };
+
+  const handleResetConfirm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetError('');
+    setResetInfo('');
+    if (!identifier || !resetCode || !newPass) {
+      setResetError('Preencha usuário/email, código e nova senha.');
+      return;
+    }
+    if (newPass !== confirmPass) {
+      setResetError('As senhas não conferem.');
+      return;
+    }
+    try {
+      await apiPost('reset-confirm', { identifier, code: resetCode, newPassword: newPass });
+      setResetInfo('Senha redefinida com sucesso. Use a nova senha para entrar.');
+      setPassword(newPass);
+      setShowReset(false);
+    } catch (err: any) {
+      setResetError(err?.message || 'Código inválido ou expirado.');
     }
   };
 
@@ -95,6 +142,16 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             </div>
           </div>
 
+          <div className="text-right">
+            <button
+              type="button"
+              onClick={() => setShowReset(!showReset)}
+              className="text-xs font-semibold text-primary-600 hover:text-primary-700"
+            >
+              Esqueci minha senha
+            </button>
+          </div>
+
           <button
             type="submit"
             disabled={loading}
@@ -117,6 +174,95 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             )}
           </button>
         </form>
+
+        {showReset && (
+          <div className="mt-6 border-t border-gray-200 pt-6 space-y-4">
+            <div className="flex items-center gap-2 text-gray-700">
+              <ShieldCheck className="h-4 w-4 text-primary-600" />
+              <span className="font-semibold">Redefinir senha</span>
+            </div>
+
+            {resetError && (
+              <div className="bg-red-50 text-red-600 p-3 rounded-lg flex items-center text-sm">
+                <AlertCircle className="h-4 w-4 mr-2" />
+                {resetError}
+              </div>
+            )}
+            {resetInfo && (
+              <div className="bg-green-50 text-green-700 p-3 rounded-lg text-sm">
+                {resetInfo}
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-sm font-semibold text-gray-700 ml-1">Usuário ou Email</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                  <input
+                    type="text"
+                    className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all text-gray-900"
+                    placeholder="Digite seu usuário ou email"
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {resetStep === 'confirm' && (
+                <>
+                  <div className="space-y-1">
+                    <label className="text-sm font-semibold text-gray-700 ml-1">Código</label>
+                    <input
+                      type="text"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all text-gray-900"
+                      placeholder="Código de 6 dígitos"
+                      value={resetCode}
+                      onChange={(e) => setResetCode(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-sm font-semibold text-gray-700 ml-1">Nova senha</label>
+                    <input
+                      type="password"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all text-gray-900"
+                      placeholder="Mínimo 6 caracteres"
+                      value={newPass}
+                      onChange={(e) => setNewPass(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-sm font-semibold text-gray-700 ml-1">Confirmar nova senha</label>
+                    <input
+                      type="password"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all text-gray-900"
+                      placeholder="Repita a nova senha"
+                      value={confirmPass}
+                      onChange={(e) => setConfirmPass(e.target.value)}
+                    />
+                  </div>
+                </>
+              )}
+
+              <div className="flex gap-2">
+                <button
+                  onClick={handleResetRequest}
+                  className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl font-semibold transition-colors"
+                >
+                  Enviar código
+                </button>
+                <button
+                  onClick={handleResetConfirm}
+                  className="flex-1 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-semibold transition-colors"
+                >
+                  Confirmar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="mt-8 text-center text-xs text-gray-400">
           DigitAll &bull; Controle de Produção

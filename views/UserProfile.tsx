@@ -23,12 +23,14 @@ const ALL_TABS = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'ponto', label: 'Registro de Ponto' },
   { key: 'relatorio', label: 'Relatórios' },
-  { key: 'cooperados', label: 'Cooperados' },
+  { key: 'espelho', label: 'Espelho da Biometria' },
+  { key: 'autorizacao', label: 'Justificativa de Plantão' },
+  { key: 'cadastro', label: 'Cooperados' },
+  { key: 'hospitais', label: 'Hospitais & Setores' },
   { key: 'biometria', label: 'Biometria' },
-  { key: 'auditoria', label: 'Auditoria' },
+  { key: 'auditoria', label: 'Auditoria & Logs' },
   { key: 'gestao', label: 'Gestão de Usuários' },
-  { key: 'espelho', label: 'Meu Espelho' },
-  { key: 'autorizacao', label: 'Autorizações' },
+  { key: 'perfil', label: 'Meu Perfil' },
 ];
 
 export const UserProfile: React.FC = () => {
