@@ -50,6 +50,24 @@ export default function App() {
         const firstAllowed = Object.keys(session.permissions).find(k => session.permissions[k as keyof HospitalPermissions]);
         if (firstAllowed) setCurrentView(firstAllowed);
       }
+
+      // Auto-refresh silencioso em sessões ativas
+      (async () => {
+        await StorageService.refreshManagersFromRemote();
+        await StorageService.refreshCooperadosFromRemote();
+        await StorageService.refreshHospitaisFromRemote();
+      })();
+
+      const interval = setInterval(async () => {
+        try {
+          await StorageService.refreshHospitaisFromRemote();
+          await StorageService.refreshCooperadosFromRemote();
+        } catch (err) {
+          console.warn('[AUTO-REFRESH] Falha ao atualizar dados:', err);
+        }
+      }, 120000); // 2 minutos
+
+      return () => clearInterval(interval);
     }
   }, []);
 
