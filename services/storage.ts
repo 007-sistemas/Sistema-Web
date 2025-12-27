@@ -172,7 +172,8 @@ export const StorageService = {
         gestao: false,
         espelho: false,
         autorizacao: false,
-        perfil: false,
+        // Perfil deve existir e vir habilitado por padrão para gestores
+        perfil: true,
       };
 
       const mapped: Manager[] = rows.map((row: any) => {
@@ -617,8 +618,9 @@ export const StorageService = {
     return manager?.preferences || {
       theme: 'auto',
       primaryColor: '#2563eb', // Default blue
-      visibleTabs: ['dashboard', 'ponto', 'relatorio', 'cooperados', 'biometria', 'auditoria'],
-      tabOrder: ['dashboard', 'ponto', 'relatorio', 'cooperados', 'biometria', 'auditoria']
+      // IDs devem bater com Layout: dashboard, ponto, relatorio, espelho, autorizacao, cadastro, hospitais, biometria, auditoria, gestao, perfil
+      visibleTabs: ['dashboard', 'ponto', 'relatorio', 'espelho', 'autorizacao', 'cadastro', 'hospitais', 'biometria', 'auditoria', 'gestao', 'perfil'],
+      tabOrder: ['dashboard', 'ponto', 'relatorio', 'espelho', 'autorizacao', 'cadastro', 'hospitais', 'biometria', 'auditoria', 'gestao', 'perfil']
     };
   },
 

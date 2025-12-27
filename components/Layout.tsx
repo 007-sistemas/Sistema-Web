@@ -17,6 +17,7 @@ import {
   Wrench
 } from 'lucide-react';
 import { Hospital, HospitalPermissions } from '../types';
+import { StorageService } from '../services/storage';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -38,6 +39,29 @@ export const Layout: React.FC<LayoutProps> = ({
   permissions
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const [preferences, setPreferences] = React.useState<any>(null);
+
+  React.useEffect(() => {
+    const prefs = StorageService.getUserPreferences();
+    if (prefs) {
+      setPreferences(prefs);
+      // Aplicar tema e cor primária imediatamente
+      if (prefs.theme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else if (prefs.theme === 'light') {
+        document.documentElement.classList.remove('dark');
+      } else {
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      }
+      if (prefs.primaryColor) {
+        document.documentElement.style.setProperty('--primary-color', prefs.primaryColor);
+      }
+    }
+  }, []);
 
   const allNavItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, permissionKey: 'dashboard' },
@@ -50,12 +74,31 @@ export const Layout: React.FC<LayoutProps> = ({
     { id: 'biometria', label: 'Biometria', icon: Fingerprint, permissionKey: 'biometria' },
     { id: 'auditoria', label: 'Auditoria & Logs', icon: ShieldCheck, permissionKey: 'auditoria' },
     { id: 'gestao', label: 'Gestão de Usuários', icon: Briefcase, permissionKey: 'gestao' },
+    { id: 'perfil', label: 'Meu Perfil', icon: Wrench, permissionKey: 'perfil' },
   ];
 
-  const navItems = allNavItems.filter(item => {
+  let navItems = allNavItems.filter(item => {
     if (!permissions) return true;
     return permissions[item.permissionKey as keyof HospitalPermissions] === true;
   });
+
+  // Aplicar preferências de abas (visíveis e ordem)
+  if (preferences) {
+    if (Array.isArray(preferences.visibleTabs) && preferences.visibleTabs.length > 0) {
+      const filtered = navItems.filter(item => preferences.visibleTabs.includes(item.id));
+      // Fallback: se filtrou tudo, mantenha itens permitidos
+      navItems = filtered.length > 0 ? filtered : navItems;
+    }
+    if (Array.isArray(preferences.tabOrder) && preferences.tabOrder.length > 0) {
+      const orderMap = new Map<string, number>();
+      preferences.tabOrder.forEach((key: string, idx: number) => orderMap.set(key, idx));
+      navItems = navItems.sort((a, b) => {
+        const ai = orderMap.has(a.id) ? (orderMap.get(a.id) as number) : Number.MAX_SAFE_INTEGER;
+        const bi = orderMap.has(b.id) ? (orderMap.get(b.id) as number) : Number.MAX_SAFE_INTEGER;
+        return ai - bi;
+      });
+    }
+  }
 
   const exitKioskMode = () => {
     window.location.search = '';

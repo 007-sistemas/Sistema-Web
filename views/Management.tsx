@@ -145,6 +145,7 @@ export const Management: React.FC = () => {
     { key: 'biometria', label: 'Biometria' },
     { key: 'auditoria', label: 'Auditoria & Logs' },
     { key: 'gestao', label: 'Gestão de Usuários' },
+    { key: 'perfil', label: 'Meu Perfil' },
   ];
 
   const togglePermission = (key: keyof HospitalPermissions) => {

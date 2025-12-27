@@ -8,6 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
+        darkMode: 'class',
         theme: {
           extend: {
             colors: {
@@ -21,6 +22,60 @@
         }
       }
     </script>
+    <style>
+      /* Paleta dinâmica via CSS custom properties; StorageService/UserProfile atualiza --primary-color */
+      :root {
+        --primary-color: #9333ea;
+      }
+      /* Mapear classes principais do Tailwind para usar a cor dinâmica */
+      .bg-primary-900 { background-color: color-mix(in srgb, var(--primary-color), #000 35%) !important; }
+      .bg-primary-800 { background-color: color-mix(in srgb, var(--primary-color), #000 25%) !important; }
+      .bg-primary-700 { background-color: color-mix(in srgb, var(--primary-color), #000 15%) !important; }
+      .bg-primary-600 { background-color: var(--primary-color) !important; }
+      .bg-primary-500 { background-color: color-mix(in srgb, var(--primary-color), #fff 10%) !important; }
+      .text-primary-900 { color: color-mix(in srgb, var(--primary-color), #000 35%) !important; }
+      .text-primary-800 { color: color-mix(in srgb, var(--primary-color), #000 25%) !important; }
+      .text-primary-700 { color: color-mix(in srgb, var(--primary-color), #000 15%) !important; }
+      .text-primary-600 { color: var(--primary-color) !important; }
+      .text-primary-500 { color: color-mix(in srgb, var(--primary-color), #fff 10%) !important; }
+      .border-primary-900 { border-color: color-mix(in srgb, var(--primary-color), #000 35%) !important; }
+      .border-primary-800 { border-color: color-mix(in srgb, var(--primary-color), #000 25%) !important; }
+      .border-primary-700 { border-color: color-mix(in srgb, var(--primary-color), #000 15%) !important; }
+      .border-primary-600 { border-color: var(--primary-color) !important; }
+      .border-primary-500 { border-color: color-mix(in srgb, var(--primary-color), #fff 10%) !important; }
+      /* Fallback para hover utilities comuns */
+      .hover\:bg-primary-700:hover { background-color: color-mix(in srgb, var(--primary-color), #000 15%) !important; }
+      .hover\:bg-primary-800:hover { background-color: color-mix(in srgb, var(--primary-color), #000 25%) !important; }
+      .hover\:text-primary-600:hover { color: var(--primary-color) !important; }
+      .focus\:ring-primary-500:focus { --tw-ring-color: var(--primary-color) !important; }
+      .focus\:border-primary-500:focus { border-color: var(--primary-color) !important; }
+      /* Dark mode base backgrounds */
+      .dark body { background-color: #0f172a; color: #e2e8f0; }
+      .dark .bg-white { background-color: #0b1224 !important; }
+      .dark .text-gray-900 { color: #e2e8f0 !important; }
+      .dark .text-gray-800 { color: #e2e8f0 !important; }
+      .dark .text-gray-700 { color: #cbd5e1 !important; }
+      .dark .text-gray-600 { color: #cbd5e1 !important; }
+      .dark .border-gray-100 { border-color: #1e293b !important; }
+      .dark .border-gray-200 { border-color: #273449 !important; }
+      .dark .bg-gray-50 { background-color: #0f172a !important; }
+      .dark .bg-gray-100 { background-color: #111827 !important; }
+      .dark .bg-gray-200 { background-color: #1f2937 !important; }
+      .dark .bg-gray-700 { background-color: #0f172a !important; }
+      /* Inputs e placeholders visíveis no dark */
+      .dark input,
+      .dark select,
+      .dark textarea {
+        background-color: #0f172a !important;
+        color: #e2e8f0 !important;
+        border-color: #334155 !important;
+      }
+      .dark input::placeholder,
+      .dark textarea::placeholder {
+        color: #94a3b8 !important;
+      }
+      .dark label { color: #e2e8f0 !important; }
+    </style>
     
     <!-- SDK Biometria Digital Persona -->
     <!-- Caminhos relativos (.) para garantir carregamento local ou em subpastas -->
