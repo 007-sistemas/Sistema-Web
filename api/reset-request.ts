@@ -20,59 +20,64 @@ function sendCors(res: VercelResponse) {
 }
 
 async function sendEmail(to: string, code: string, username: string) {
-  if (!RESEND_API_KEY) {
-    console.warn('[RESET] RESEND_API_KEY ausente. Tentando SMTP...');
-    // Fallback SMTP (ex.: Gmail)
-    if (SMTP_HOST && SMTP_USER && SMTP_PASS) {
-      try {
-        // @ts-ignore - módulo será resolvido em produção (Vercel)
-        const nodemailerMod: any = await import('nodemailer');
-        const transporter = nodemailerMod.createTransport({
-          host: SMTP_HOST,
-          port: SMTP_PORT,
-          secure: SMTP_PORT === 465,
-          auth: { user: SMTP_USER, pass: SMTP_PASS },
-        });
-        const info = await transporter.sendMail({
-          from: FROM_EMAIL || SMTP_USER,
-          to,
-          subject: 'DigitAll - Código de redefinição de senha',
-          text: `Olá ${username},\n\nUse este código para redefinir sua senha: ${code}\nEle expira em 15 minutos.\n\nSe não foi você, ignore este email.`,
-        });
-        console.log('[RESET] SMTP enviado. MessageId:', (info as any)?.messageId);
-        return { sent: true, smtp: true };
-      } catch (smtpErr: any) {
-        console.error('[RESET] Falha SMTP:', smtpErr?.message || smtpErr);
-        return { sent: false, reason: 'SMTP failed' };
-      }
+  // 1) Preferir SMTP se estiver configurado
+  if (SMTP_HOST && SMTP_USER && SMTP_PASS) {
+    try {
+      // @ts-ignore - módulo será resolvido em produção (Vercel)
+      const nodemailerMod: any = await import('nodemailer');
+      const transporter = nodemailerMod.createTransport({
+        host: SMTP_HOST,
+        port: SMTP_PORT,
+        secure: SMTP_PORT === 465,
+        auth: { user: SMTP_USER, pass: SMTP_PASS },
+      });
+      const info = await transporter.sendMail({
+        from: FROM_EMAIL || SMTP_USER,
+        to,
+        subject: 'DigitAll - Código de redefinição de senha',
+        text: `Olá ${username},\n\nUse este código para redefinir sua senha: ${code}\nEle expira em 15 minutos.\n\nSe não foi você, ignore este email.`,
+      });
+      console.log('[RESET] SMTP enviado. MessageId:', (info as any)?.messageId);
+      return { sent: true, smtp: true };
+    } catch (smtpErr: any) {
+      console.error('[RESET] Falha SMTP:', smtpErr?.message || smtpErr);
+      // Continua tentando via Resend se disponível
     }
-    console.warn('[RESET] SMTP não configurado. Código (dev):', code);
-    return { sent: false, reason: 'RESEND_API_KEY missing and SMTP not configured' };
   }
 
-  const payload = {
-    from: FROM_EMAIL,
-    to,
-    subject: 'DigitAll - Código de redefinição de senha',
-    text: `Olá ${username},\n\nUse este código para redefinir sua senha: ${code}\nEle expira em 15 minutos.\n\nSe não foi você, ignore este email.`,
-  };
+  // 2) Tentar Resend se chave estiver presente
+  if (RESEND_API_KEY) {
+    // Se FROM_EMAIL for um domínio não verificado (ex. Gmail), usar o remetente de onboarding
+    const fromCandidate = (!FROM_EMAIL || FROM_EMAIL.endsWith('@gmail.com'))
+      ? 'onboarding@resend.dev'
+      : FROM_EMAIL;
 
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${RESEND_API_KEY}`,
-    },
-    body: JSON.stringify(payload),
-  });
+    const payload = {
+      from: fromCandidate,
+      to,
+      subject: 'DigitAll - Código de redefinição de senha',
+      text: `Olá ${username},\n\nUse este código para redefinir sua senha: ${code}\nEle expira em 15 minutos.\n\nSe não foi você, ignore este email.`,
+    };
 
-  if (!res.ok) {
-    const text = await res.text();
-    console.error('[RESET] Falha ao enviar email:', text);
-    return { sent: false, reason: text };
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      console.error('[RESET] Falha ao enviar email via Resend:', text);
+      return { sent: false, reason: text };
+    }
+    return { sent: true, resend: true };
   }
 
-  return { sent: true };
+  console.warn('[RESET] Nenhum provedor de email configurado. Código (dev):', code);
+  return { sent: false, reason: 'No email provider configured' };
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
