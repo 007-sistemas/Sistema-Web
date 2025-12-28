@@ -176,11 +176,27 @@ export const StorageService = {
         perfil: true,
       };
 
+      // Preservar preferences locais antes de atualizar
+      const currentManagers = StorageService.getManagers();
+      const prefsMap = new Map<string, any>();
+      currentManagers.forEach(m => {
+        if (m.preferences) {
+          prefsMap.set(m.id, m.preferences);
+        }
+      });
+
       const mapped: Manager[] = rows.map((row: any) => {
         let perms = row.permissoes;
         if (typeof perms === 'string') {
           try { perms = JSON.parse(perms); } catch (err) { perms = {}; }
         }
+        
+        // Tentar parsear preferences do Neon
+        let prefs = row.preferences;
+        if (typeof prefs === 'string') {
+          try { prefs = JSON.parse(prefs); } catch (err) { prefs = null; }
+        }
+
         return {
           id: row.id,
           username: row.username,
@@ -188,6 +204,8 @@ export const StorageService = {
           cpf: row.cpf || '',
           email: row.email || '',
           permissoes: { ...defaultPerms, ...(perms || {}) },
+          // Usar preferences do Neon se existir, senão manter local
+          preferences: prefs || prefsMap.get(row.id),
         };
       });
 

@@ -41,26 +41,43 @@ export const Layout: React.FC<LayoutProps> = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [preferences, setPreferences] = React.useState<any>(null);
 
+  const applyPreferences = (prefs: any) => {
+    if (!prefs) return;
+    // Aplicar tema
+    if (prefs.theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else if (prefs.theme === 'light') {
+      document.documentElement.classList.remove('dark');
+    } else {
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }
+    // Aplicar cor primária
+    if (prefs.primaryColor) {
+      document.documentElement.style.setProperty('--primary-color', prefs.primaryColor);
+    }
+  };
+
   React.useEffect(() => {
     const prefs = StorageService.getUserPreferences();
     if (prefs) {
       setPreferences(prefs);
-      // Aplicar tema e cor primária imediatamente
-      if (prefs.theme === 'dark') {
-        document.documentElement.classList.add('dark');
-      } else if (prefs.theme === 'light') {
-        document.documentElement.classList.remove('dark');
-      } else {
-        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-          document.documentElement.classList.add('dark');
-        } else {
-          document.documentElement.classList.remove('dark');
-        }
-      }
-      if (prefs.primaryColor) {
-        document.documentElement.style.setProperty('--primary-color', prefs.primaryColor);
-      }
+      applyPreferences(prefs);
     }
+
+    // Recarregar preferências periodicamente para pegar mudanças do UserProfile
+    const interval = setInterval(() => {
+      const updatedPrefs = StorageService.getUserPreferences();
+      if (updatedPrefs && JSON.stringify(updatedPrefs) !== JSON.stringify(prefs)) {
+        setPreferences(updatedPrefs);
+        applyPreferences(updatedPrefs);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const allNavItems = [
