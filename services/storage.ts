@@ -13,30 +13,7 @@ const SESSION_KEY = 'biohealth_session';
 
 // Initial Seed Data
 const seedData = () => {
-  // SEED MASTER USER
-  if (!localStorage.getItem(MANAGERS_KEY)) {
-    const masterUser: Manager = {
-      id: 'master-001',
-      username: 'gabriel',
-      password: 'gabriel',
-        cpf: '000.000.000-00',
-        email: 'gabriel@coop.com',
-      permissoes: {
-        dashboard: true,
-        ponto: true,
-        relatorio: true,
-        cadastro: true,
-        hospitais: true,
-        biometria: true,
-        auditoria: true,
-        gestao: true,
-        espelho: false, // Admins usually look at general reports, but can set true if needed
-        autorizacao: true, // Master has access to authorization
-        perfil: true
-      }
-    };
-    localStorage.setItem(MANAGERS_KEY, JSON.stringify([masterUser]));
-  }
+  // Não faz seed de usuário master localmente. Managers virão do backend remoto.
 
   // Não carrega seed data de cooperados aqui; deixa vazio para que
   // refreshCooperadosFromRemote() preencha com dados do Neon no login

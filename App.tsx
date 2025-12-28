@@ -17,11 +17,12 @@ import { AutorizacaoPonto } from './views/AutorizacaoPonto';
 import { UserProfile } from './views/UserProfile';
 import { HospitalPermissions } from './types';
 
+
 export default function App() {
   const [currentView, setCurrentView] = useState('dashboard');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userPermissions, setUserPermissions] = useState<HospitalPermissions | null>(null);
-  
+
   useEffect(() => {
     const checkSdk = setInterval(() => {
       // @ts-ignore
@@ -32,43 +33,39 @@ export default function App() {
     }, 1000);
     setTimeout(() => clearInterval(checkSdk), 5000);
     return () => clearInterval(checkSdk);
-  }, []); 
+  }, []);
 
   useEffect(() => {
-    StorageService.init();
-    
-    // Nota: não sincronizar dados seed para Neon.
-    // Dados agora vêm DO Neon (refreshCooperadosFromRemote no login),
-    // não o contrário. syncInitialData() pode criar duplicatas/órfãos.
-    // syncInitialData();
-    
-    const session = StorageService.getSession();
-    if (session) {
-      setIsAuthenticated(true);
-      setUserPermissions(session.permissions);
-      if (!session.permissions[currentView as keyof HospitalPermissions]) {
-        const firstAllowed = Object.keys(session.permissions).find(k => session.permissions[k as keyof HospitalPermissions]);
-        if (firstAllowed) setCurrentView(firstAllowed);
-      }
+    // Sempre sincroniza managers do backend remoto ao iniciar
+    (async () => {
+      await StorageService.refreshManagersFromRemote();
+      await StorageService.refreshCooperadosFromRemote();
+      await StorageService.refreshHospitaisFromRemote();
 
-      // Auto-refresh silencioso em sessões ativas
-      (async () => {
-        await StorageService.refreshManagersFromRemote();
-        await StorageService.refreshCooperadosFromRemote();
-        await StorageService.refreshHospitaisFromRemote();
-      })();
+      StorageService.init(); // ainda inicializa seed para outros dados
 
-      const interval = setInterval(async () => {
-        try {
-          await StorageService.refreshHospitaisFromRemote();
-          await StorageService.refreshCooperadosFromRemote();
-        } catch (err) {
-          console.warn('[AUTO-REFRESH] Falha ao atualizar dados:', err);
+      const session = StorageService.getSession();
+      if (session) {
+        setIsAuthenticated(true);
+        setUserPermissions(session.permissions);
+        if (!session.permissions[currentView as keyof HospitalPermissions]) {
+          const firstAllowed = Object.keys(session.permissions).find(k => session.permissions[k as keyof HospitalPermissions]);
+          if (firstAllowed) setCurrentView(firstAllowed);
         }
-      }, 120000); // 2 minutos
 
-      return () => clearInterval(interval);
-    }
+        // Auto-refresh silencioso em sessões ativas
+        const interval = setInterval(async () => {
+          try {
+            await StorageService.refreshHospitaisFromRemote();
+            await StorageService.refreshCooperadosFromRemote();
+          } catch (err) {
+            console.warn('[AUTO-REFRESH] Falha ao atualizar dados:', err);
+          }
+        }, 120000); // 2 minutos
+
+        return () => clearInterval(interval);
+      }
+    })();
   }, []);
 
   const handleLoginSuccess = (permissions: HospitalPermissions) => {
