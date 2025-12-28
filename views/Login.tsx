@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { HospitalPermissions } from '../types';
 import { StorageService } from '../services/storage';
 import { apiPost } from '../services/api';
@@ -15,13 +15,21 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showReset, setShowReset] = useState(false);
-  const [resetStep, setResetStep] = useState<'request' | 'confirm'>('request');
+  const [resetStep, setResetStep] = useState<'request' | 'verify' | 'set'>('request');
   const [identifier, setIdentifier] = useState('');
   const [resetCode, setResetCode] = useState('');
   const [newPass, setNewPass] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
   const [resetInfo, setResetInfo] = useState('');
   const [resetError, setResetError] = useState('');
+  const [cooldown, setCooldown] = useState<number>(0);
+  const [provider, setProvider] = useState<string>('');
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setInterval(() => setCooldown((s) => (s > 0 ? s - 1 : 0)), 1000);
+    return () => clearInterval(t);
+  }, [cooldown]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,15 +68,61 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     e.preventDefault();
     setResetError('');
     setResetInfo('');
+    setProvider('');
     try {
       const resp: any = await apiPost('reset-request', { identifier });
+      const prov = resp?.provider ? String(resp.provider) : '';
+      setProvider(prov);
+      if (resp?.emailSent) {
+        StorageService.logAudit('RESET_EMAIL_ENVIADO', `Código enviado para ${identifier} via ${prov || 'email'}`);
+      }
       setResetInfo('Código enviado para o email cadastrado (se existir).');
       if (resp?.devCode) {
         setResetInfo(`Código enviado. (Dev: ${resp.devCode})`);
       }
-      setResetStep('confirm');
+      setCooldown(120);
+      setResetStep('verify');
     } catch (err: any) {
-      setResetError(err?.message || 'Falha ao solicitar redefinição.');
+      // Tentar extrair JSON com retryAfter
+      let msg = err?.message || 'Falha ao solicitar redefinição.';
+      try {
+        const parsed = JSON.parse(msg);
+        if (parsed?.retryAfter) {
+          const secs = Number(parsed.retryAfter) || 120;
+          setCooldown(secs);
+          setResetError(`Aguarde ${secs}s para reenviar.`);
+        } else if (parsed?.error) {
+          setResetError(parsed.error);
+        } else {
+          setResetError(msg);
+        }
+      } catch {
+        setResetError(msg);
+      }
+    }
+  };
+
+  const handleCodeVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetError('');
+    setResetInfo('');
+    if (!identifier || !resetCode) {
+      setResetError('Preencha usuário/email e código.');
+      return;
+    }
+    try {
+      await apiPost('reset-verify', { identifier, code: resetCode });
+      setResetInfo('Código validado. Agora, defina a nova senha.');
+      StorageService.logAudit('RESET_CODIGO_VALIDADO', `Código válido para ${identifier}`);
+      setResetStep('set');
+    } catch (err: any) {
+      let msg = err?.message || 'Código inválido ou expirado.';
+      try {
+        const parsed = JSON.parse(msg);
+        setResetError(parsed?.error || msg);
+      } catch {
+        setResetError(msg);
+      }
     }
   };
 
@@ -84,13 +138,26 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       setResetError('As senhas não conferem.');
       return;
     }
+    // Validação de força mínima no client (reforço à validação do servidor)
+    const strong = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(newPass);
+    if (!strong) {
+      setResetError('Senha fraca. Use no mínimo 8 caracteres, com letras maiúsculas, minúsculas e números.');
+      return;
+    }
     try {
       await apiPost('reset-confirm', { identifier, code: resetCode, newPassword: newPass });
+      StorageService.logAudit('RESET_CONFIRMADO', `Senha redefinida para ${identifier}`);
       setResetInfo('Senha redefinida com sucesso. Use a nova senha para entrar.');
       setPassword(newPass);
       setShowReset(false);
     } catch (err: any) {
-      setResetError(err?.message || 'Código inválido ou expirado.');
+      let msg = err?.message || 'Código inválido ou expirado.';
+      try {
+        const parsed = JSON.parse(msg);
+        setResetError(parsed?.error || msg);
+      } catch {
+        setResetError(msg);
+      }
     }
   };
 
@@ -209,7 +276,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 </div>
               </div>
 
-              {resetStep === 'confirm' && (
+              {resetStep === 'verify' && (
                 <>
                   <div className="space-y-1">
                     <label className="text-sm font-semibold text-gray-700 ml-1">Código</label>
@@ -221,7 +288,43 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                       onChange={(e) => setResetCode(e.target.value)}
                     />
                   </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleCodeVerify}
+                      className="flex-1 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-semibold transition-colors"
+                    >
+                      Validar código
+                    </button>
+                  </div>
+                </>
+              )}
 
+              {resetStep === 'set' && (
+                <>
+                  <div className="space-y-1">
+                    <label className="text-sm font-semibold text-gray-700 ml-1">Nova senha</label>
+                    <input
+                      type="password"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all text-gray-900"
+                      placeholder="Mínimo 8 caracteres, com maiúscula, minúscula e número"
+                      value={newPass}
+                      onChange={(e) => setNewPass(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-semibold text-gray-700 ml-1">Confirmar nova senha</label>
+                    <input
+                      type="password"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all text-gray-900"
+                      placeholder="Repita a nova senha"
+                      value={confirmPass}
+                      onChange={(e) => setConfirmPass(e.target.value)}
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Ações */}
                   <div className="space-y-1">
                     <label className="text-sm font-semibold text-gray-700 ml-1">Nova senha</label>
                     <input
@@ -249,9 +352,10 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               <div className="flex gap-2">
                 <button
                   onClick={handleResetRequest}
-                  className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl font-semibold transition-colors"
+                  disabled={cooldown > 0}
+                  className={`flex-1 py-3 rounded-xl font-semibold transition-colors ${cooldown > 0 ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'}`}
                 >
-                  Enviar código
+                  {cooldown > 0 ? `Reenviar em ${cooldown}s` : 'Enviar código'}
                 </button>
                 <button
                   onClick={handleResetConfirm}
@@ -260,6 +364,9 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                   Confirmar
                 </button>
               </div>
+              {provider && (
+                <div className="text-xs text-gray-500 mt-2">Envio: {provider.toUpperCase()}</div>
+              )}
             </div>
           </div>
         )}
