@@ -123,11 +123,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const manager = managers[0];
+
+    // Verificar cooldown: impedir múltiplas solicitações em curto intervalo
+    const recentResets = await sql`
+      SELECT id, created_at, expires_at, used FROM password_resets
+      WHERE manager_id = ${manager.id}
+      ORDER BY created_at DESC
+      LIMIT 1
+    `;
+
+    if (recentResets && recentResets.length > 0) {
+      const last = recentResets[0] as any;
+      const createdAt = new Date(last.created_at);
+      const ageMs = Date.now() - createdAt.getTime();
+      const cooldownMs = 2 * 60 * 1000; // 2 minutos de cooldown
+      if (!last.used && ageMs < cooldownMs) {
+        const retrySeconds = Math.ceil((cooldownMs - ageMs) / 1000);
+        res.setHeader('Retry-After', String(retrySeconds));
+        return res.status(429).json({ ok: false, error: 'Aguarde antes de solicitar novo código.', retryAfter: retrySeconds });
+      }
+    }
     const code = generateCode();
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
     const codeHash = hashCode(code);
     const resetId = crypto.randomUUID();
 
+    // Limpar códigos anteriores não utilizados para evitar confusão
     await sql`DELETE FROM password_resets WHERE manager_id = ${manager.id} AND used = false;`;
     await sql`
       INSERT INTO password_resets (id, manager_id, code_hash, expires_at, used)

@@ -48,6 +48,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: 'identifier, code e newPassword são obrigatórios' });
     }
 
+    // Validação básica de força da senha
+    const strong = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(newPassword);
+    if (!strong) {
+      return res.status(400).json({ error: 'Senha fraca. Use no mínimo 8 caracteres, com letras maiúsculas, minúsculas e números.' });
+    }
+
     const managers = await sql`
       SELECT id, username FROM managers WHERE username = ${identifier} OR email = ${identifier} LIMIT 1
     `;
