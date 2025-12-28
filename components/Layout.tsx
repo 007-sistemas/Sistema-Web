@@ -82,18 +82,21 @@ export const Layout: React.FC<LayoutProps> = ({
     return () => clearInterval(interval);
   }, []);
 
+  // Itens do submenu Cadastros
+  const cadastroNavItems = [
+    { id: 'cadastro', label: 'Cooperados', icon: Users, permissionKey: 'cadastro' },
+    { id: 'hospitais', label: 'Hospitais & Setores', icon: Building2, permissionKey: 'hospitais' },
+    { id: 'biometria', label: 'Biometria', icon: Fingerprint, permissionKey: 'biometria' },
+    { id: 'gestao', label: 'Gestão de Usuários', icon: Briefcase, permissionKey: 'gestao' },
+  ];
+
   const allNavItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, permissionKey: 'dashboard' },
     { id: 'ponto', label: 'Registrar Produção', icon: ClipboardCheck, permissionKey: 'ponto' },
     { id: 'relatorio', label: 'Relatório Detalhado', icon: FileText, permissionKey: 'relatorio' },
     { id: 'espelho', label: 'Espelho da Biometria', icon: FileClock, permissionKey: 'espelho' },
     { id: 'autorizacao', label: 'Justificativa de Plantão', icon: CheckSquare, permissionKey: 'autorizacao' },
-    { id: 'cadastro', label: 'Cooperados', icon: Users, permissionKey: 'cadastro' },
-    { id: 'hospitais', label: 'Hospitais & Setores', icon: Building2, permissionKey: 'hospitais' },
-    { id: 'biometria', label: 'Biometria', icon: Fingerprint, permissionKey: 'biometria' },
-    { id: 'auditoria', label: 'Auditoria & Logs', icon: ShieldCheck, permissionKey: 'auditoria' },
-    { id: 'gestao', label: 'Gestão de Usuários', icon: Briefcase, permissionKey: 'gestao' },
-    { id: 'perfil', label: 'Meu Perfil', icon: Wrench, permissionKey: 'perfil' },
+    // O menu Cadastros será renderizado separadamente
   ];
 
   let navItems = allNavItems.filter(item => {
@@ -183,7 +186,32 @@ export const Layout: React.FC<LayoutProps> = ({
             <p className="text-xs text-primary-300">Controle de Produção</p>
           </div>
         </div>
-        
+
+        {/* Menu Cadastros */}
+        <div className="px-4 pt-6">
+          <div className="flex items-center space-x-2 mb-2">
+            <span className="inline-flex items-center"><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-folder"><path d="M3 7a2 2 0 0 1 2-2h3.17a2 2 0 0 1 1.41.59l1.83 1.83A2 2 0 0 0 13.83 8H19a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg></span>
+            <span className="font-semibold text-lg">Cadastros</span>
+          </div>
+          <div className="space-y-1">
+            {cadastroNavItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => onChangeView(item.id)}
+                className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors ${
+                  currentView === item.id 
+                    ? 'bg-primary-700 text-white shadow-lg' 
+                    : 'text-primary-100 hover:bg-primary-800 hover:text-white'
+                }`}
+              >
+                <item.icon className="h-5 w-5" />
+                <span>{item.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Demais menus */}
         <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
           {navItems.map((item) => (
             <button
