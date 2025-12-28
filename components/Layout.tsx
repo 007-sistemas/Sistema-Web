@@ -49,10 +49,12 @@ export const Layout: React.FC<LayoutProps> = ({
     } else if (prefs.theme === 'light') {
       document.documentElement.classList.remove('dark');
     } else {
-      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        document.documentElement.classList.add('dark');
-      } else {
+      // Auto: verificar horário (6h-18h = claro, 18h-6h = escuro)
+      const hour = new Date().getHours();
+      if (hour >= 6 && hour < 18) {
         document.documentElement.classList.remove('dark');
+      } else {
+        document.documentElement.classList.add('dark');
       }
     }
     // Aplicar cor primária
