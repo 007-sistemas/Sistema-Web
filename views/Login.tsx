@@ -325,29 +325,6 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               )}
 
               {/* Ações */}
-                  <div className="space-y-1">
-                    <label className="text-sm font-semibold text-gray-700 ml-1">Nova senha</label>
-                    <input
-                      type="password"
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all text-gray-900"
-                      placeholder="Mínimo 6 caracteres"
-                      value={newPass}
-                      onChange={(e) => setNewPass(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-sm font-semibold text-gray-700 ml-1">Confirmar nova senha</label>
-                    <input
-                      type="password"
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all text-gray-900"
-                      placeholder="Repita a nova senha"
-                      value={confirmPass}
-                      onChange={(e) => setConfirmPass(e.target.value)}
-                    />
-                  </div>
-                </>
-              )}
 
               <div className="flex gap-2">
                 <button
