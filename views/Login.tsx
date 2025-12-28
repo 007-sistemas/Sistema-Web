@@ -24,6 +24,8 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [resetError, setResetError] = useState('');
   const [cooldown, setCooldown] = useState<number>(0);
   const [provider, setProvider] = useState<string>('');
+  const [codeVerifying, setCodeVerifying] = useState(false);
+  const [codeMessage, setCodeMessage] = useState<{ type: 'error' | 'success', text: string } | null>(null);
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -106,23 +108,27 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     e.preventDefault();
     setResetError('');
     setResetInfo('');
+    setCodeMessage(null);
     if (!identifier || !resetCode) {
-      setResetError('Preencha usuário/email e código.');
+      setCodeMessage({ type: 'error', text: 'Preencha usuário/email e código.' });
       return;
     }
+    setCodeVerifying(true);
     try {
       await apiPost('reset-verify', { identifier, code: resetCode });
+      setCodeMessage({ type: 'success', text: '✓ Código válido' });
       setResetInfo('Código validado. Agora, defina a nova senha.');
       StorageService.logAudit('RESET_CODIGO_VALIDADO', `Código válido para ${identifier}`);
-      setResetStep('set');
+      setTimeout(() => setResetStep('set'), 500);
     } catch (err: any) {
       let msg = err?.message || 'Código inválido ou expirado.';
       try {
         const parsed = JSON.parse(msg);
-        setResetError(parsed?.error || msg);
-      } catch {
-        setResetError(msg);
-      }
+        msg = parsed?.error || msg;
+      } catch {}
+      setCodeMessage({ type: 'error', text: msg });
+    } finally {
+      setCodeVerifying(false);
     }
   };
 
@@ -285,15 +291,25 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                       className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all text-gray-900"
                       placeholder="Código de 6 dígitos"
                       value={resetCode}
-                      onChange={(e) => setResetCode(e.target.value)}
+                      onChange={(e) => {
+                        setResetCode(e.target.value);
+                        setCodeMessage(null);
+                      }}
                     />
+                    {codeMessage && (
+                      <div className={`text-xs mt-1 flex items-center gap-1 ${codeMessage.type === 'error' ? 'text-red-600' : 'text-green-600'}`}>
+                        {codeMessage.type === 'error' && <AlertCircle className="h-3 w-3" />}
+                        {codeMessage.text}
+                      </div>
+                    )}
                   </div>
                   <div className="flex gap-2">
                     <button
                       onClick={handleCodeVerify}
-                      className="flex-1 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-semibold transition-colors"
+                      disabled={codeVerifying}
+                      className={`flex-1 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-semibold transition-colors ${codeVerifying ? 'opacity-70 cursor-wait' : ''}`}
                     >
-                      Validar código
+                      {codeVerifying ? 'Validando...' : 'Validar código'}
                     </button>
                   </div>
                 </>
