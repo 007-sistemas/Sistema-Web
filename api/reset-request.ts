@@ -162,15 +162,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const emailResult = manager.email ? await sendEmail(manager.email, code, manager.username) : { sent: false, reason: 'No email configured' };
 
-    const response: any = { ok: true, expiresAt, emailSent: emailResult.sent };
-    
-    // Em não-produção, incluir código e detalhes para debug
+    const provider = (emailResult as any)?.smtp ? 'smtp' : (emailResult as any)?.resend ? 'resend' : undefined;
+    const response: any = { ok: true, expiresAt, emailSent: emailResult.sent, provider };
+
+    // Sempre retornar motivo do erro se houver, para facilitar suporte
+    if (!emailResult.sent && (emailResult as any)?.reason) {
+      response.emailError = (emailResult as any).reason;
+    }
+
+    // Em não-produção, incluir código para testes manuais
     const isProd = process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
     if (!isProd) {
       response.devCode = code;
-      if (!emailResult.sent && emailResult.reason) {
-        response.emailError = emailResult.reason;
-      }
     }
 
     return res.status(200).json(response);
