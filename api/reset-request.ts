@@ -155,11 +155,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       VALUES (${resetId}, ${manager.id}, ${codeHash}, ${expiresAt}, false)
     `;
 
-    const emailResult = manager.email ? await sendEmail(manager.email, code, manager.username) : { sent: false };
+    const emailResult = manager.email ? await sendEmail(manager.email, code, manager.username) : { sent: false, reason: 'No email configured' };
 
     const response: any = { ok: true, expiresAt, emailSent: emailResult.sent };
-    if (process.env.NODE_ENV !== 'production') {
-      response.devCode = code; // Facilita teste em dev
+    
+    // Em não-produção, incluir código e detalhes para debug
+    const isProd = process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
+    if (!isProd) {
+      response.devCode = code;
+      if (!emailResult.sent && emailResult.reason) {
+        response.emailError = emailResult.reason;
+      }
     }
 
     return res.status(200).json(response);
