@@ -202,6 +202,16 @@ export const UserProfile: React.FC = () => {
         </div>
       </div>
 
+      {/* Botão Salvar Preferências */}
+      <div className="flex justify-end">
+        <button
+          className="bg-primary-600 hover:bg-primary-700 text-white font-semibold px-6 py-2 rounded-lg shadow transition-all disabled:opacity-60"
+          onClick={handleSavePreferences}
+          disabled={isSaving}
+        >
+          {isSaving ? 'Salvando...' : 'Salvar Preferências'}
+        </button>
+      </div>
     </div>
   );
 };

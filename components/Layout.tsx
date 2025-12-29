@@ -65,22 +65,18 @@ export const Layout: React.FC<LayoutProps> = ({
   };
 
   React.useEffect(() => {
-    const prefs = StorageService.getUserPreferences();
-    if (prefs) {
-      setPreferences(prefs);
-      applyPreferences(prefs);
-    }
-
-    // Recarregar preferências periodicamente para pegar mudanças do UserProfile
-    const interval = setInterval(() => {
-      const updatedPrefs = StorageService.getUserPreferences();
-      if (updatedPrefs && JSON.stringify(updatedPrefs) !== JSON.stringify(prefs)) {
-        setPreferences(updatedPrefs);
-        applyPreferences(updatedPrefs);
+    // Sempre aplica preferências ao montar e ao mudar de sessão
+    const applyUserPrefs = () => {
+      const prefs = StorageService.getUserPreferences();
+      if (prefs) {
+        setPreferences(prefs);
+        applyPreferences(prefs);
       }
-    }, 1000);
-
-    return () => clearInterval(interval);
+    };
+    applyUserPrefs();
+    // Também escuta mudanças de sessão/localStorage
+    window.addEventListener('storage', applyUserPrefs);
+    return () => window.removeEventListener('storage', applyUserPrefs);
   }, []);
 
   // Itens de Cadastros
@@ -88,7 +84,7 @@ export const Layout: React.FC<LayoutProps> = ({
     { id: 'biometria', label: 'Biometria', icon: Fingerprint, permissionKey: 'biometria' },
     { id: 'cadastro', label: 'Cooperados', icon: Users, permissionKey: 'cadastro' },
     { id: 'gestao', label: 'Gestão de Usuários', icon: Briefcase, permissionKey: 'gestao' },
-    { id: 'hospitais', label: 'Hospitais & Setores', icon: Building2, permissionKey: 'hospitais' },
+    { id: 'hospitais', label: 'Hospitais', icon: Building2, permissionKey: 'hospitais' },
     // Força exibição da aba Setores para todos gestores autenticados
     { id: 'setores', label: 'Setores', icon: ShieldCheck, permissionKey: null },
   ].sort((a, b) => a.label.localeCompare(b.label));
