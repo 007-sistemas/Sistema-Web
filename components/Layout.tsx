@@ -89,6 +89,8 @@ export const Layout: React.FC<LayoutProps> = ({
     { id: 'cadastro', label: 'Cooperados', icon: Users, permissionKey: 'cadastro' },
     { id: 'gestao', label: 'Gestão de Usuários', icon: Briefcase, permissionKey: 'gestao' },
     { id: 'hospitais', label: 'Hospitais & Setores', icon: Building2, permissionKey: 'hospitais' },
+    // Força exibição da aba Setores para todos gestores autenticados
+    { id: 'setores', label: 'Setores', icon: ShieldCheck, permissionKey: null },
   ].sort((a, b) => a.label.localeCompare(b.label));
 
   // Menu principal (exceto perfil e cadastros)
@@ -117,6 +119,7 @@ export const Layout: React.FC<LayoutProps> = ({
   });
   // Só adiciona o agrupador Cadastros se houver pelo menos um subitem visível
   let cadastrosItems = cadastroNavItems.filter(item => {
+    if (item.id === 'setores') return true; // Sempre mostra Setores
     if (!permissions || permissions === null) return true;
     return permissions[item.permissionKey as keyof HospitalPermissions] === true;
   });

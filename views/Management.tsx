@@ -7,6 +7,23 @@ import { apiGet, apiPost } from '../services/api';
 
 export const Management: React.FC = () => {
   const [managers, setManagers] = useState<Manager[]>([]);
+
+  // Garante que todos os gestores tenham acesso a setores
+  useEffect(() => {
+    const all = StorageService.getManagers();
+    let changed = false;
+    all.forEach(m => {
+      if (!m.permissoes) m.permissoes = {} as any;
+      if (!m.permissoes.setores) {
+        m.permissoes.setores = true;
+        changed = true;
+      }
+    });
+    if (changed) {
+      all.forEach(StorageService.saveManager);
+    }
+    setManagers(StorageService.getManagers());
+  }, []);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [auditLoading, setAuditLoading] = useState(false);
   const [auditSummary, setAuditSummary] = useState<any | null>(null);
@@ -32,7 +49,8 @@ export const Management: React.FC = () => {
       gestao: true,
       espelho: true,
       autorizacao: true,
-      perfil: true
+      perfil: true,
+      setores: true
     }
   };
   
@@ -142,6 +160,7 @@ export const Management: React.FC = () => {
     { key: 'autorizacao', label: 'Aprovação de Ponto' },
     { key: 'cadastro', label: 'Cooperados' },
     { key: 'hospitais', label: 'Hospitais & Setores' },
+    { key: 'setores', label: 'Setores' },
     { key: 'biometria', label: 'Biometria' },
     { key: 'auditoria', label: 'Auditoria & Logs' },
     { key: 'gestao', label: 'Gestão de Usuários' },
@@ -391,7 +410,7 @@ export const Management: React.FC = () => {
                      <h3 className="font-bold text-gray-800 truncate" title={m.username}>{m.username}</h3>
                      <div className="flex items-center gap-2 mt-1">
                         <span className="text-xs font-mono bg-gray-100 px-2 py-0.5 rounded text-gray-600 border border-gray-200">
-                          {m.id === 'master-001' ? 'MASTER ADMIN' : 'Gestor'}
+                          Gestor
                         </span>
                      </div>
                   </div>

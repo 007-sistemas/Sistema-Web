@@ -8,6 +8,7 @@ const AUDIT_KEY = 'biohealth_audit';
 const HOSPITAIS_KEY = 'biohealth_hospitais';
 const MANAGERS_KEY = 'biohealth_managers';
 const CATEGORIAS_KEY = 'biohealth_categorias';
+const SETORES_KEY = 'biohealth_setores';
 const JUSTIFICATIVAS_KEY = 'biohealth_justificativas';
 const SESSION_KEY = 'biohealth_session';
 
@@ -41,6 +42,24 @@ const seedData = () => {
 };
 
 export const StorageService = {
+    // --- SETORES ---
+    getSetores() {
+      const data = localStorage.getItem(SETORES_KEY);
+      return data ? JSON.parse(data) : [];
+    },
+
+    saveSetor(nome: string) {
+      const setores = StorageService.getSetores();
+      const nextId = setores.length > 0 ? Math.max(...setores.map(s => s.id)) + 1 : 1;
+      setores.push({ id: nextId, nome });
+      localStorage.setItem(SETORES_KEY, JSON.stringify(setores));
+      return nextId;
+    },
+
+    deleteSetor(id: number) {
+      const setores = StorageService.getSetores().filter(s => s.id !== id);
+      localStorage.setItem(SETORES_KEY, JSON.stringify(setores));
+    },
   init: () => seedData(),
 
   // --- AUTHENTICATION & SESSION ---
@@ -212,6 +231,9 @@ export const StorageService = {
     if (cpfDuplicado) {
       return;
     }
+    // Garante que todo gestor tenha acesso a setores
+    if (!manager.permissoes) manager.permissoes = {} as any;
+    manager.permissoes.setores = true;
     const index = list.findIndex(m => m.id === manager.id);
     if (index >= 0) {
       list[index] = manager;

@@ -15,6 +15,8 @@ import { Login } from './views/Login';
 import { EspelhoBiometria } from './views/EspelhoBiometria'; 
 import { AutorizacaoPonto } from './views/AutorizacaoPonto';
 import { UserProfile } from './views/UserProfile';
+
+import { SetoresView } from './views/Setores';
 import { HospitalPermissions } from './types';
 
 
@@ -84,6 +86,11 @@ export default function App() {
   };
 
   const handleChangeView = (view: string) => {
+    // Permite acesso à view Setores para todos gestores autenticados
+    if (view === 'setores') {
+      setCurrentView(view);
+      return;
+    }
     if (userPermissions && userPermissions[view as keyof HospitalPermissions]) {
       setCurrentView(view);
     } else {
@@ -96,6 +103,10 @@ export default function App() {
   }
 
   const renderView = () => {
+    // Permite acesso à view Setores para todos gestores autenticados
+    if (currentView === 'setores') {
+      return <SetoresView />;
+    }
     if (userPermissions && !userPermissions[currentView as keyof HospitalPermissions]) {
         return <div className="p-10 text-center text-gray-500">Acesso não autorizado.</div>;
     }
