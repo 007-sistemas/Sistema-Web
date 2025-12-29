@@ -34,9 +34,18 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   }, [cooldown]);
 
   const handleLogin = async (e: React.FormEvent) => {
+
     e.preventDefault();
     setError('');
     setLoading(true);
+
+    // DEBUG: Exibe managers do localStorage antes do login
+    try {
+      const managersRaw = localStorage.getItem('biohealth_managers');
+      console.log('[DEBUG] Managers no localStorage:', managersRaw);
+    } catch (err) {
+      console.warn('[DEBUG] Não foi possível ler biohealth_managers:', err);
+    }
 
     try {
       // Atualiza dados remotos antes de autenticar

@@ -4,6 +4,15 @@ import { neon } from "@neondatabase/serverless";
 const connectionString = process.env.DATABASE_URL;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+    // CORS headers
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+    if (req.method === 'OPTIONS') {
+      res.status(200).end();
+      return;
+    }
   if (!connectionString) {
     res.status(500).json({ error: "Missing DATABASE_URL env var" });
     return;

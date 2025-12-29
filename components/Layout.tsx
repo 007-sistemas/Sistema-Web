@@ -39,6 +39,7 @@ export const Layout: React.FC<LayoutProps> = ({
   permissions
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const [isCadastrosOpen, setIsCadastrosOpen] = React.useState(true);
   const [preferences, setPreferences] = React.useState<any>(null);
 
   const applyPreferences = (prefs: any) => {
@@ -82,45 +83,52 @@ export const Layout: React.FC<LayoutProps> = ({
     return () => clearInterval(interval);
   }, []);
 
-  // Itens do submenu Cadastros
+  // Itens de Cadastros
   const cadastroNavItems = [
-    { id: 'cadastro', label: 'Cooperados', icon: Users, permissionKey: 'cadastro' },
-    { id: 'hospitais', label: 'Hospitais & Setores', icon: Building2, permissionKey: 'hospitais' },
     { id: 'biometria', label: 'Biometria', icon: Fingerprint, permissionKey: 'biometria' },
+    { id: 'cadastro', label: 'Cooperados', icon: Users, permissionKey: 'cadastro' },
     { id: 'gestao', label: 'Gestão de Usuários', icon: Briefcase, permissionKey: 'gestao' },
-  ];
+    { id: 'hospitais', label: 'Hospitais & Setores', icon: Building2, permissionKey: 'hospitais' },
+  ].sort((a, b) => a.label.localeCompare(b.label));
 
-  const allNavItems = [
+  // Menu principal (exceto perfil e cadastros)
+  const mainNavItems = [
+    { id: 'autorizacao', label: 'Justificativa de Plantão', icon: CheckSquare, permissionKey: 'autorizacao' },
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, permissionKey: 'dashboard' },
+    { id: 'espelho', label: 'Espelho da Biometria', icon: FileClock, permissionKey: 'espelho' },
     { id: 'ponto', label: 'Registrar Produção', icon: ClipboardCheck, permissionKey: 'ponto' },
     { id: 'relatorio', label: 'Relatório Detalhado', icon: FileText, permissionKey: 'relatorio' },
-    { id: 'espelho', label: 'Espelho da Biometria', icon: FileClock, permissionKey: 'espelho' },
-    { id: 'autorizacao', label: 'Justificativa de Plantão', icon: CheckSquare, permissionKey: 'autorizacao' },
-    // O menu Cadastros será renderizado separadamente
   ];
 
-  let navItems = allNavItems.filter(item => {
+  // Agrupador Cadastros como item de menu
+  const cadastrosGroup = {
+    id: 'cadastros',
+    label: 'Cadastros',
+    icon: (props: any) => (
+      <span className="inline-flex items-center"><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-folder"><path d="M3 7a2 2 0 0 1 2-2h3.17a2 2 0 0 1 1.41.59l1.83 1.83A2 2 0 0 0 13.83 8H19a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg></span>)
+  };
+
+  // Perfil sempre por último
+  const perfilNavItem = { id: 'perfil', label: 'Meu Perfil', icon: Wrench, permissionKey: 'perfil' };
+
+  let navItems = mainNavItems.filter(item => {
     if (!permissions) return true;
     return permissions[item.permissionKey as keyof HospitalPermissions] === true;
   });
-
-  // Aplicar preferências de abas (visíveis e ordem)
-  if (preferences) {
-    if (Array.isArray(preferences.visibleTabs) && preferences.visibleTabs.length > 0) {
-      const filtered = navItems.filter(item => preferences.visibleTabs.includes(item.id));
-      // Fallback: se filtrou tudo, mantenha itens permitidos
-      navItems = filtered.length > 0 ? filtered : navItems;
-    }
-    if (Array.isArray(preferences.tabOrder) && preferences.tabOrder.length > 0) {
-      const orderMap = new Map<string, number>();
-      preferences.tabOrder.forEach((key: string, idx: number) => orderMap.set(key, idx));
-      navItems = navItems.sort((a, b) => {
-        const ai = orderMap.has(a.id) ? (orderMap.get(a.id) as number) : Number.MAX_SAFE_INTEGER;
-        const bi = orderMap.has(b.id) ? (orderMap.get(b.id) as number) : Number.MAX_SAFE_INTEGER;
-        return ai - bi;
-      });
-    }
+  // Só adiciona o agrupador Cadastros se houver pelo menos um subitem visível
+  let cadastrosItems = cadastroNavItems.filter(item => {
+    if (!permissions || permissions === null) return true;
+    return permissions[item.permissionKey as keyof HospitalPermissions] === true;
+  });
+  // Sempre mostra o agrupador se houver subitens
+  if (cadastrosItems.length > 0) {
+    navItems = [...navItems, cadastrosGroup].sort((a, b) => a.label.localeCompare(b.label));
+  } else {
+    navItems = navItems.sort((a, b) => a.label.localeCompare(b.label));
   }
+  const showPerfil = !permissions || permissions[perfilNavItem.permissionKey as keyof HospitalPermissions];
+
+  // Não aplicar preferências de abas para o agrupador Cadastros nem seus subitens
 
   const exitKioskMode = () => {
     window.location.search = '';
@@ -187,18 +195,14 @@ export const Layout: React.FC<LayoutProps> = ({
           </div>
         </div>
 
-        {/* Menu Cadastros */}
-        <div className="px-4 pt-6">
-          <div className="flex items-center space-x-2 mb-2">
-            <span className="inline-flex items-center"><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-folder"><path d="M3 7a2 2 0 0 1 2-2h3.17a2 2 0 0 1 1.41.59l1.83 1.83A2 2 0 0 0 13.83 8H19a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg></span>
-            <span className="font-semibold text-lg">Cadastros</span>
-          </div>
-          <div className="space-y-1">
-            {cadastroNavItems.map((item) => (
+        {/* Menu Cadastros agrupado, mas alinhado com os demais */}
+        <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+          {navItems.map((item) =>
+            item.id !== 'cadastros' ? (
               <button
                 key={item.id}
                 onClick={() => onChangeView(item.id)}
-                className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors ${
+                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
                   currentView === item.id 
                     ? 'bg-primary-700 text-white shadow-lg' 
                     : 'text-primary-100 hover:bg-primary-800 hover:text-white'
@@ -207,27 +211,57 @@ export const Layout: React.FC<LayoutProps> = ({
                 <item.icon className="h-5 w-5" />
                 <span>{item.label}</span>
               </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Demais menus */}
-        <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-          {navItems.map((item) => (
+            ) : (
+              <div key="cadastros">
+                <button
+                  className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg font-semibold text-lg transition-colors focus:outline-none text-primary-100 hover:bg-primary-800 hover:text-white"
+                  onClick={() => setIsCadastrosOpen((v) => !v)}
+                  aria-expanded={isCadastrosOpen}
+                  aria-controls="cadastros-submenu"
+                  style={{marginLeft: 0}}
+                >
+                  <cadastrosGroup.icon />
+                  <span className="flex-1 text-left">Cadastros</span>
+                  <svg className={`h-4 w-4 transform transition-transform ${isCadastrosOpen ? '' : '-rotate-90'}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" /></svg>
+                </button>
+                {isCadastrosOpen && (
+                  <div className="space-y-1" id="cadastros-submenu">
+                    {cadastrosItems.map((subitem) => (
+                      <button
+                        key={subitem.id}
+                        onClick={() => onChangeView(subitem.id)}
+                        className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors ${
+                          currentView === subitem.id 
+                            ? 'bg-primary-700 text-white shadow-lg' 
+                            : 'text-primary-100 hover:bg-primary-800 hover:text-white'
+                        }`}
+                      >
+                        <subitem.icon className="h-5 w-5" />
+                        <span>{subitem.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          )}
+          {/* Meu Perfil sempre por último */}
+          {showPerfil && (
             <button
-              key={item.id}
-              onClick={() => onChangeView(item.id)}
-              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-                currentView === item.id 
+              key={perfilNavItem.id}
+              onClick={() => onChangeView(perfilNavItem.id)}
+              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors mt-6 ${
+                currentView === perfilNavItem.id 
                   ? 'bg-primary-700 text-white shadow-lg' 
                   : 'text-primary-100 hover:bg-primary-800 hover:text-white'
               }`}
             >
-              <item.icon className="h-5 w-5" />
-              <span>{item.label}</span>
+              <perfilNavItem.icon className="h-5 w-5" />
+              <span>{perfilNavItem.label}</span>
             </button>
-          ))}
+          )}
         </nav>
+
 
         <div className="p-4 border-t border-primary-800">
           <button 
