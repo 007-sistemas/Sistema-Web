@@ -16,6 +16,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+        // Tabela de setores
+        await sql`
+          CREATE TABLE IF NOT EXISTS setores (
+            id TEXT PRIMARY KEY,
+            nome TEXT NOT NULL
+          );
+        `;
+
+        // Tabela de relação hospital_setores (muitos para muitos)
+        await sql`
+          CREATE TABLE IF NOT EXISTS hospital_setores (
+            hospital_id TEXT REFERENCES hospitals(id) ON DELETE CASCADE,
+            setor_id TEXT REFERENCES setores(id) ON DELETE CASCADE,
+            PRIMARY KEY (hospital_id, setor_id)
+          );
+        `;
     const sql = neon(connectionString);
 
     // Drop existing tables to recreate with correct schema
