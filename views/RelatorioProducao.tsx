@@ -125,9 +125,10 @@ export const RelatorioProducao: React.FC = () => {
                     setorNome: (() => {
                         // Busca o nome do setor pelo ID, independente do filtro de hospital
                         if (log.setorId) {
-                            // Procura em todos os setores de todos os hospitais
                             const setor = hospitais.flatMap(h => h.setores).find(s => s.id === log.setorId);
                             if (setor) return setor.nome;
+                            // Se não encontrar, mostra o próprio ID do setor
+                            return log.setorId;
                         }
                         // Fallback: tenta extrair nome do setor do campo local (ex: "HRN - UTI")
                         if (log.local && log.local.includes(' - ')) {
@@ -231,12 +232,9 @@ export const RelatorioProducao: React.FC = () => {
     const timestamp = new Date(`${formData}T${formHora}:00`).toISOString();
     const cooperado = cooperados.find(c => c.id === formCooperadoId);
     const hospital = hospitais.find(h => h.id === filterHospital);
-        let setor = hospital?.setores.find(s => s.id === formSetorId);
-        if (!setor) {
-          setor = hospitais.flatMap(h => h.setores).find(s => s.id === formSetorId);
-        }
-
-    if (!cooperado || !hospital || !setor) return;
+                // Busca setor globalmente, não só no hospital filtrado
+                let setor = hospitais.flatMap(h => h.setores).find(s => s.id === formSetorId);
+                if (!cooperado || !hospital || !setor) return;
 
     if (formTipo === TipoPonto.ENTRADA) {
         const newCode = generateRandomCode();
