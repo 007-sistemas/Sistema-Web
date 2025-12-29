@@ -118,16 +118,28 @@ export const RelatorioProducao: React.FC = () => {
           processedExits.add(matchingExit.id);
         }
 
-        shifts.push({
-          id: log.id,
-          cooperadoNome: log.cooperadoNome,
-          local: log.local,
-          setorNome: log.setorId && filterHospital ? (setoresDisponiveis.find(s => s.id === log.setorId)?.nome || log.local) : log.local,
-          data: new Date(log.timestamp).toLocaleDateString(),
-          entry: log,
-          exit: matchingExit,
-          status: matchingExit ? 'Fechado' : 'Em Aberto'
-        });
+                shifts.push({
+                    id: log.id,
+                    cooperadoNome: log.cooperadoNome,
+                    local: log.local,
+                    setorNome: (() => {
+                        // Busca o nome do setor pelo ID, independente do filtro de hospital
+                        if (log.setorId) {
+                            // Procura em todos os setores de todos os hospitais
+                            const setor = hospitais.flatMap(h => h.setores).find(s => s.id === log.setorId);
+                            if (setor) return setor.nome;
+                        }
+                        // Fallback: tenta extrair nome do setor do campo local (ex: "HRN - UTI")
+                        if (log.local && log.local.includes(' - ')) {
+                            return log.local.split(' - ')[1] || log.local;
+                        }
+                        return log.local;
+                    })(),
+                    data: new Date(log.timestamp).toLocaleDateString(),
+                    entry: log,
+                    exit: matchingExit,
+                    status: matchingExit ? 'Fechado' : 'Em Aberto'
+                });
       }
     });
 
@@ -219,7 +231,10 @@ export const RelatorioProducao: React.FC = () => {
     const timestamp = new Date(`${formData}T${formHora}:00`).toISOString();
     const cooperado = cooperados.find(c => c.id === formCooperadoId);
     const hospital = hospitais.find(h => h.id === filterHospital);
-    const setor = hospital?.setores.find(s => s.id === formSetorId);
+        let setor = hospital?.setores.find(s => s.id === formSetorId);
+        if (!setor) {
+          setor = hospitais.flatMap(h => h.setores).find(s => s.id === formSetorId);
+        }
 
     if (!cooperado || !hospital || !setor) return;
 
