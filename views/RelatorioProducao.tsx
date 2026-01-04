@@ -281,27 +281,71 @@ export const RelatorioProducao: React.FC = () => {
                 handleNovoPlantao();
                 return;
             }
-        } else if (formTipo === TipoPonto.SAIDA && selectedExitId) {
-            const existingExit = logs.find(p => p.id === selectedExitId);
-            if (existingExit) {
-                const updatedExit: RegistroPonto = {
-                    ...existingExit,
+        } else if (formTipo === TipoPonto.SAIDA) {
+            // Se existe saída já, editar a saída existente
+            if (selectedExitId) {
+                const existingExit = logs.find(p => p.id === selectedExitId);
+                if (existingExit) {
+                    const updatedExit: RegistroPonto = {
+                        ...existingExit,
+                        timestamp: timestamp,
+                        local: `${hospital.nome} - ${setor.nome}`,
+                        hospitalId: hospital.id,
+                        setorId: setor.id.toString()
+                    };
+                    StorageService.updatePonto(updatedExit);
+                    alert("Saída atualizada com sucesso!");
+                    loadData();
+                    handleNovoPlantao();
+                    return;
+                }
+            } 
+            // Se NÃO existe saída ainda, criar uma nova saída vinculada à entrada
+            else if (selectedEntryId) {
+                const entryPonto = logs.find(p => p.id === selectedEntryId);
+                if (!entryPonto) {
+                    alert("Entrada não encontrada.");
+                    return;
+                }
+                if (entryPonto.status === 'Fechado') {
+                    alert("Este registro já foi fechado.");
+                    return;
+                }
+                if (entryPonto.cooperadoId !== cooperado.id) {
+                    alert("O código pertence a outro cooperado.");
+                    return;
+                }
+
+                const exitPonto: RegistroPonto = {
+                    id: crypto.randomUUID(),
+                    codigo: entryPonto.codigo,
+                    cooperadoId: cooperado.id,
+                    cooperadoNome: cooperado.nome,
                     timestamp: timestamp,
+                    tipo: TipoPonto.SAIDA,
                     local: `${hospital.nome} - ${setor.nome}`,
                     hospitalId: hospital.id,
-                    setorId: setor.id.toString()
+                    setorId: setor.id.toString(),
+                    isManual: true,
+                    status: 'Fechado',
+                    validadoPor: 'Admin',
+                    relatedId: entryPonto.id
                 };
-                StorageService.updatePonto(updatedExit);
-                alert("Saída atualizada com sucesso!");
+
+                const updatedEntry = { ...entryPonto, status: 'Fechado' as const };
+                
+                StorageService.savePonto(exitPonto);
+                StorageService.updatePonto(updatedEntry);
+                
+                alert("Saída registrada!");
                 loadData();
                 handleNovoPlantao();
                 return;
             }
-        } else {
-            console.log('Debug:', { selectedPontoId, selectedEntryId, selectedExitId, formTipo, tipoPonto: TipoPonto });
-            alert("Por favor, selecione o tipo de registro (Entrada ou Saída) para editar.");
-            return;
         }
+        
+        alert("Por favor, selecione o tipo de registro (Entrada ou Saída) para editar.");
+        return;
     }
 
     // CRIAR novo registro
