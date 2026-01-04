@@ -26,7 +26,6 @@ export const HospitalRegister: React.FC = () => {
   const [isSetorModalOpen, setIsSetorModalOpen] = useState(false);
   const [tempSelectedSetores, setTempSelectedSetores] = useState<Setor[]>([]);
   const [loadingSetores, setLoadingSetores] = useState(false);
-  const [savingSetores, setSavingSetores] = useState(false);
 
   const initialFormState: Hospital = {
     id: '',
@@ -123,39 +122,13 @@ export const HospitalRegister: React.FC = () => {
   const handleSelectAllTempSetores = () => setTempSelectedSetores(allSetores);
   const handleClearAllTempSetores = () => setTempSelectedSetores([]);
   
-  const handleConfirmSetores = async () => {
-    if (!formData.id) return;
-    setSavingSetores(true);
-    try {
-      // Obter setores atuais do hospital
-      const setoresAtuais = await apiGet<Setor[]>(`hospital-setores?hospitalId=${formData.id}`);
-      const idsAtuais = new Set(setoresAtuais?.map(s => s.id) || []);
-      const idsNovos = new Set(tempSelectedSetores.map(s => s.id));
-
-      // Remover setores que foram desmarcados
-      for (const id of idsAtuais) {
-        if (!idsNovos.has(id)) {
-          await apiDelete(`hospital-setores`, { hospitalId: formData.id, setorId: id });
-        }
-      }
-
-      // Adicionar setores novos
-      for (const setor of tempSelectedSetores) {
-        if (!idsAtuais.has(setor.id)) {
-          await apiPost('hospital-setores', { hospitalId: formData.id, setorId: setor.id });
-        }
-      }
-
-      setIsSetorModalOpen(false);
-    } catch (err) {
-      console.error('Erro ao salvar setores:', err);
-      alert('Erro ao salvar setores. Tente novamente.');
-    } finally {
-      setSavingSetores(false);
-    }
+  const handleConfirmSetores = () => {
+    // Apenas confirma a seleção, não salva ainda
+    // O save real acontecerá quando o hospital for salvo
+    setIsSetorModalOpen(false);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.nome) return alert('Nome do hospital é obrigatório');
     if (!formData.usuarioAcesso) return alert('Usuário de acesso é obrigatório');
@@ -176,6 +149,34 @@ export const HospitalRegister: React.FC = () => {
     };
 
     StorageService.saveHospital(newHospital);
+    
+    // Sincronizar setores com a API
+    if (tempSelectedSetores.length > 0) {
+      try {
+        // Obter setores já associados (se for edição)
+        const setoresAtuais = await apiGet<Setor[]>(`hospital-setores?hospitalId=${newHospital.id}`).catch(() => []);
+        const idsAtuais = new Set(setoresAtuais.map(s => s.id));
+        const idsNovos = new Set(tempSelectedSetores.map(s => s.id));
+
+        // Remover setores desmarcados
+        for (const id of idsAtuais) {
+          if (!idsNovos.has(id)) {
+            await apiDelete(`hospital-setores`, { hospitalId: newHospital.id, setorId: id });
+          }
+        }
+
+        // Adicionar setores novos
+        for (const setor of tempSelectedSetores) {
+          if (!idsAtuais.has(setor.id)) {
+            await apiPost('hospital-setores', { hospitalId: newHospital.id, setorId: setor.id });
+          }
+        }
+      } catch (err) {
+        console.warn('Erro ao sincronizar setores com API:', err);
+        // Continua mesmo com erro na API, pois já salvou localmente
+      }
+    }
+
     loadHospitais();
     setIsFormOpen(false);
     setFormData(initialFormState);
@@ -366,10 +367,9 @@ export const HospitalRegister: React.FC = () => {
                   <button 
                     type="button" 
                     onClick={handleConfirmSetores} 
-                    disabled={savingSetores}
-                    className="px-4 py-2 rounded-lg bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50"
+                    className="px-4 py-2 rounded-lg bg-primary-600 text-white hover:bg-primary-700"
                   >
-                    {savingSetores ? 'Salvando...' : 'Confirmar'}
+                    Confirmar
                   </button>
                 </div>
               </div>
