@@ -4,10 +4,27 @@ import { Hospital, HospitalPermissions } from '../types';
 import { StorageService } from '../services/storage';
 import { Plus, Save, Trash2, Building2, Layers, X, Edit2, Lock, Shield, User } from 'lucide-react';
 
+// Modal simples
+const Modal: React.FC<{ open: boolean, onClose: () => void, children: React.ReactNode }> = ({ open, onClose, children }) => {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
+      <div className="bg-white rounded-xl shadow-lg p-6 min-w-[320px] max-w-full relative animate-fade-in">
+        <button onClick={onClose} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700"><X className="h-5 w-5" /></button>
+        {children}
+      </div>
+    </div>
+  );
+};
+
 export const HospitalRegister: React.FC = () => {
   const [hospitais, setHospitais] = useState<Hospital[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  
+  const [allSetores, setAllSetores] = useState<{id: number, nome: string}[]>([]);
+  const [novoSetorNome, setNovoSetorNome] = useState('');
+  const [isSetorModalOpen, setIsSetorModalOpen] = useState(false);
+  const [tempSelectedSetores, setTempSelectedSetores] = useState<{id: number, nome: string}[]>([]);
+
   const initialFormState: Hospital = {
     id: '',
     nome: '',
@@ -31,14 +48,45 @@ export const HospitalRegister: React.FC = () => {
   };
   
   const [formData, setFormData] = useState<Hospital>(initialFormState);
-  const [tempSetorName, setTempSetorName] = useState('');
 
   useEffect(() => {
     loadHospitais();
+    setAllSetores(StorageService.getSetores());
   }, []);
+
+  // Sempre que abrir o modal, sincroniza seleção temporária
+  useEffect(() => {
+    if (isSetorModalOpen) {
+      setTempSelectedSetores(formData.setores);
+    }
+  }, [isSetorModalOpen]);
 
   const loadHospitais = () => {
     setHospitais(StorageService.getHospitais());
+  };
+
+  // Atualiza setores globais ao criar novo (dentro do modal)
+  const handleAddNovoSetor = () => {
+    if (!novoSetorNome.trim()) return;
+    StorageService.saveSetor(novoSetorNome.trim());
+    setAllSetores(StorageService.getSetores());
+    setNovoSetorNome('');
+  };
+
+  // Modal: seleção múltipla
+  const handleToggleTempSetor = (setor: {id: number, nome: string}) => {
+    setTempSelectedSetores(prev => {
+      const exists = prev.some(s => s.id === setor.id);
+      return exists
+        ? prev.filter(s => s.id !== setor.id)
+        : [...prev, setor];
+    });
+  };
+  const handleSelectAllTempSetores = () => setTempSelectedSetores(allSetores);
+  const handleClearAllTempSetores = () => setTempSelectedSetores([]);
+  const handleConfirmSetores = () => {
+    setFormData(prev => ({ ...prev, setores: tempSelectedSetores }));
+    setIsSetorModalOpen(false);
   };
 
   const handleNewHospital = () => {
@@ -193,42 +241,75 @@ export const HospitalRegister: React.FC = () => {
               <label className="text-sm font-medium text-gray-700 block flex items-center gap-2">
                 <Layers className="h-4 w-4" /> Setores / Alas
               </label>
-              <div className="flex space-x-2">
-                <input 
-                  type="text" 
-                  className="flex-1 bg-white text-gray-900 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none"
-                  value={tempSetorName}
-                  onChange={e => setTempSetorName(e.target.value)}
-                  placeholder="Ex: UTI, Emergência..."
-                  onKeyDown={e => { if(e.key === 'Enter') { e.preventDefault(); addSetor(); }}}
-                />
-                <button 
+              <div className="flex items-center gap-2">
+                <button
                   type="button"
-                  onClick={addSetor}
-                  className="bg-primary-100 text-primary-700 px-3 py-2 rounded-lg hover:bg-primary-200"
+                  onClick={() => setIsSetorModalOpen(true)}
+                  className="bg-primary-100 text-primary-700 px-3 py-2 rounded-lg hover:bg-primary-200 flex items-center gap-1"
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-4 w-4" /> Gerenciar Setores
                 </button>
               </div>
-
               <div className="flex flex-wrap gap-2 mt-2">
-                {formData.setores.map(setor => (
-                  <div key={setor.id} className="flex items-center bg-gray-100 px-3 py-1 rounded-full border border-gray-200">
-                    <span className="text-sm text-gray-700 mr-2">{setor.nome}</span>
-                    <button 
-                      type="button"
-                      onClick={() => removeSetor(setor.id)}
-                      className="text-gray-400 hover:text-red-500"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
                 {formData.setores.length === 0 && (
-                  <p className="text-xs text-gray-400 w-full">Nenhum setor adicionado.</p>
+                  <p className="text-xs text-gray-400 w-full">Nenhum setor selecionado.</p>
                 )}
+                {formData.setores.map(setor => (
+                  <span key={setor.id} className="flex items-center gap-2 px-3 py-1 rounded-full border bg-primary-50 border-primary-200 text-primary-700 text-sm">
+                    <Layers className="h-3 w-3 mr-1" /> {setor.nome}
+                  </span>
+                ))}
               </div>
             </div>
+
+            {/* Modal de seleção de setores */}
+            <Modal open={isSetorModalOpen} onClose={() => setIsSetorModalOpen(false)}>
+              <div className="space-y-4">
+                <h4 className="font-semibold text-lg text-gray-800 mb-2">Selecionar Setores</h4>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    className="flex-1 bg-white text-gray-900 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none"
+                    value={novoSetorNome}
+                    onChange={e => setNovoSetorNome(e.target.value)}
+                    placeholder="Novo setor..."
+                    onKeyDown={e => { if(e.key === 'Enter') { e.preventDefault(); handleAddNovoSetor(); }}}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddNovoSetor}
+                    className="bg-primary-100 text-primary-700 px-3 py-2 rounded-lg hover:bg-primary-200"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="flex gap-2 mb-2">
+                  <button type="button" onClick={handleSelectAllTempSetores} className="bg-green-100 text-green-700 px-3 py-2 rounded-lg hover:bg-green-200 text-xs">Marcar Todos</button>
+                  <button type="button" onClick={handleClearAllTempSetores} className="bg-gray-100 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-200 text-xs">Limpar Seleção</button>
+                </div>
+                <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
+                  {allSetores.length === 0 && <p className="text-xs text-gray-400 w-full">Nenhum setor cadastrado.</p>}
+                  {allSetores.map(setor => {
+                    const checked = tempSelectedSetores.some(s => s.id === setor.id);
+                    return (
+                      <label key={setor.id} className={`flex items-center gap-2 px-3 py-1 rounded-full border cursor-pointer ${checked ? 'bg-primary-50 border-primary-300' : 'bg-gray-50 border-gray-200'}`}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => handleToggleTempSetor(setor)}
+                          className="accent-primary-600"
+                        />
+                        <span className="text-sm text-gray-700">{setor.nome}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                <div className="flex justify-end mt-4 gap-2">
+                  <button type="button" onClick={() => setIsSetorModalOpen(false)} className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">Cancelar</button>
+                  <button type="button" onClick={handleConfirmSetores} className="px-4 py-2 rounded-lg bg-primary-600 text-white hover:bg-primary-700">Confirmar</button>
+                </div>
+              </div>
+            </Modal>
 
             {/* Permissions Section */}
             <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
