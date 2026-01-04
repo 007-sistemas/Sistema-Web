@@ -276,7 +276,6 @@ export const RelatorioProducao: React.FC = () => {
                     setorId: setor.id.toString()
                 };
                 StorageService.updatePonto(updatedEntry);
-                alert("Entrada atualizada com sucesso!");
                 loadData();
                 handleNovoPlantao();
                 return;
@@ -294,7 +293,6 @@ export const RelatorioProducao: React.FC = () => {
                         setorId: setor.id.toString()
                     };
                     StorageService.updatePonto(updatedExit);
-                    alert("Saída atualizada com sucesso!");
                     loadData();
                     handleNovoPlantao();
                     return;
@@ -337,7 +335,6 @@ export const RelatorioProducao: React.FC = () => {
                 StorageService.savePonto(exitPonto);
                 StorageService.updatePonto(updatedEntry);
                 
-                alert("Saída registrada!");
                 loadData();
                 handleNovoPlantao();
                 return;
