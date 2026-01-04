@@ -148,7 +148,24 @@ export const HospitalRegister: React.FC = () => {
       id: formData.id || crypto.randomUUID(),
     };
 
+    // Salvar no localStorage
     StorageService.saveHospital(newHospital);
+    
+    // Tentar salvar no Neon via API
+    try {
+      await apiPost('hospitals', {
+        id: newHospital.id,
+        nome: newHospital.nome,
+        slug: newHospital.slug,
+        usuarioAcesso: newHospital.usuarioAcesso,
+        senha: newHospital.senha,
+        endereco: newHospital.endereco || {},
+        permissoes: newHospital.permissoes
+      });
+    } catch (err) {
+      console.warn('Erro ao salvar hospital na API:', err);
+      // Continua mesmo com erro, pois já salvou localmente
+    }
     
     // Sincronizar setores com a API
     if (tempSelectedSetores.length > 0) {
