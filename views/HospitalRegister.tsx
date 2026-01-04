@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import { Hospital, HospitalPermissions } from '../types';
+import { Hospital, HospitalPermissions, Setor } from '../types';
 import { StorageService } from '../services/storage';
+import { apiGet, apiPost, apiDelete } from '../services/api';
 import { Plus, Save, Trash2, Building2, Layers, X, Edit2, Lock, Shield, User } from 'lucide-react';
 
 // Modal simples
@@ -20,10 +21,12 @@ const Modal: React.FC<{ open: boolean, onClose: () => void, children: React.Reac
 export const HospitalRegister: React.FC = () => {
   const [hospitais, setHospitais] = useState<Hospital[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [allSetores, setAllSetores] = useState<{id: number, nome: string}[]>([]);
+  const [allSetores, setAllSetores] = useState<Setor[]>([]);
   const [novoSetorNome, setNovoSetorNome] = useState('');
   const [isSetorModalOpen, setIsSetorModalOpen] = useState(false);
-  const [tempSelectedSetores, setTempSelectedSetores] = useState<{id: number, nome: string}[]>([]);
+  const [tempSelectedSetores, setTempSelectedSetores] = useState<Setor[]>([]);
+  const [loadingSetores, setLoadingSetores] = useState(false);
+  const [savingSetores, setSavingSetores] = useState(false);
 
   const initialFormState: Hospital = {
     id: '',
@@ -31,7 +34,6 @@ export const HospitalRegister: React.FC = () => {
     slug: '',
     usuarioAcesso: '',
     senha: '',
-    // Endereço removido conforme solicitação
     permissoes: {
       dashboard: true,
       ponto: true,
@@ -43,38 +45,74 @@ export const HospitalRegister: React.FC = () => {
       gestao: false,
       espelho: false,
       autorizacao: false
-    },
-    setores: []
+    }
   };
   
   const [formData, setFormData] = useState<Hospital>(initialFormState);
 
   useEffect(() => {
     loadHospitais();
-    setAllSetores(StorageService.getSetores());
+    loadAllSetores();
   }, []);
 
-  // Sempre que abrir o modal, sincroniza seleção temporária
+  // Ao abrir modal, carrega setores já associados ao hospital
   useEffect(() => {
-    if (isSetorModalOpen) {
-      setTempSelectedSetores(formData.setores);
+    if (isSetorModalOpen && formData.id) {
+      loadHospitalSetores();
     }
-  }, [isSetorModalOpen]);
+  }, [isSetorModalOpen, formData.id]);
 
   const loadHospitais = () => {
     setHospitais(StorageService.getHospitais());
   };
 
+  const loadAllSetores = async () => {
+    setLoadingSetores(true);
+    try {
+      const setores = await apiGet<Setor[]>('setores');
+      setAllSetores(setores || []);
+    } catch (err) {
+      console.error('Erro ao carregar setores:', err);
+      // Fallback para localStorage
+      const local = StorageService.getSetores();
+      setAllSetores(local);
+    } finally {
+      setLoadingSetores(false);
+    }
+  };
+
+  const loadHospitalSetores = async () => {
+    if (!formData.id) return;
+    try {
+      const setoresAssociados = await apiGet<Setor[]>(`hospital-setores?hospitalId=${formData.id}`);
+      setTempSelectedSetores(setoresAssociados || []);
+    } catch (err) {
+      console.error('Erro ao carregar setores do hospital:', err);
+      setTempSelectedSetores([]);
+    }
+  };
+
   // Atualiza setores globais ao criar novo (dentro do modal)
-  const handleAddNovoSetor = () => {
+  const handleAddNovoSetor = async () => {
     if (!novoSetorNome.trim()) return;
-    StorageService.saveSetor(novoSetorNome.trim());
-    setAllSetores(StorageService.getSetores());
-    setNovoSetorNome('');
+    try {
+      const novoSetor = await apiPost<Setor>('setores', { nome: novoSetorNome.trim() });
+      if (novoSetor) {
+        setAllSetores(prev => [...prev, novoSetor]);
+        setNovoSetorNome('');
+      }
+    } catch (err) {
+      console.error('Erro ao criar setor:', err);
+      // Fallback localStorage
+      StorageService.saveSetor(novoSetorNome.trim());
+      const updated = StorageService.getSetores();
+      setAllSetores(updated);
+      setNovoSetorNome('');
+    }
   };
 
   // Modal: seleção múltipla
-  const handleToggleTempSetor = (setor: {id: number, nome: string}) => {
+  const handleToggleTempSetor = (setor: Setor) => {
     setTempSelectedSetores(prev => {
       const exists = prev.some(s => s.id === setor.id);
       return exists
@@ -84,15 +122,37 @@ export const HospitalRegister: React.FC = () => {
   };
   const handleSelectAllTempSetores = () => setTempSelectedSetores(allSetores);
   const handleClearAllTempSetores = () => setTempSelectedSetores([]);
-  const handleConfirmSetores = () => {
-    setFormData(prev => ({ ...prev, setores: tempSelectedSetores }));
-    setIsSetorModalOpen(false);
-  };
+  
+  const handleConfirmSetores = async () => {
+    if (!formData.id) return;
+    setSavingSetores(true);
+    try {
+      // Obter setores atuais do hospital
+      const setoresAtuais = await apiGet<Setor[]>(`hospital-setores?hospitalId=${formData.id}`);
+      const idsAtuais = new Set(setoresAtuais?.map(s => s.id) || []);
+      const idsNovos = new Set(tempSelectedSetores.map(s => s.id));
 
-  const handleNewHospital = () => {
-    // Usuário agora é manual, não geramos mais o código automaticamente
-    setFormData(initialFormState);
-    setIsFormOpen(true);
+      // Remover setores que foram desmarcados
+      for (const id of idsAtuais) {
+        if (!idsNovos.has(id)) {
+          await apiDelete(`hospital-setores`, { hospitalId: formData.id, setorId: id });
+        }
+      }
+
+      // Adicionar setores novos
+      for (const setor of tempSelectedSetores) {
+        if (!idsAtuais.has(setor.id)) {
+          await apiPost('hospital-setores', { hospitalId: formData.id, setorId: setor.id });
+        }
+      }
+
+      setIsSetorModalOpen(false);
+    } catch (err) {
+      console.error('Erro ao salvar setores:', err);
+      alert('Erro ao salvar setores. Tente novamente.');
+    } finally {
+      setSavingSetores(false);
+    }
   };
 
   const handleSave = (e: React.FormEvent) => {
@@ -119,9 +179,10 @@ export const HospitalRegister: React.FC = () => {
     loadHospitais();
     setIsFormOpen(false);
     setFormData(initialFormState);
+    setTempSelectedSetores([]);
   };
 
-  const handleEdit = (h: Hospital) => {
+  const handleEdit = async (h: Hospital) => {
     // Merge with default structure
     setFormData({
       ...initialFormState,
@@ -138,20 +199,11 @@ export const HospitalRegister: React.FC = () => {
     }
   };
 
-  const addSetor = () => {
-    if (!tempSetorName.trim()) return;
-    setFormData(prev => ({
-      ...prev,
-      setores: [...prev.setores, { id: crypto.randomUUID(), nome: tempSetorName }]
-    }));
-    setTempSetorName('');
-  };
-
-  const removeSetor = (setorId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      setores: prev.setores.filter(s => s.id !== setorId)
-    }));
+  const handleNewHospital = () => {
+    // Usuário agora é manual, não geramos mais o código automaticamente
+    setFormData(initialFormState);
+    setTempSelectedSetores([]);
+    setIsFormOpen(true);
   };
 
   // Permission Labels Map
@@ -251,10 +303,10 @@ export const HospitalRegister: React.FC = () => {
                 </button>
               </div>
               <div className="flex flex-wrap gap-2 mt-2">
-                {formData.setores.length === 0 && (
+                {tempSelectedSetores.length === 0 && (
                   <p className="text-xs text-gray-400 w-full">Nenhum setor selecionado.</p>
                 )}
-                {formData.setores.map(setor => (
+                {tempSelectedSetores.map(setor => (
                   <span key={setor.id} className="flex items-center gap-2 px-3 py-1 rounded-full border bg-primary-50 border-primary-200 text-primary-700 text-sm">
                     <Layers className="h-3 w-3 mr-1" /> {setor.nome}
                   </span>
@@ -266,47 +318,59 @@ export const HospitalRegister: React.FC = () => {
             <Modal open={isSetorModalOpen} onClose={() => setIsSetorModalOpen(false)}>
               <div className="space-y-4">
                 <h4 className="font-semibold text-lg text-gray-800 mb-2">Selecionar Setores</h4>
-                <div className="flex gap-2 mb-2">
-                  <input
-                    type="text"
-                    className="flex-1 bg-white text-gray-900 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none"
-                    value={novoSetorNome}
-                    onChange={e => setNovoSetorNome(e.target.value)}
-                    placeholder="Novo setor..."
-                    onKeyDown={e => { if(e.key === 'Enter') { e.preventDefault(); handleAddNovoSetor(); }}}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddNovoSetor}
-                    className="bg-primary-100 text-primary-700 px-3 py-2 rounded-lg hover:bg-primary-200"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </button>
-                </div>
-                <div className="flex gap-2 mb-2">
-                  <button type="button" onClick={handleSelectAllTempSetores} className="bg-green-100 text-green-700 px-3 py-2 rounded-lg hover:bg-green-200 text-xs">Marcar Todos</button>
-                  <button type="button" onClick={handleClearAllTempSetores} className="bg-gray-100 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-200 text-xs">Limpar Seleção</button>
-                </div>
-                <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
-                  {allSetores.length === 0 && <p className="text-xs text-gray-400 w-full">Nenhum setor cadastrado.</p>}
-                  {allSetores.map(setor => {
-                    const checked = tempSelectedSetores.some(s => s.id === setor.id);
-                    return (
-                      <label key={setor.id} className={`flex items-center gap-2 px-3 py-1 rounded-full border cursor-pointer ${checked ? 'bg-primary-50 border-primary-300' : 'bg-gray-50 border-gray-200'}`}>
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => handleToggleTempSetor(setor)}
-                          className="accent-primary-600"
-                        />
-                        <span className="text-sm text-gray-700">{setor.nome}</span>
-                      </label>
-                    );
-                  })}
-                </div>
+                {loadingSetores && <p className="text-sm text-gray-500">Carregando setores...</p>}
+                {!loadingSetores && (
+                  <>
+                    <div className="flex gap-2 mb-2">
+                      <input
+                        type="text"
+                        className="flex-1 bg-white text-gray-900 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none"
+                        value={novoSetorNome}
+                        onChange={e => setNovoSetorNome(e.target.value)}
+                        placeholder="Novo setor..."
+                        onKeyDown={e => { if(e.key === 'Enter') { e.preventDefault(); handleAddNovoSetor(); }}}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddNovoSetor}
+                        className="bg-primary-100 text-primary-700 px-3 py-2 rounded-lg hover:bg-primary-200"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <div className="flex gap-2 mb-2">
+                      <button type="button" onClick={handleSelectAllTempSetores} className="bg-green-100 text-green-700 px-3 py-2 rounded-lg hover:bg-green-200 text-xs">Marcar Todos</button>
+                      <button type="button" onClick={handleClearAllTempSetores} className="bg-gray-100 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-200 text-xs">Limpar Seleção</button>
+                    </div>
+                    <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
+                      {allSetores.length === 0 && <p className="text-xs text-gray-400 w-full">Nenhum setor cadastrado.</p>}
+                      {allSetores.map(setor => {
+                        const checked = tempSelectedSetores.some(s => s.id === setor.id);
+                        return (
+                          <label key={setor.id} className={`flex items-center gap-2 px-3 py-1 rounded-full border cursor-pointer ${checked ? 'bg-primary-50 border-primary-300' : 'bg-gray-50 border-gray-200'}`}>
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => handleToggleTempSetor(setor)}
+                              className="accent-primary-600"
+                            />
+                            <span className="text-sm text-gray-700">{setor.nome}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
                 <div className="flex justify-end mt-4 gap-2">
                   <button type="button" onClick={() => setIsSetorModalOpen(false)} className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">Cancelar</button>
-                  <button type="button" onClick={handleConfirmSetores} className="px-4 py-2 rounded-lg bg-primary-600 text-white hover:bg-primary-700">Confirmar</button>
+                  <button 
+                    type="button" 
+                    onClick={handleConfirmSetores} 
+                    disabled={savingSetores}
+                    className="px-4 py-2 rounded-lg bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50"
+                  >
+                    {savingSetores ? 'Salvando...' : 'Confirmar'}
+                  </button>
                 </div>
               </div>
             </Modal>
@@ -370,45 +434,7 @@ export const HospitalRegister: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {hospitais.map(h => (
-            <div key={h.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow group relative">
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex items-center space-x-3">
-                  <div className="bg-primary-50 p-2 rounded-lg">
-                    <Building2 className="h-6 w-6 text-primary-600" />
-                  </div>
-                  <div className="overflow-hidden">
-                     <h3 className="font-bold text-gray-800 truncate" title={h.nome}>{h.nome}</h3>
-                     <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs font-mono bg-gray-100 px-2 py-0.5 rounded text-gray-600 border border-gray-200">
-                          {h.usuarioAcesso}
-                        </span>
-                     </div>
-                  </div>
-                </div>
-                <div className="flex space-x-1 flex-shrink-0">
-                  <button onClick={() => handleEdit(h)} className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded">
-                    <Edit2 className="h-4 w-4" />
-                  </button>
-                  <button onClick={() => handleDelete(h.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-              
-              <div className="mt-4 mb-4">
-                <div className="flex items-center text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                  <Layers className="h-3 w-3 mr-1" />
-                  Setores ({h.setores.length})
-                </div>
-                <div className="flex flex-wrap gap-2 max-h-16 overflow-hidden">
-                  {h.setores.map(s => (
-                    <span key={s.id} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                      {s.nome}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <HospitalCard key={h.id} hospital={h} onEdit={handleEdit} onDelete={handleDelete} />
           ))}
           
           {hospitais.length === 0 && (
@@ -419,6 +445,72 @@ export const HospitalRegister: React.FC = () => {
           )}
         </div>
       )}
+    </div>
+  );
+};
+
+// Componente para exibir um hospital com setores carregados via API
+const HospitalCard: React.FC<{ hospital: Hospital; onEdit: (h: Hospital) => void; onDelete: (id: string) => void }> = ({ hospital, onEdit, onDelete }) => {
+  const [setores, setSetores] = useState<Setor[]>([]);
+  const [loadingSetores, setLoadingSetores] = useState(true);
+
+  useEffect(() => {
+    const loadSetores = async () => {
+      try {
+        const data = await apiGet<Setor[]>(`hospital-setores?hospitalId=${hospital.id}`);
+        setSetores(data || []);
+      } catch (err) {
+        console.error('Erro ao carregar setores do hospital:', err);
+        setSetores([]);
+      } finally {
+        setLoadingSetores(false);
+      }
+    };
+
+    loadSetores();
+  }, [hospital.id]);
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow group relative">
+      <div className="flex justify-between items-start mb-4">
+        <div className="flex items-center space-x-3">
+          <div className="bg-primary-50 p-2 rounded-lg">
+            <Building2 className="h-6 w-6 text-primary-600" />
+          </div>
+          <div className="overflow-hidden">
+             <h3 className="font-bold text-gray-800 truncate" title={hospital.nome}>{hospital.nome}</h3>
+             <div className="flex items-center gap-2 mt-1">
+                <span className="text-xs font-mono bg-gray-100 px-2 py-0.5 rounded text-gray-600 border border-gray-200">
+                  {hospital.usuarioAcesso}
+                </span>
+             </div>
+          </div>
+        </div>
+        <div className="flex space-x-1 flex-shrink-0">
+          <button onClick={() => onEdit(hospital)} className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded">
+            <Edit2 className="h-4 w-4" />
+          </button>
+          <button onClick={() => onDelete(hospital.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded">
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+      
+      <div className="mt-4 mb-4">
+        <div className="flex items-center text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+          <Layers className="h-3 w-3 mr-1" />
+          Setores {!loadingSetores && `(${setores.length})`}
+        </div>
+        <div className="flex flex-wrap gap-2 max-h-16 overflow-hidden">
+          {loadingSetores && <p className="text-xs text-gray-400">Carregando...</p>}
+          {!loadingSetores && setores.length === 0 && <p className="text-xs text-gray-400">Nenhum setor associado</p>}
+          {setores.map(s => (
+            <span key={s.id} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+              {s.nome}
+            </span>
+          ))}
+        </div>
+      </div>
     </div>
   );
 };
