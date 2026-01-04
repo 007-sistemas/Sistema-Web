@@ -214,6 +214,11 @@ export const RelatorioProducao: React.FC = () => {
     setFormData(d.toISOString().split('T')[0]);
     setFormHora(d.toTimeString().substring(0,5));
     
+    // Carregar código da entrada se existir
+    if (row.entry) {
+      setFormInputCodigo(row.entry.codigo);
+    }
+    
     // NÃO setar o tipo automaticamente - deixar para o usuário escolher
     // O usuário deve escolher se quer editar a entrada ou saída
   };
@@ -259,8 +264,8 @@ export const RelatorioProducao: React.FC = () => {
 
     // Se há um registro selecionado, EDITAR ao invés de criar novo
     if (selectedPontoId) {
-        // Se está editando uma ENTRADA
-        if (selectedEntryId && formTipo === TipoPonto.ENTRADA) {
+        // Validar que um tipo foi selecionado
+        if (formTipo === TipoPonto.ENTRADA && selectedEntryId) {
             const existingEntry = logs.find(p => p.id === selectedEntryId);
             if (existingEntry) {
                 const updatedEntry: RegistroPonto = {
@@ -276,9 +281,7 @@ export const RelatorioProducao: React.FC = () => {
                 handleNovoPlantao();
                 return;
             }
-        }
-        // Se está editando uma SAÍDA
-        else if (selectedExitId && formTipo === TipoPonto.SAIDA) {
+        } else if (formTipo === TipoPonto.SAIDA && selectedExitId) {
             const existingExit = logs.find(p => p.id === selectedExitId);
             if (existingExit) {
                 const updatedExit: RegistroPonto = {
@@ -294,8 +297,8 @@ export const RelatorioProducao: React.FC = () => {
                 handleNovoPlantao();
                 return;
             }
-        }
-        else {
+        } else {
+            console.log('Debug:', { selectedPontoId, selectedEntryId, selectedExitId, formTipo, tipoPonto: TipoPonto });
             alert("Por favor, selecione o tipo de registro (Entrada ou Saída) para editar.");
             return;
         }
