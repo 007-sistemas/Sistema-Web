@@ -254,10 +254,34 @@ export const RelatorioProducao: React.FC = () => {
     const timestamp = new Date(`${formData}T${formHora}:00`).toISOString();
     const cooperado = cooperados.find(c => c.id === formCooperadoId);
     const hospital = hospitais.find(h => h.id === filterHospital);
-    const setor = hospital?.setores.find(s => s.id === formSetorId);
+    const setor = setoresDisponiveis.find(s => s.id.toString() === formSetorId);
 
-    if (!cooperado || !hospital || !setor) return;
+    if (!cooperado || !hospital || !setor) {
+      console.error('Validação falhou:', { cooperado: !!cooperado, hospital: !!hospital, setor: !!setor, formSetorId, setoresDisponiveis });
+      alert("Erro: Cooperado, Hospital ou Setor não encontrado.");
+      return;
+    }
 
+    // Se há um registro selecionado, EDITAR ao invés de criar novo
+    if (selectedPontoId) {
+        const existingPonto = logs.find(p => p.id === selectedPontoId);
+        if (existingPonto) {
+            const updatedPonto: RegistroPonto = {
+                ...existingPonto,
+                timestamp: timestamp,
+                local: `${hospital.nome} - ${setor.nome}`,
+                hospitalId: hospital.id,
+                setorId: setor.id.toString()
+            };
+            StorageService.updatePonto(updatedPonto);
+            alert("Registro atualizado com sucesso!");
+            loadData();
+            handleNovoPlantao();
+            return;
+        }
+    }
+
+    // CRIAR novo registro
     if (formTipo === TipoPonto.ENTRADA) {
         const newCode = generateRandomCode();
         const novoPonto: RegistroPonto = {
@@ -269,7 +293,7 @@ export const RelatorioProducao: React.FC = () => {
             tipo: TipoPonto.ENTRADA,
             local: `${hospital.nome} - ${setor.nome}`,
             hospitalId: hospital.id,
-            setorId: setor.id,
+            setorId: setor.id.toString(),
             isManual: true,
             status: 'Aberto',
             validadoPor: 'Admin'
@@ -306,7 +330,7 @@ export const RelatorioProducao: React.FC = () => {
             tipo: TipoPonto.SAIDA,
             local: `${hospital.nome} - ${setor.nome}`,
             hospitalId: hospital.id,
-            setorId: setor.id,
+            setorId: setor.id.toString(),
             isManual: true,
             status: 'Fechado',
             validadoPor: 'Admin',
