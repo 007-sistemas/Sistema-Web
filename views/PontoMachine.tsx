@@ -122,7 +122,7 @@ export const PontoMachine: React.FC = () => {
 
   const getCurrentLocationString = () => {
     const h = getSelectedHospital();
-    const s = h?.setores.find(s => s.id === selectedSetorId);
+    const s = availableSetores.find(s => s.id.toString() === selectedSetorId);
     if (!h) return "Local não selecionado";
     return `${h.nome} - ${s ? s.nome : 'Setor não selecionado'}`;
   };
