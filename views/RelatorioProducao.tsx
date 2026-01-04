@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { StorageService } from '../services/storage';
-import { RegistroPonto, Cooperado, Hospital, TipoPonto } from '../types';
+import { RegistroPonto, Cooperado, Hospital, TipoPonto, Setor } from '../types';
+import { apiGet } from '../services/api';
 import { Search, Save, Trash2, Clock, Filter, X, ArrowRight } from 'lucide-react';
 
 // Interface auxiliar para exibição
@@ -20,6 +21,7 @@ export const RelatorioProducao: React.FC = () => {
   const [logs, setLogs] = useState<RegistroPonto[]>([]);
   const [cooperados, setCooperados] = useState<Cooperado[]>([]);
   const [hospitais, setHospitais] = useState<Hospital[]>([]);
+  const [setoresDisponiveis, setSetoresDisponiveis] = useState<Setor[]>([]);
   
   // --- FILTER STATE ---
   const [filterHospital, setFilterHospital] = useState('');
@@ -50,6 +52,43 @@ export const RelatorioProducao: React.FC = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Carregar setores quando o filtro de hospital mudar
+  useEffect(() => {
+    if (!filterHospital) {
+      setSetoresDisponiveis([]);
+      return;
+    }
+
+    const loadSetores = async () => {
+      try {
+        const setores = await apiGet<Setor[]>(`hospital-setores?hospitalId=${filterHospital}`);
+        if (!setores || setores.length === 0) {
+          // Fallback para setores padrão
+          setSetoresDisponiveis([
+            { id: 1, nome: 'UTI' },
+            { id: 2, nome: 'Pronto Atendimento' },
+            { id: 3, nome: 'Centro Cirúrgico' },
+            { id: 4, nome: 'Ambulatório' },
+            { id: 5, nome: 'Maternidade' }
+          ]);
+        } else {
+          setSetoresDisponiveis(setores);
+        }
+      } catch (err) {
+        console.error('Erro ao carregar setores:', err);
+        setSetoresDisponiveis([
+          { id: 1, nome: 'UTI' },
+          { id: 2, nome: 'Pronto Atendimento' },
+          { id: 3, nome: 'Centro Cirúrgico' },
+          { id: 4, nome: 'Ambulatório' },
+          { id: 5, nome: 'Maternidade' }
+        ]);
+      }
+    };
+
+    loadSetores();
+  }, [filterHospital]);
 
   const loadData = () => {
     setCooperados(StorageService.getCooperados());
@@ -88,17 +127,10 @@ export const RelatorioProducao: React.FC = () => {
 
   const filteredLogs = getFilteredLogs();
 
-  // Helper to get sectors based on selected HOSPITAL FILTER
-  // MUST BE DEFINED BEFORE getShiftRows
-  const getAvailableSetoresForForm = () => {
-    const h = hospitais.find(hp => hp.id === filterHospital);
-    return h ? h.setores : [];
-  };
+  // Helper to get sectors from state
+  const getAvailableSetoresForForm = () => setoresDisponiveis;
   
-  const getAvailableSetoresForFilter = () => {
-    const h = hospitais.find(hp => hp.id === filterHospital);
-    return h ? h.setores : [];
-  };
+  const getAvailableSetoresForFilter = () => setoresDisponiveis;
 
   // --- PAIRING LOGIC (Shift View) ---
   const getShiftRows = (): ShiftRow[] => {
@@ -167,9 +199,12 @@ export const RelatorioProducao: React.FC = () => {
 
     setSelectedPontoId(row.entry ? row.entry.id : row.exit?.id || null);
     
+    // Definir o hospital do registro
+    setFilterHospital(ponto.hospitalId);
+    
     setFormCooperadoId(ponto.cooperadoId);
     setFormCooperadoInput(ponto.cooperadoNome); 
-    setFormSetorId(ponto.setorId || '');
+    setFormSetorId(ponto.setorId ? ponto.setorId.toString() : '');
     
     const d = new Date(ponto.timestamp);
     setFormData(d.toISOString().split('T')[0]);
@@ -582,7 +617,7 @@ export const RelatorioProducao: React.FC = () => {
                     className="w-full bg-white text-gray-900 border border-gray-300 rounded p-2 focus:ring-2 focus:ring-primary-500 outline-none disabled:bg-gray-100"
                     value={formSetorId}
                     onChange={e => setFormSetorId(e.target.value)}
-                    disabled={!filterHospital}
+                    disabled={!filterHospital && !selectedPontoId}
                 >
                     <option value="">Selecione...</option>
                     {getAvailableSetoresForForm().map(s => (
