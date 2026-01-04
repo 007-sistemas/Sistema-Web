@@ -52,25 +52,19 @@ export const SetoresView: React.FC = () => {
     if (!novoNome.trim()) return;
     try {
       setLoading(true);
-      const id = crypto.randomUUID();
-      const novoSetor = { id, nome: novoNome.trim() };
       
       if (useLocal) {
-        // Fallback: usar localStorage
+        // Fallback: usar localStorage com ID numérico
+        const maxId = Math.max(...setores.map(s => s.id), 0);
+        const novoSetor = { id: maxId + 1, nome: novoNome.trim() };
         saveSetorLocal(novoSetor);
         setSetores(getSetoresLocal());
       } else {
-        // Tentar API
-        try {
-          await apiPost('setores', novoSetor);
-          await loadSetores();
-        } catch (apiErr) {
-          console.warn('API falhou, salvando localmente:', apiErr);
-          saveSetorLocal(novoSetor);
-          setSetores(getSetoresLocal());
-          setUseLocal(true);
-        }
+        // API: POST só com o nome, backend gera o ID
+        const novoSetor = await apiPost<Setor>('setores', { nome: novoNome.trim() });
+        setSetores([...setores, novoSetor]);
       }
+      
       setNovoNome('');
     } catch (err) {
       console.error('Erro ao criar setor:', err);
@@ -85,7 +79,7 @@ export const SetoresView: React.FC = () => {
     setEditingNome(setor.nome);
   };
 
-  const handleSaveEdit = async (setorId: string) => {
+  const handleSaveEdit = async (setorId: number) => {
     if (!editingNome.trim()) return;
     try {
       setLoading(true);
@@ -122,7 +116,7 @@ export const SetoresView: React.FC = () => {
     setEditingNome('');
   };
 
-  const handleDelete = async (setorId: string) => {
+  const handleDelete = async (setorId: number) => {
     if (!confirm('Tem certeza que deseja excluir este setor?')) return;
     try {
       setLoading(true);
