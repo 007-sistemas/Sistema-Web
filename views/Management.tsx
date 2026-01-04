@@ -155,7 +155,7 @@ export const Management: React.FC = () => {
   const permissionLabels: { key: keyof HospitalPermissions; label: string }[] = [
     { key: 'dashboard', label: 'Dashboard' },
     { key: 'ponto', label: 'Registrar Produção' },
-    { key: 'relatorio', label: 'Relatório Detalhado' },
+    { key: 'relatorio', label: 'Controle de Produção' },
     { key: 'espelho', label: 'Espelho de Ponto' },
     { key: 'autorizacao', label: 'Aprovação de Ponto' },
     { key: 'cadastro', label: 'Cooperados' },

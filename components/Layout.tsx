@@ -95,7 +95,7 @@ export const Layout: React.FC<LayoutProps> = ({
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, permissionKey: 'dashboard' },
     { id: 'espelho', label: 'Espelho da Biometria', icon: FileClock, permissionKey: 'espelho' },
     { id: 'ponto', label: 'Registrar Produção', icon: ClipboardCheck, permissionKey: 'ponto' },
-    { id: 'relatorio', label: 'Relatório Detalhado', icon: FileText, permissionKey: 'relatorio' },
+    { id: 'relatorio', label: 'Controle de Produção', icon: FileText, permissionKey: 'relatorio' },
   ];
 
   // Agrupador Cadastros como item de menu

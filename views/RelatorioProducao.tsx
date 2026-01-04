@@ -443,7 +443,7 @@ export const RelatorioProducao: React.FC = () => {
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-20">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">Relatório e Lançamento de Produção</h2>
+        <h2 className="text-2xl font-bold text-gray-800">Controle de Produção</h2>
       </div>
 
       {/* --- FILTERS SECTION --- */}
