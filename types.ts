@@ -37,15 +37,6 @@ export interface Setor {
   nome: string;
 }
 
-export interface HospitalAddress {
-  cep: string;
-  logradouro: string;
-  numero: string;
-  latitude?: number;
-  longitude?: number;
-  raio?: number;
-}
-
 export interface HospitalPermissions {
   dashboard: boolean;
   ponto: boolean;
@@ -67,7 +58,6 @@ export interface Hospital {
   slug: string; // URL identifier (e.g., 'hrn', 'hrc')
   usuarioAcesso: string; // Auto-generated login code
   senha?: string; // Access password
-  endereco?: HospitalAddress;
   permissoes: HospitalPermissions;
   // setores agora vêm da tabela hospital_setores (relacionamento N:N)
 }

@@ -25,17 +25,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Garantir colunas esperadas em bases antigas
       await sql`ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS usuario_acesso text`;
       await sql`ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS senha text`;
-      await sql`ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS endereco jsonb`;
       await sql`ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS permissoes jsonb`;
-      await sql`ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS setores jsonb`;
 
-      const rows = await sql`SELECT id, nome, slug, usuario_acesso, senha, endereco, permissoes, setores FROM hospitals ORDER BY created_at DESC`;
+      const rows = await sql`SELECT id, nome, slug, usuario_acesso, senha, permissoes FROM hospitals ORDER BY created_at DESC`;
       res.status(200).json(rows);
       return;
     }
 
     if (req.method === 'POST') {
-      const { id, nome, slug, usuarioAcesso, senha, endereco, permissoes } = req.body;
+      const { id, nome, slug, usuarioAcesso, senha, permissoes } = req.body;
       
       if (!id || !nome || !usuarioAcesso || !senha) {
         res.status(400).json({ error: 'Campos obrigatórios: id, nome, usuarioAcesso, senha' });
@@ -43,14 +41,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       await sql`
-        INSERT INTO hospitals (id, nome, slug, usuario_acesso, senha, endereco, permissoes, created_at)
+        INSERT INTO hospitals (id, nome, slug, usuario_acesso, senha, permissoes, created_at)
         VALUES (
           ${id}, 
           ${nome}, 
           ${slug || nome.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 10)},
           ${usuarioAcesso},
           ${senha},
-          ${JSON.stringify(endereco || {})},
           ${JSON.stringify(permissoes || {})},
           NOW()
         )
@@ -59,7 +56,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           slug = EXCLUDED.slug,
           usuario_acesso = EXCLUDED.usuario_acesso,
           senha = EXCLUDED.senha,
-          endereco = EXCLUDED.endereco,
           permissoes = EXCLUDED.permissoes
       `;
 
@@ -68,7 +64,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === 'PUT') {
-      const { id, nome, slug, usuarioAcesso, senha, endereco, permissoes } = req.body;
+      const { id, nome, slug, usuarioAcesso, senha, permissoes } = req.body;
       
       if (!id) {
         res.status(400).json({ error: 'Campo obrigatório: id' });
@@ -81,7 +77,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           slug = ${slug},
           usuario_acesso = ${usuarioAcesso},
           senha = ${senha},
-          endereco = ${JSON.stringify(endereco || {})},
           permissoes = ${JSON.stringify(permissoes || {})}
         WHERE id = ${id}
       `;

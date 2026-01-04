@@ -162,7 +162,6 @@ export const HospitalRegister: React.FC = () => {
         slug: newHospital.slug,
         usuarioAcesso: newHospital.usuarioAcesso,
         senha: newHospital.senha,
-        endereco: newHospital.endereco || {},
         permissoes: newHospital.permissoes
       });
       console.log('✅ Hospital salvo na API:', response);
@@ -214,6 +213,17 @@ export const HospitalRegister: React.FC = () => {
       ...h,
       permissoes: { ...initialFormState.permissoes, ...h.permissoes }
     });
+    
+    // Carregar setores associados ao hospital via API
+    try {
+      const setoresAssociados = await apiGet<Setor[]>(`hospital-setores?hospitalId=${h.id}`);
+      setTempSelectedSetores(setoresAssociados || []);
+      console.log(`✅ Carregados ${setoresAssociados?.length || 0} setores do hospital ${h.nome}`);
+    } catch (err) {
+      console.error('Erro ao carregar setores do hospital:', err);
+      setTempSelectedSetores([]);
+    }
+    
     setIsFormOpen(true);
   };
 
