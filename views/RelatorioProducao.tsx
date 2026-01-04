@@ -212,7 +212,7 @@ export const RelatorioProducao: React.FC = () => {
     
     const d = new Date(ponto.timestamp);
     setFormData(d.toISOString().split('T')[0]);
-    setFormHora(d.toTimeString().substring(0,5));
+    setFormHora(''); // Deixar em branco para usuário preencher manualmente
     
     // Carregar código da entrada se existir
     if (row.entry) {
@@ -248,6 +248,11 @@ export const RelatorioProducao: React.FC = () => {
 
     if (!formCooperadoId || !formSetorId || !formData || !formHora) {
         alert("Preencha todos os campos obrigatórios.");
+        return;
+    }
+
+    if (!formTipo) {
+        alert("Selecione o tipo de registro (Entrada ou Saída).");
         return;
     }
 
