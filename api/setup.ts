@@ -92,7 +92,6 @@ const connectionString = process.env.DATABASE_URL;
         senha TEXT,
         endereco JSONB,
         permissoes JSONB,
-        setores JSONB,
         created_at TIMESTAMPTZ NOT NULL DEFAULT now()
       );
     `;

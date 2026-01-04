@@ -69,7 +69,7 @@ export interface Hospital {
   senha?: string; // Access password
   endereco?: HospitalAddress;
   permissoes: HospitalPermissions;
-  setores: Setor[];
+  // setores agora vêm da tabela hospital_setores (relacionamento N:N)
 }
 
 export interface UserPreferences {
