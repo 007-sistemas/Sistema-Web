@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Cooperado, TipoPonto, RegistroPonto, Hospital } from '../types';
+import { Cooperado, TipoPonto, RegistroPonto, Hospital, Setor } from '../types';
 import { StorageService } from '../services/storage';
+import { apiGet } from '../services/api';
 import { ScannerMock } from '../components/ScannerMock';
 import { MapPin, LogIn, LogOut, Building2, Layers, AlertCircle } from 'lucide-react';
 
@@ -17,6 +18,8 @@ export const PontoMachine: React.FC = () => {
   const [hospitais, setHospitais] = useState<Hospital[]>([]);
   const [selectedHospitalId, setSelectedHospitalId] = useState<string>('');
   const [selectedSetorId, setSelectedSetorId] = useState<string>('');
+  const [availableSetores, setAvailableSetores] = useState<Setor[]>([]);
+  const [loadingSetores, setLoadingSetores] = useState(false);
 
   // Refs para garantir acesso ao estado mais recente dentro do callback de biometria
   const hospitalIdRef = useRef(selectedHospitalId);
@@ -39,6 +42,50 @@ export const PontoMachine: React.FC = () => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Load setores when hospital is selected
+  useEffect(() => {
+    if (!selectedHospitalId) {
+      setAvailableSetores([]);
+      return;
+    }
+
+    const loadSetores = async () => {
+      setLoadingSetores(true);
+      try {
+        const setores = await apiGet<Setor[]>(`hospital-setores?hospitalId=${selectedHospitalId}`);
+        
+        // Se não houver setores vinculados, usa os 5 padrão para teste
+        if (!setores || setores.length === 0) {
+          const setoresPadrao: Setor[] = [
+            { id: 1, nome: 'UTI' },
+            { id: 2, nome: 'Pronto Atendimento' },
+            { id: 3, nome: 'Centro Cirúrgico' },
+            { id: 4, nome: 'Ambulatório' },
+            { id: 5, nome: 'Maternidade' }
+          ];
+          setAvailableSetores(setoresPadrao);
+        } else {
+          setAvailableSetores(setores);
+        }
+      } catch (error) {
+        console.error('❌ Erro ao carregar setores:', error);
+        // Em caso de erro, usa os setores padrão
+        const setoresPadrao: Setor[] = [
+          { id: 1, nome: 'UTI' },
+          { id: 2, nome: 'Pronto Atendimento' },
+          { id: 3, nome: 'Centro Cirúrgico' },
+          { id: 4, nome: 'Ambulatório' },
+          { id: 5, nome: 'Maternidade' }
+        ];
+        setAvailableSetores(setoresPadrao);
+      } finally {
+        setLoadingSetores(false);
+      }
+    };
+
+    loadSetores();
+  }, [selectedHospitalId]);
 
   useEffect(() => {
     const session = StorageService.getSession();
@@ -85,7 +132,7 @@ export const PontoMachine: React.FC = () => {
     const currentHospitalId = hospitalIdRef.current;
     const currentSetorId = setorIdRef.current;
 
-    console.log('Tentativa de registro. Estado atual:', { currentHospitalId, currentSetorId });
+    console.log('🔍 HandleIdentification chamado:', { hash, currentHospitalId, currentSetorId });
 
     if (!currentHospitalId) {
         alert("Por favor, selecione a Unidade Hospitalar.");
@@ -97,12 +144,14 @@ export const PontoMachine: React.FC = () => {
     }
 
     const allCooperados = StorageService.getCooperados();
+    console.log('👥 Cooperados disponíveis:', allCooperados.length);
     
     // Simulate finding user with that hash
     // In a real app, hash matching would happen on backend or secure module
     const found = allCooperados.find(c => c.biometrias.length > 0) || allCooperados[0];
     
     if (found) {
+      console.log('✅ Cooperado encontrado:', found.nome);
       setIdentifiedCooperado(found);
       
       // LOGIC: Determine Entry vs Exit automatically
@@ -117,13 +166,15 @@ export const PontoMachine: React.FC = () => {
         }
       }
 
+      console.log('📝 Tipo de registro:', nextType);
       setDeterminedAction(nextType);
       
-      // REGISTER IMMEDIATELY - No confirmation step
-      // Passamos os valores atuais explicitamente para garantir consistência
+      // Registrar imediatamente
+      console.log('🚀 Chamando registerPontoImmediate...');
       registerPontoImmediate(found, nextType, currentHospitalId, currentSetorId, last);
 
     } else {
+      console.log('❌ Nenhum cooperado encontrado');
       alert("Nenhum cooperado identificado ou cadastrado com biometria.");
     }
   };
@@ -135,14 +186,18 @@ export const PontoMachine: React.FC = () => {
       setId: string, 
       lastPonto?: RegistroPonto
   ) => {
+    console.log('🎯 Iniciando registro:', { cooperado: cooperado.nome, tipo, hospId, setId });
+    
     let codigo = Math.floor(100000 + Math.random() * 900000).toString();
     let status: 'Aberto' | 'Fechado' = 'Aberto';
     let relatedId: string | undefined;
 
     // Recalcular string de local com base nos IDs passados (garantia de consistência)
     const h = hospitais.find(h => h.id === hospId);
-    const s = h?.setores.find(s => s.id === setId);
+    const s = availableSetores.find(s => s.id.toString() === setId);
     const localString = `${h?.nome || ''} - ${s?.nome || ''}`;
+    
+    console.log('📍 Local identificado:', localString, { hospital: h?.nome, setor: s?.nome });
 
     // Handle Entry/Exit Pairing
     if (tipo === TipoPonto.SAIDA) {
@@ -173,11 +228,14 @@ export const PontoMachine: React.FC = () => {
       relatedId: relatedId
     };
 
+    console.log('💾 Salvando ponto:', novoPonto);
     StorageService.savePonto(novoPonto);
+    console.log('✅ Ponto salvo! Mudando para step SUCCESS...');
     setStep('SUCCESS');
 
     // Reset after 3 seconds
     setTimeout(() => {
+      console.log('⏰ Voltando para step SCAN');
       setStep('SCAN');
       setIdentifiedCooperado(null);
       // Keep location selected for convenience
@@ -265,10 +323,10 @@ export const PontoMachine: React.FC = () => {
                     disabled={!selectedHospitalId}
                   >
                     <option value="">
-                      {!selectedHospitalId ? 'Selecione Hospital Primeiro' : 'Selecione o Setor...'}
+                      {!selectedHospitalId ? 'Selecione Hospital Primeiro' : loadingSetores ? 'Carregando setores...' : 'Selecione o Setor...'}
                     </option>
-                    {currentHospital?.setores.map(s => (
-                      <option key={s.id} value={s.id}>{s.nome}</option>
+                    {availableSetores.map(s => (
+                      <option key={s.id} value={s.id.toString()}>{s.nome}</option>
                     ))}
                   </select>
                 </div>

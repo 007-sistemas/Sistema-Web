@@ -69,12 +69,30 @@ export const HospitalRegister: React.FC = () => {
     setLoadingSetores(true);
     try {
       const setores = await apiGet<Setor[]>('setores');
-      setAllSetores(setores || []);
+      // Se não houver setores, cria os 5 padrão para teste
+      if (!setores || setores.length === 0) {
+        const setoresPadrao: Setor[] = [
+          { id: 1, nome: 'UTI' },
+          { id: 2, nome: 'Pronto Atendimento' },
+          { id: 3, nome: 'Centro Cirúrgico' },
+          { id: 4, nome: 'Ambulatório' },
+          { id: 5, nome: 'Maternidade' }
+        ];
+        setAllSetores(setoresPadrao);
+      } else {
+        setAllSetores(setores);
+      }
     } catch (err) {
       console.error('Erro ao carregar setores:', err);
-      // Fallback para localStorage
-      const local = StorageService.getSetores();
-      setAllSetores(local);
+      // Fallback para setores padrão
+      const setoresPadrao: Setor[] = [
+        { id: 1, nome: 'UTI' },
+        { id: 2, nome: 'Pronto Atendimento' },
+        { id: 3, nome: 'Centro Cirúrgico' },
+        { id: 4, nome: 'Ambulatório' },
+        { id: 5, nome: 'Maternidade' }
+      ];
+      setAllSetores(setoresPadrao);
     } finally {
       setLoadingSetores(false);
     }
