@@ -43,7 +43,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       await sql`
-        INSERT INTO hospitals (id, nome, slug, usuario_acesso, senha, endereco, permissoes, created_at, updated_at)
+        INSERT INTO hospitals (id, nome, slug, usuario_acesso, senha, endereco, permissoes, created_at)
         VALUES (
           ${id}, 
           ${nome}, 
@@ -52,7 +52,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ${senha},
           ${JSON.stringify(endereco || {})},
           ${JSON.stringify(permissoes || {})},
-          NOW(),
           NOW()
         )
         ON CONFLICT (id) DO UPDATE SET
@@ -61,8 +60,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           usuario_acesso = EXCLUDED.usuario_acesso,
           senha = EXCLUDED.senha,
           endereco = EXCLUDED.endereco,
-          permissoes = EXCLUDED.permissoes,
-          updated_at = NOW()
+          permissoes = EXCLUDED.permissoes
       `;
 
       res.status(201).json({ ok: true, id });
@@ -84,8 +82,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           usuario_acesso = ${usuarioAcesso},
           senha = ${senha},
           endereco = ${JSON.stringify(endereco || {})},
-          permissoes = ${JSON.stringify(permissoes || {})},
-          updated_at = NOW()
+          permissoes = ${JSON.stringify(permissoes || {})}
         WHERE id = ${id}
       `;
 
