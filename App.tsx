@@ -92,6 +92,10 @@ export default function App() {
       setCurrentView(view);
       return;
     }
+    // Ignora cliques no agrupador "cadastros" (não é uma view real)
+    if (view === 'cadastros') {
+      return;
+    }
     if (userPermissions && userPermissions[view as keyof HospitalPermissions]) {
       setCurrentView(view);
     } else {

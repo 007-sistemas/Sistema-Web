@@ -287,21 +287,57 @@ export const Layout: React.FC<LayoutProps> = ({
 
         {isMobileMenuOpen && (
           <div className="md:hidden bg-primary-900 text-white p-4 space-y-2 absolute w-full z-50">
-            {navItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => {
-                  onChangeView(item.id);
-                  setIsMobileMenuOpen(false);
-                }}
-                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg ${
-                  currentView === item.id ? 'bg-primary-700' : ''
-                }`}
-              >
-                <item.icon className="h-5 w-5" />
-                <span>{item.label}</span>
-              </button>
-            ))}
+            {navItems.map((item) => 
+              item.id !== 'cadastros' ? (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    onChangeView(item.id);
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg ${
+                    currentView === item.id ? 'bg-primary-700' : ''
+                  }`}
+                >
+                  <item.icon className="h-5 w-5" />
+                  <span>{item.label}</span>
+                </button>
+              ) : (
+                <div key="cadastros">
+                  <button
+                    className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg font-semibold transition-colors focus:outline-none text-primary-100 hover:bg-primary-800 hover:text-white"
+                    onClick={() => setIsCadastrosOpen((v) => !v)}
+                    aria-expanded={isCadastrosOpen}
+                    aria-controls="cadastros-submenu-mobile"
+                  >
+                    <cadastrosGroup.icon />
+                    <span className="flex-1 text-left">Cadastros</span>
+                    <svg className={`h-4 w-4 transform transition-transform ${isCadastrosOpen ? '' : '-rotate-90'}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" /></svg>
+                  </button>
+                  {isCadastrosOpen && (
+                    <div className="space-y-1 pl-4" id="cadastros-submenu-mobile">
+                      {cadastrosItems.map((subitem) => (
+                        <button
+                          key={subitem.id}
+                          onClick={() => {
+                            onChangeView(subitem.id);
+                            setIsMobileMenuOpen(false);
+                          }}
+                          className={`w-full flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors ${
+                            currentView === subitem.id 
+                              ? 'bg-primary-700 text-white shadow-lg' 
+                              : 'text-primary-100 hover:bg-primary-800 hover:text-white'
+                          }`}
+                        >
+                          <subitem.icon className="h-5 w-5" />
+                          <span>{subitem.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            )}
             <div className="border-t border-primary-800 pt-2 mt-2">
                 <button 
                     onClick={handleLogoutClick}
