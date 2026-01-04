@@ -61,13 +61,6 @@ export const Management: React.FC = () => {
     loadManagers();
   }, []);
 
-  // Reseta o formulário quando fechar o modal
-  useEffect(() => {
-    if (!isFormOpen) {
-      setFormData(initialFormState);
-    }
-  }, [isFormOpen]);
-
   const loadManagers = () => {
     setManagers(StorageService.getManagers());
   };
@@ -157,12 +150,19 @@ export const Management: React.FC = () => {
     setDuplicateManager(null);
   };
 
+  const handleCloseModal = () => {
+    setIsFormOpen(false);
+    setFormData(initialFormState);
+  };
+
   const handleEdit = (m: Manager) => {
     // Recarrega do localStorage para garantir que tem os dados mais recentes
     const fresh = StorageService.getManagers().find(manager => manager.id === m.id);
     if (fresh) {
+      console.log('✅ Carregando dados frescos do gestor:', fresh.username, fresh.permissoes);
       setFormData(fresh);
     } else {
+      console.log('⚠️ Usando dados do cache:', m.username);
       setFormData(m);
     }
     setIsFormOpen(true);
@@ -283,7 +283,7 @@ export const Management: React.FC = () => {
             <h3 className="text-lg font-semibold text-gray-700">
               {formData.id ? 'Editar Gestor' : 'Novo Gestor'}
             </h3>
-            <button onClick={() => setIsFormOpen(false)} className="text-gray-400 hover:text-gray-600">
+            <button onClick={handleCloseModal} className="text-gray-400 hover:text-gray-600">
               <X className="h-5 w-5" />
             </button>
           </div>
@@ -371,7 +371,7 @@ export const Management: React.FC = () => {
             <div className="flex justify-end space-x-3 pt-4">
               <button 
                 type="button"
-                onClick={() => setIsFormOpen(false)}
+                onClick={handleCloseModal}
                 className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 Cancelar
