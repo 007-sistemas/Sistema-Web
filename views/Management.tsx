@@ -42,6 +42,7 @@ export const Management: React.FC = () => {
       dashboard: true,
       ponto: true,
       relatorio: true,
+      relatorios: true,
       cadastro: true,
       hospitais: true,
       biometria: true,

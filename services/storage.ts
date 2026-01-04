@@ -70,10 +70,15 @@ export const StorageService = {
     const manager = managers.find(m => m.username === usernameOrCode && m.password === password);
     
     if (manager) {
+      // Garantir que permissão 'relatorios' existe
+      const permissions = { ...manager.permissoes };
+      if (!('relatorios' in permissions)) {
+        permissions.relatorios = true;
+      }
       return { 
         type: 'MANAGER', 
         user: manager,
-        permissions: manager.permissoes 
+        permissions
       };
     }
 
@@ -82,10 +87,15 @@ export const StorageService = {
     const hospital = hospitals.find(h => h.usuarioAcesso === usernameOrCode && h.senha === password);
 
     if (hospital) {
+      // Garantir que permissão 'relatorios' existe
+      const permissions = { ...hospital.permissoes };
+      if (!('relatorios' in permissions)) {
+        permissions.relatorios = false; // Default: desabilitado para hospitais
+      }
       return { 
         type: 'HOSPITAL', 
         user: hospital,
-        permissions: hospital.permissoes 
+        permissions
       };
     }
 
@@ -150,7 +160,18 @@ export const StorageService = {
   
   getManagers: (): Manager[] => {
     const data = localStorage.getItem(MANAGERS_KEY);
-    return data ? JSON.parse(data) : [];
+    let managers = data ? JSON.parse(data) : [];
+    
+    // Garantir que todo manager tem a permissão 'relatorios'
+    managers = managers.map((m: Manager) => {
+      if (!m.permissoes) m.permissoes = {} as any;
+      if (!('relatorios' in m.permissoes)) {
+        m.permissoes.relatorios = true; // Default: habilitado para novos gestores
+      }
+      return m;
+    });
+    
+    return managers;
   },
 
   refreshManagersFromRemote: async () => {
