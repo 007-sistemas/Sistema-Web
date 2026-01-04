@@ -544,9 +544,11 @@ export const RelatorioProducao: React.FC = () => {
                 <tr 
                     key={row.id} 
                     onClick={() => handleSelectRow(row)}
-                    className={`cursor-pointer transition-colors ${\n                        (selectedPontoId === row.entry?.id || selectedPontoId === row.exit?.id) 
+                    className={`cursor-pointer transition-colors ${
+                        (selectedPontoId === row.entry?.id || selectedPontoId === row.exit?.id) 
                           ? 'bg-primary-200 dark:bg-primary-800 font-semibold' 
-                          : 'hover:bg-gray-100 dark:hover:bg-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100'\n                    }`}
+                          : 'hover:bg-gray-100 dark:hover:bg-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100'
+                    }`}
                 >
                   <td className="px-4 py-3">
                     <button className="text-xs text-primary-600 dark:text-primary-400 underline font-medium">Selecionar</button>
