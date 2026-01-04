@@ -85,8 +85,7 @@ export const Layout: React.FC<LayoutProps> = ({
     { id: 'cadastro', label: 'Cooperados', icon: Users, permissionKey: 'cadastro' },
     { id: 'gestao', label: 'Gestão de Usuários', icon: Briefcase, permissionKey: 'gestao' },
     { id: 'hospitais', label: 'Hospitais', icon: Building2, permissionKey: 'hospitais' },
-    // Força exibição da aba Setores para todos gestores autenticados
-    { id: 'setores', label: 'Setores', icon: ShieldCheck, permissionKey: null },
+    { id: 'setores', label: 'Setores', icon: ShieldCheck, permissionKey: 'setores' },
   ].sort((a, b) => a.label.localeCompare(b.label));
 
   // Menu principal (exceto perfil e cadastros)
@@ -110,23 +109,32 @@ export const Layout: React.FC<LayoutProps> = ({
   // Perfil sempre por último
   const perfilNavItem = { id: 'perfil', label: 'Meu Perfil', icon: Wrench, permissionKey: 'perfil' };
 
-  let navItems = mainNavItems.filter(item => {
-    if (!permissions) return true;
-    return permissions[item.permissionKey as keyof HospitalPermissions] === true;
-  });
-  // Só adiciona o agrupador Cadastros se houver pelo menos um subitem visível
-  let cadastrosItems = cadastroNavItems.filter(item => {
-    if (item.id === 'setores') return true; // Sempre mostra Setores
-    if (!permissions || permissions === null) return true;
-    return permissions[item.permissionKey as keyof HospitalPermissions] === true;
-  });
-  // Sempre mostra o agrupador se houver subitens
-  if (cadastrosItems.length > 0) {
-    navItems = [...navItems, cadastrosGroup].sort((a, b) => a.label.localeCompare(b.label));
-  } else {
-    navItems = navItems.sort((a, b) => a.label.localeCompare(b.label));
-  }
-  const showPerfil = !permissions || permissions[perfilNavItem.permissionKey as keyof HospitalPermissions];
+  // Recalcula items quando permissions mudam
+  const [navItems, setNavItems] = React.useState<any[]>([]);
+  const [cadastrosItems, setCadastrosItems] = React.useState<any[]>([]);
+  const [showPerfil, setShowPerfil] = React.useState(true);
+
+  React.useEffect(() => {
+    const filtered = mainNavItems.filter(item => {
+      if (!permissions) return true;
+      return permissions[item.permissionKey as keyof HospitalPermissions] === true;
+    });
+
+    const cadastroFiltered = cadastroNavItems.filter(item => {
+      if (!permissions) return true;
+      return permissions[item.permissionKey as keyof HospitalPermissions] === true;
+    });
+
+    // Só adiciona o agrupador Cadastros se houver pelo menos um subitem visível
+    if (cadastroFiltered.length > 0) {
+      setNavItems([...filtered, cadastrosGroup].sort((a, b) => a.label.localeCompare(b.label)));
+    } else {
+      setNavItems(filtered.sort((a, b) => a.label.localeCompare(b.label)));
+    }
+
+    setCadastrosItems(cadastroFiltered);
+    setShowPerfil(!permissions || permissions[perfilNavItem.permissionKey as keyof HospitalPermissions]);
+  }, [permissions]);
 
   // Não aplicar preferências de abas para o agrupador Cadastros nem seus subitens
 
