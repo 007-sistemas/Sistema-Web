@@ -37,6 +37,8 @@ export const RelatorioProducao: React.FC = () => {
 
   // Selection State
   const [selectedPontoId, setSelectedPontoId] = useState<string | null>(null);
+  const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null); // Para rastrear qual é a entrada
+  const [selectedExitId, setSelectedExitId] = useState<string | null>(null); // Para rastrear qual é a saída
 
   // Form State
   const [formCooperadoId, setFormCooperadoId] = useState('');
@@ -198,6 +200,8 @@ export const RelatorioProducao: React.FC = () => {
     if (!ponto) return;
 
     setSelectedPontoId(row.entry ? row.entry.id : row.exit?.id || null);
+    setSelectedEntryId(row.entry?.id || null);
+    setSelectedExitId(row.exit?.id || null);
     
     // Definir o hospital do registro
     setFilterHospital(ponto.hospitalId);
@@ -210,23 +214,14 @@ export const RelatorioProducao: React.FC = () => {
     setFormData(d.toISOString().split('T')[0]);
     setFormHora(d.toTimeString().substring(0,5));
     
-    // If it's a closed cycle, defaulting to Entry info is usually safer for "viewing"
-    // If user wants to add an exit, we set type to SAIDA
-    if (row.entry && !row.exit) {
-       setFormTipo(TipoPonto.SAIDA); // Suggest closing it
-       setFormInputCodigo(row.entry.codigo);
-    } else {
-       setFormTipo(ponto.tipo);
-       if (ponto.tipo === TipoPonto.ENTRADA) {
-          setFormInputCodigo(ponto.codigo);
-       } else {
-          setFormInputCodigo('');
-       }
-    }
+    // NÃO setar o tipo automaticamente - deixar para o usuário escolher
+    // O usuário deve escolher se quer editar a entrada ou saída
   };
 
   const handleNovoPlantao = () => {
     setSelectedPontoId(null);
+    setSelectedEntryId(null);
+    setSelectedExitId(null);
     setFormCooperadoId('');
     setFormCooperadoInput('');
     setFormSetorId('');
@@ -264,19 +259,44 @@ export const RelatorioProducao: React.FC = () => {
 
     // Se há um registro selecionado, EDITAR ao invés de criar novo
     if (selectedPontoId) {
-        const existingPonto = logs.find(p => p.id === selectedPontoId);
-        if (existingPonto) {
-            const updatedPonto: RegistroPonto = {
-                ...existingPonto,
-                timestamp: timestamp,
-                local: `${hospital.nome} - ${setor.nome}`,
-                hospitalId: hospital.id,
-                setorId: setor.id.toString()
-            };
-            StorageService.updatePonto(updatedPonto);
-            alert("Registro atualizado com sucesso!");
-            loadData();
-            handleNovoPlantao();
+        // Se está editando uma ENTRADA
+        if (selectedEntryId && formTipo === TipoPonto.ENTRADA) {
+            const existingEntry = logs.find(p => p.id === selectedEntryId);
+            if (existingEntry) {
+                const updatedEntry: RegistroPonto = {
+                    ...existingEntry,
+                    timestamp: timestamp,
+                    local: `${hospital.nome} - ${setor.nome}`,
+                    hospitalId: hospital.id,
+                    setorId: setor.id.toString()
+                };
+                StorageService.updatePonto(updatedEntry);
+                alert("Entrada atualizada com sucesso!");
+                loadData();
+                handleNovoPlantao();
+                return;
+            }
+        }
+        // Se está editando uma SAÍDA
+        else if (selectedExitId && formTipo === TipoPonto.SAIDA) {
+            const existingExit = logs.find(p => p.id === selectedExitId);
+            if (existingExit) {
+                const updatedExit: RegistroPonto = {
+                    ...existingExit,
+                    timestamp: timestamp,
+                    local: `${hospital.nome} - ${setor.nome}`,
+                    hospitalId: hospital.id,
+                    setorId: setor.id.toString()
+                };
+                StorageService.updatePonto(updatedExit);
+                alert("Saída atualizada com sucesso!");
+                loadData();
+                handleNovoPlantao();
+                return;
+            }
+        }
+        else {
+            alert("Por favor, selecione o tipo de registro (Entrada ou Saída) para editar.");
             return;
         }
     }
@@ -519,31 +539,31 @@ export const RelatorioProducao: React.FC = () => {
                 <th className="px-4 py-3">Código</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 bg-gray-50">
+            <tbody className="divide-y divide-gray-100 bg-white dark:bg-gray-900">
               {shiftRows.map((row) => (
                 <tr 
                     key={row.id} 
                     onClick={() => handleSelectRow(row)}
-                    className={`cursor-pointer hover:bg-primary-50 transition-colors ${
-                        (selectedPontoId === row.entry?.id || selectedPontoId === row.exit?.id) ? 'bg-primary-100 ring-1 ring-primary-300' : ''
-                    }`}
+                    className={`cursor-pointer transition-colors ${\n                        (selectedPontoId === row.entry?.id || selectedPontoId === row.exit?.id) 
+                          ? 'bg-primary-200 dark:bg-primary-800 font-semibold' 
+                          : 'hover:bg-gray-100 dark:hover:bg-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100'\n                    }`}
                 >
                   <td className="px-4 py-3">
-                    <button className="text-xs text-primary-600 underline font-medium">Selecionar</button>
+                    <button className="text-xs text-primary-600 dark:text-primary-400 underline font-medium">Selecionar</button>
                   </td>
-                  <td className="px-4 py-3 truncate max-w-[200px]" title={row.local}>
+                  <td className="px-4 py-3 truncate max-w-[200px] text-gray-700 dark:text-gray-300" title={row.local}>
                     {row.setorNome}
                   </td>
-                  <td className="px-4 py-3 font-medium text-gray-900">{row.cooperadoNome}</td>
-                  <td className="px-4 py-3">{row.data}</td>
+                  <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{row.cooperadoNome}</td>
+                  <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{row.data}</td>
                   
                   {/* Coluna Entrada */}
-                  <td className="px-4 py-3 text-center font-mono font-bold text-green-700 bg-green-50/50">
+                  <td className="px-4 py-3 text-center font-mono font-bold text-green-700 dark:text-green-400 bg-green-50/50 dark:bg-green-950/30">
                     {row.entry ? new Date(row.entry.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--'}
                   </td>
 
                   {/* Coluna Saída */}
-                  <td className="px-4 py-3 text-center font-mono font-bold text-red-700 bg-red-50/50">
+                  <td className="px-4 py-3 text-center font-mono font-bold text-red-700 dark:text-red-400 bg-red-50/50 dark:bg-red-950/30">
                     {row.exit ? new Date(row.exit.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--'}
                   </td>
 
@@ -552,7 +572,7 @@ export const RelatorioProducao: React.FC = () => {
                         {row.status === 'Aberto' ? 'Em Aberto' : row.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs text-gray-500">
+                  <td className="px-4 py-3 font-mono text-xs text-gray-600 dark:text-gray-400">
                     {row.entry?.codigo || row.exit?.codigo}
                   </td>
                 </tr>
