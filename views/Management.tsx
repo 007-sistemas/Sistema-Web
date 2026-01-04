@@ -61,6 +61,13 @@ export const Management: React.FC = () => {
     loadManagers();
   }, []);
 
+  // Reseta o formulário quando fechar o modal
+  useEffect(() => {
+    if (!isFormOpen) {
+      setFormData(initialFormState);
+    }
+  }, [isFormOpen]);
+
   const loadManagers = () => {
     setManagers(StorageService.getManagers());
   };
@@ -153,7 +160,13 @@ export const Management: React.FC = () => {
   };
 
   const handleEdit = (m: Manager) => {
-    setFormData(m);
+    // Recarrega do localStorage para garantir que tem os dados mais recentes
+    const fresh = StorageService.getManagers().find(manager => manager.id === m.id);
+    if (fresh) {
+      setFormData(fresh);
+    } else {
+      setFormData(m);
+    }
     setIsFormOpen(true);
   };
 
