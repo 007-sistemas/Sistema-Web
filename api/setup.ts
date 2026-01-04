@@ -3,6 +3,27 @@ import { neon } from "@neondatabase/serverless";
 
 // Expects DATABASE_URL set in Vercel project environment variables
 const connectionString = process.env.DATABASE_URL;
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  console.log("[SETUP] Handler chamado");
+  console.log("[SETUP] DATABASE_URL:", connectionString ? "OK" : "NÃO DEFINIDA");
+
+  if (!connectionString) {
+    console.error("[SETUP] DATABASE_URL não definida");
+    res.status(500).json({ error: "Missing DATABASE_URL env var" });
+    return;
+  }
+
+  if (req.method !== "POST") {
+    console.error("[SETUP] Método não permitido:", req.method);
+    res.status(405).json({ error: "Method not allowed" });
+    return;
+  }
+
+  try {
+    console.log("[SETUP] Iniciando criação das tabelas...");
+    const sql = neon(connectionString);
+    
     // Drop existing tables to recreate with correct schema (order matters for FKs)
     await sql`DROP TABLE IF EXISTS hospital_setores CASCADE;`;
     await sql`DROP TABLE IF EXISTS setores CASCADE;`;
@@ -16,15 +37,7 @@ const connectionString = process.env.DATABASE_URL;
     await sql`DROP TABLE IF EXISTS users CASCADE;`;
 
     await sql`CREATE EXTENSION IF NOT EXISTS pgcrypto;`;
-  if (req.method !== "POST") {
-    console.error("[SETUP] Método não permitido:", req.method);
-    res.status(405).json({ error: "Method not allowed" });
-    return;
-  }
-
-  try {
-    console.log("[SETUP] Iniciando criação das tabelas...");
-    const sql = neon(connectionString);
+    
     // =============================
     // CRIAÇÃO DA TABELA SETORES
     // =============================
