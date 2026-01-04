@@ -70,18 +70,16 @@ export default function App() {
       }
     })();
 
-    // Escuta mudanças na sessão (permissões) via storage events
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'session') {
-        const newSession = StorageService.getSession();
-        if (newSession) {
-          setUserPermissions(newSession.permissions);
-        }
+    // Escuta evento customizado de atualização de permissões (apenas ao salvar)
+    const handlePermissionsUpdate = () => {
+      const newSession = StorageService.getSession();
+      if (newSession) {
+        setUserPermissions(newSession.permissions);
       }
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    window.addEventListener('permissionsUpdated', handlePermissionsUpdate);
+    return () => window.removeEventListener('permissionsUpdated', handlePermissionsUpdate);
   }, []);
 
   const handleLoginSuccess = (permissions: HospitalPermissions) => {

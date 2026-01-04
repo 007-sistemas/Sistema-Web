@@ -131,16 +131,14 @@ export const Management: React.FC = () => {
     // Se estiver editando o usuário atual, atualiza a sessão com as novas permissões
     const currentSession = StorageService.getSession();
     if (currentSession && currentSession.user.id === newManager.id) {
-      StorageService.setSession({
+      const updatedSession = {
         ...currentSession,
         permissions: newManager.permissoes
-      });
-      // Dispara evento para que App.tsx reaja à mudança
-      window.dispatchEvent(new StorageEvent('storage', {
-        key: 'session',
-        newValue: JSON.stringify({ ...currentSession, permissions: newManager.permissoes }),
-        oldValue: JSON.stringify(currentSession)
-      }));
+      };
+      StorageService.setSession(updatedSession);
+      
+      // Dispara evento customizado para atualizar as abas SOMENTE após salvar
+      window.dispatchEvent(new CustomEvent('permissionsUpdated'));
     }
 
     loadManagers();
