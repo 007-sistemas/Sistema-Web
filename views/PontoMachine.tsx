@@ -75,11 +75,7 @@ export const PontoMachine: React.FC = () => {
 
   const getCurrentLocationString = () => {
     const h = getSelectedHospital();
-    // Busca setor globalmente em todos os hospitais
-    let s = h?.setores.find(s => s.id === selectedSetorId);
-    if (!s) {
-      s = hospitais.flatMap(hosp => hosp.setores).find(setor => setor.id === selectedSetorId);
-    }
+    const s = h?.setores.find(s => s.id === selectedSetorId);
     if (!h) return "Local não selecionado";
     return `${h.nome} - ${s ? s.nome : 'Setor não selecionado'}`;
   };

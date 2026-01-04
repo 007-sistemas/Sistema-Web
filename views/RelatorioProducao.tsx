@@ -118,29 +118,16 @@ export const RelatorioProducao: React.FC = () => {
           processedExits.add(matchingExit.id);
         }
 
-                shifts.push({
-                    id: log.id,
-                    cooperadoNome: log.cooperadoNome,
-                    local: log.local,
-                    setorNome: (() => {
-                        // Busca o nome do setor pelo ID, independente do filtro de hospital
-                        if (log.setorId) {
-                            const setor = hospitais.flatMap(h => h.setores).find(s => s.id === log.setorId);
-                            if (setor) return setor.nome;
-                            // Se não encontrar, mostra o próprio ID do setor
-                            return log.setorId;
-                        }
-                        // Fallback: tenta extrair nome do setor do campo local (ex: "HRN - UTI")
-                        if (log.local && log.local.includes(' - ')) {
-                            return log.local.split(' - ')[1] || log.local;
-                        }
-                        return log.local;
-                    })(),
-                    data: new Date(log.timestamp).toLocaleDateString(),
-                    entry: log,
-                    exit: matchingExit,
-                    status: matchingExit ? 'Fechado' : 'Em Aberto'
-                });
+        shifts.push({
+          id: log.id,
+          cooperadoNome: log.cooperadoNome,
+          local: log.local,
+          setorNome: log.setorId && filterHospital ? (setoresDisponiveis.find(s => s.id === log.setorId)?.nome || log.local) : log.local,
+          data: new Date(log.timestamp).toLocaleDateString(),
+          entry: log,
+          exit: matchingExit,
+          status: matchingExit ? 'Fechado' : 'Em Aberto'
+        });
       }
     });
 
@@ -232,9 +219,9 @@ export const RelatorioProducao: React.FC = () => {
     const timestamp = new Date(`${formData}T${formHora}:00`).toISOString();
     const cooperado = cooperados.find(c => c.id === formCooperadoId);
     const hospital = hospitais.find(h => h.id === filterHospital);
-                // Busca setor globalmente, não só no hospital filtrado
-                let setor = hospitais.flatMap(h => h.setores).find(s => s.id === formSetorId);
-                if (!cooperado || !hospital || !setor) return;
+    const setor = hospital?.setores.find(s => s.id === formSetorId);
+
+    if (!cooperado || !hospital || !setor) return;
 
     if (formTipo === TipoPonto.ENTRADA) {
         const newCode = generateRandomCode();
@@ -463,7 +450,7 @@ export const RelatorioProducao: React.FC = () => {
           <table className="w-full text-left text-sm text-gray-600">
             <thead className="bg-primary-600 text-white font-bold sticky top-0 z-10">
               <tr>
-                <th className="px-4 py-3"></th>
+                <th className="px-4 py-3">Selecionar</th>
                 <th className="px-4 py-3">Setor</th>
                 <th className="px-4 py-3">Cooperado</th>
                 <th className="px-4 py-3">Data</th>
@@ -482,7 +469,9 @@ export const RelatorioProducao: React.FC = () => {
                         (selectedPontoId === row.entry?.id || selectedPontoId === row.exit?.id) ? 'bg-primary-100 ring-1 ring-primary-300' : ''
                     }`}
                 >
-                                    <td className="px-4 py-3"></td>
+                  <td className="px-4 py-3">
+                    <button className="text-xs text-primary-600 underline font-medium">Selecionar</button>
+                  </td>
                   <td className="px-4 py-3 truncate max-w-[200px]" title={row.local}>
                     {row.setorNome}
                   </td>
@@ -490,14 +479,14 @@ export const RelatorioProducao: React.FC = () => {
                   <td className="px-4 py-3">{row.data}</td>
                   
                   {/* Coluna Entrada */}
-                                    <td className="px-4 py-3 text-center font-mono font-bold text-gray-900 dark:text-white">
-                                        {row.entry ? new Date(row.entry.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--'}
-                                    </td>
+                  <td className="px-4 py-3 text-center font-mono font-bold text-green-700 bg-green-50/50">
+                    {row.entry ? new Date(row.entry.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--'}
+                  </td>
 
-                                    {/* Coluna Saída */}
-                                    <td className="px-4 py-3 text-center font-mono font-bold text-gray-900 dark:text-white">
-                                        {row.exit ? new Date(row.exit.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--'}
-                                    </td>
+                  {/* Coluna Saída */}
+                  <td className="px-4 py-3 text-center font-mono font-bold text-red-700 bg-red-50/50">
+                    {row.exit ? new Date(row.exit.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--'}
+                  </td>
 
                   <td className="px-4 py-3 text-center">
                     <span className={`px-2 py-1 text-xs rounded-full text-white font-bold shadow-sm ${row.status.includes('Aberto') ? 'bg-amber-500' : 'bg-green-600'}`}>

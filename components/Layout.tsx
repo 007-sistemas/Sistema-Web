@@ -84,7 +84,7 @@ export const Layout: React.FC<LayoutProps> = ({
     { id: 'biometria', label: 'Biometria', icon: Fingerprint, permissionKey: 'biometria' },
     { id: 'cadastro', label: 'Cooperados', icon: Users, permissionKey: 'cadastro' },
     { id: 'gestao', label: 'Gestão de Usuários', icon: Briefcase, permissionKey: 'gestao' },
-    { id: 'hospitais', label: 'Hospitais', icon: Building2, permissionKey: 'hospitais' },
+    { id: 'hospitais', label: 'Hospitais & Setores', icon: Building2, permissionKey: 'hospitais' },
     // Força exibição da aba Setores para todos gestores autenticados
     { id: 'setores', label: 'Setores', icon: ShieldCheck, permissionKey: null },
   ].sort((a, b) => a.label.localeCompare(b.label));

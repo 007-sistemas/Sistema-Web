@@ -3,36 +3,46 @@ import { neon } from "@neondatabase/serverless";
 
 // Expects DATABASE_URL set in Vercel project environment variables
 const connectionString = process.env.DATABASE_URL;
+    // Drop existing tables to recreate with correct schema (order matters for FKs)
+    await sql`DROP TABLE IF EXISTS hospital_setores CASCADE;`;
+    await sql`DROP TABLE IF EXISTS setores CASCADE;`;
+    await sql`DROP TABLE IF EXISTS audit_logs CASCADE;`;
+    await sql`DROP TABLE IF EXISTS biometrias CASCADE;`;
+    await sql`DROP TABLE IF EXISTS biometrics CASCADE;`;
+    await sql`DROP TABLE IF EXISTS pontos CASCADE;`;
+    await sql`DROP TABLE IF EXISTS hospitals CASCADE;`;
+    await sql`DROP TABLE IF EXISTS managers CASCADE;`;
+    await sql`DROP TABLE IF EXISTS cooperados CASCADE;`;
+    await sql`DROP TABLE IF EXISTS users CASCADE;`;
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (!connectionString) {
-    res.status(500).json({ error: "Missing DATABASE_URL env var" });
-    return;
-  }
-
+    await sql`CREATE EXTENSION IF NOT EXISTS pgcrypto;`;
   if (req.method !== "POST") {
+    console.error("[SETUP] Método não permitido:", req.method);
     res.status(405).json({ error: "Method not allowed" });
     return;
   }
 
   try {
-        // Tabela de setores
-        await sql`
-          CREATE TABLE IF NOT EXISTS setores (
-            id TEXT PRIMARY KEY,
-            nome TEXT NOT NULL
-          );
-        `;
-
-        // Tabela de relação hospital_setores (muitos para muitos)
-        await sql`
-          CREATE TABLE IF NOT EXISTS hospital_setores (
-            hospital_id TEXT REFERENCES hospitals(id) ON DELETE CASCADE,
-            setor_id TEXT REFERENCES setores(id) ON DELETE CASCADE,
-            PRIMARY KEY (hospital_id, setor_id)
-          );
-        `;
+    console.log("[SETUP] Iniciando criação das tabelas...");
     const sql = neon(connectionString);
+    // =============================
+    // CRIAÇÃO DA TABELA SETORES
+    // =============================
+    await sql`
+      CREATE TABLE IF NOT EXISTS setores (
+        id TEXT PRIMARY KEY,
+        nome TEXT NOT NULL
+      );
+    `;
+
+    // Tabela de relação hospital_setores (muitos para muitos)
+    await sql`
+      CREATE TABLE IF NOT EXISTS hospital_setores (
+        hospital_id TEXT REFERENCES hospitals(id) ON DELETE CASCADE,
+        setor_id TEXT REFERENCES setores(id) ON DELETE CASCADE,
+        PRIMARY KEY (hospital_id, setor_id)
+      );
+    `;
 
     // Drop existing tables to recreate with correct schema
     await sql`DROP TABLE IF EXISTS audit_logs CASCADE;`;
@@ -84,6 +94,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         permissoes JSONB,
         setores JSONB,
         created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `;
+
+    // =============================
+    // CRIAÇÃO DA TABELA SETORES
+    // =============================
+    await sql`
+      CREATE TABLE IF NOT EXISTS setores (
+        id TEXT PRIMARY KEY,
+        nome TEXT NOT NULL
+      );
+    `;
+
+    // Tabela de relação hospital_setores (muitos para muitos)
+    await sql`
+      CREATE TABLE IF NOT EXISTS hospital_setores (
+        hospital_id TEXT REFERENCES hospitals(id) ON DELETE CASCADE,
+        setor_id TEXT REFERENCES setores(id) ON DELETE CASCADE,
+        PRIMARY KEY (hospital_id, setor_id)
       );
     `;
 
@@ -148,8 +177,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       );
     `;
 
-    res.status(200).json({ ok: true });
+    // Verifica se as tabelas setores e hospital_setores existem e retorna o resultado
+    let setoresResult = null;
+    let hospitalSetoresResult = null;
+    try {
+      setoresResult = await sql`SELECT * FROM setores LIMIT 1;`;
+    } catch (e) {
+      setoresResult = { error: 'Tabela setores não encontrada', details: e?.message };
+    }
+    try {
+      hospitalSetoresResult = await sql`SELECT * FROM hospital_setores LIMIT 1;`;
+    } catch (e) {
+      hospitalSetoresResult = { error: 'Tabela hospital_setores não encontrada', details: e?.message };
+    }
+    res.status(200).json({ ok: true, setores: setoresResult, hospital_setores: hospitalSetoresResult });
   } catch (err: any) {
-    res.status(500).json({ error: err?.message || "Unknown error" });
+    console.error("[SETUP] ERRO:", err);
+    res.status(500).json({ error: err?.message || "Unknown error", details: err });
   }
 }
