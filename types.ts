@@ -33,7 +33,7 @@ export interface Cooperado {
 }
 
 export interface Setor {
-  id: string;
+  id: number;
   nome: string;
 }
 

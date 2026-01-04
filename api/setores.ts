@@ -4,14 +4,17 @@ import { neon } from '@neondatabase/serverless';
 const connectionString = process.env.DATABASE_URL!;
 const sql = neon(connectionString);
 
-// POST /api/setores { id, nome }
+// POST /api/setores { nome }
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'POST') {
-    const { id, nome } = req.body;
-    if (!id || !nome) return res.status(400).json({ error: 'id e nome obrigatórios' });
+    const { nome } = req.body;
+    if (!nome) return res.status(400).json({ error: 'nome obrigatório' });
     try {
-      await sql`INSERT INTO setores (id, nome) VALUES (${id}, ${nome})`;
-      const inserted = await sql`SELECT id, nome FROM setores WHERE id = ${id}`;
+      const inserted = await sql`
+        INSERT INTO setores (nome) 
+        VALUES (${nome})
+        RETURNING id, nome
+      `;
       return res.status(201).json(inserted[0]);
     } catch (e: any) {
       return res.status(500).json({ error: e.message });
