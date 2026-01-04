@@ -69,6 +69,19 @@ export default function App() {
         return () => clearInterval(interval);
       }
     })();
+
+    // Escuta mudanças na sessão (permissões) via storage events
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'session') {
+        const newSession = StorageService.getSession();
+        if (newSession) {
+          setUserPermissions(newSession.permissions);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   const handleLoginSuccess = (permissions: HospitalPermissions) => {
