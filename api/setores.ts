@@ -11,14 +11,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!id || !nome) return res.status(400).json({ error: 'id e nome obrigatórios' });
     try {
       await sql`INSERT INTO setores (id, nome) VALUES (${id}, ${nome})`;
-      return res.status(201).json({ success: true });
+      const inserted = await sql`SELECT id, nome FROM setores WHERE id = ${id}`;
+      return res.status(201).json(inserted[0]);
     } catch (e: any) {
       return res.status(500).json({ error: e.message });
     }
   }
   if (req.method === 'GET') {
     try {
-      const result = await sql`SELECT * FROM setores`;
+      const result = await sql`SELECT id, nome FROM setores ORDER BY nome ASC`;
       return res.status(200).json(result);
     } catch (e: any) {
       return res.status(500).json({ error: e.message });
