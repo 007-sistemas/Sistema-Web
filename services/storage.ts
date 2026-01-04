@@ -634,7 +634,7 @@ export const StorageService = {
     
     return manager?.preferences || {
       theme: 'auto',
-      primaryColor: '#2563eb', // Default blue
+      primaryColor: '#7c3aed', // Default roxo
       // IDs devem bater com Layout: dashboard, ponto, relatorio, espelho, autorizacao, cadastro, hospitais, biometria, auditoria, gestao, perfil
       visibleTabs: ['dashboard', 'ponto', 'relatorio', 'espelho', 'autorizacao', 'cadastro', 'hospitais', 'biometria', 'auditoria', 'gestao', 'perfil'],
       tabOrder: ['dashboard', 'ponto', 'relatorio', 'espelho', 'autorizacao', 'cadastro', 'hospitais', 'biometria', 'auditoria', 'gestao', 'perfil']
