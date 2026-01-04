@@ -70,11 +70,23 @@ export const StorageService = {
     const manager = managers.find(m => m.username === usernameOrCode && m.password === password);
     
     if (manager) {
-      // Garantir que permissão 'relatorios' existe
-      const permissions = { ...manager.permissoes };
-      if (!('relatorios' in permissions)) {
-        permissions.relatorios = true;
-      }
+      // Em modo dev, retorna todas as permissões habilitadas
+      const permissions: HospitalPermissions = {
+        dashboard: true,
+        ponto: true,
+        relatorio: true,
+        relatorios: true,
+        cadastro: true,
+        hospitais: true,
+        biometria: true,
+        auditoria: true,
+        gestao: true,
+        espelho: true,
+        autorizacao: true,
+        perfil: true,
+        setores: true
+      };
+      
       return { 
         type: 'MANAGER', 
         user: manager,
@@ -162,12 +174,27 @@ export const StorageService = {
     const data = localStorage.getItem(MANAGERS_KEY);
     let managers = data ? JSON.parse(data) : [];
     
-    // Garantir que todo manager tem a permissão 'relatorios'
+    // Em modo dev, todas as permissões são habilitadas por padrão
     managers = managers.map((m: Manager) => {
       if (!m.permissoes) m.permissoes = {} as any;
-      if (!('relatorios' in m.permissoes)) {
-        m.permissoes.relatorios = true; // Default: habilitado para novos gestores
-      }
+      
+      // Garantir que todas as permissões existem e estão TRUE em dev
+      m.permissoes = {
+        dashboard: true,
+        ponto: true,
+        relatorio: true,
+        relatorios: true,
+        cadastro: true,
+        hospitais: true,
+        biometria: true,
+        auditoria: true,
+        gestao: true,
+        espelho: true,
+        autorizacao: true,
+        perfil: true,
+        setores: true
+      };
+      
       return m;
     });
     
