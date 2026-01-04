@@ -148,12 +148,15 @@ export const HospitalRegister: React.FC = () => {
       id: formData.id || crypto.randomUUID(),
     };
 
+    console.log('💾 Salvando hospital:', newHospital);
+
     // Salvar no localStorage
     StorageService.saveHospital(newHospital);
     
     // Tentar salvar no Neon via API
     try {
-      await apiPost('hospitals', {
+      console.log('🌐 Enviando para API /hospitals...');
+      const response = await apiPost('hospitals', {
         id: newHospital.id,
         nome: newHospital.nome,
         slug: newHospital.slug,
@@ -162,14 +165,16 @@ export const HospitalRegister: React.FC = () => {
         endereco: newHospital.endereco || {},
         permissoes: newHospital.permissoes
       });
+      console.log('✅ Hospital salvo na API:', response);
     } catch (err) {
-      console.warn('Erro ao salvar hospital na API:', err);
-      // Continua mesmo com erro, pois já salvou localmente
+      console.error('❌ Erro ao salvar hospital na API:', err);
+      alert('⚠️ Hospital salvo localmente, mas não foi possível sincronizar com o servidor.');
     }
     
     // Sincronizar setores com a API
     if (tempSelectedSetores.length > 0) {
       try {
+        console.log(`🏥 Sincronizando ${tempSelectedSetores.length} setores...`);
         // Obter setores já associados (se for edição)
         const setoresAtuais = await apiGet<Setor[]>(`hospital-setores?hospitalId=${newHospital.id}`).catch(() => []);
         const idsAtuais = new Set(setoresAtuais.map(s => s.id));
@@ -185,12 +190,14 @@ export const HospitalRegister: React.FC = () => {
         // Adicionar setores novos
         for (const setor of tempSelectedSetores) {
           if (!idsAtuais.has(setor.id)) {
+            console.log(`  ➕ Adicionando setor: ${setor.nome}`);
             await apiPost('hospital-setores', { hospitalId: newHospital.id, setorId: setor.id });
           }
         }
+        console.log('✅ Setores sincronizados com sucesso!');
       } catch (err) {
-        console.warn('Erro ao sincronizar setores com API:', err);
-        // Continua mesmo com erro na API, pois já salvou localmente
+        console.error('❌ Erro ao sincronizar setores:', err);
+        alert('⚠️ Setores não foram sincronizados com o servidor.');
       }
     }
 
