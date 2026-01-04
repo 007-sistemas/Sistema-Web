@@ -10,6 +10,7 @@ import { Dashboard } from './views/Dashboard';
 import { AuditLogViewer } from './views/AuditLogViewer';
 import { HospitalRegister } from './views/HospitalRegister';
 import { RelatorioProducao } from './views/RelatorioProducao';
+import { Relatorios } from './views/Relatorios';
 import { Management } from './views/Management';
 import { Login } from './views/Login';
 import { EspelhoBiometria } from './views/EspelhoBiometria'; 
@@ -114,6 +115,7 @@ export default function App() {
       case 'dashboard': return <Dashboard />;
       case 'ponto': return <PontoMachine />;
       case 'relatorio': return <RelatorioProducao />;
+      case 'relatorios': return <Relatorios />;
       case 'espelho': return <EspelhoBiometria />; 
       case 'autorizacao': return <AutorizacaoPonto />;
       case 'cadastro': return <CooperadoRegister />;

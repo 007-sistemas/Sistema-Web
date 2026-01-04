@@ -41,6 +41,7 @@ export interface HospitalPermissions {
   dashboard: boolean;
   ponto: boolean;
   relatorio: boolean;
+  relatorios: boolean; // Nova permissão para Relatórios
   cadastro: boolean;
   hospitais: boolean;
   biometria: boolean;

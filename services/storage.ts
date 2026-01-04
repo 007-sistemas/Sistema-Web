@@ -115,6 +115,7 @@ export const StorageService = {
                 dashboard: false,
                 ponto: false,
                 relatorio: false,
+                relatorios: false,
                 cadastro: false,
                 hospitais: false,
                 biometria: false,
@@ -161,6 +162,7 @@ export const StorageService = {
         dashboard: false,
         ponto: false,
         relatorio: false,
+        relatorios: false,
         cadastro: false,
         hospitais: false,
         biometria: false,
@@ -433,6 +435,7 @@ export const StorageService = {
         dashboard: false,
         ponto: false,
         relatorio: false,
+        relatorios: false,
         cadastro: false,
         hospitais: false,
         biometria: false,
@@ -635,9 +638,9 @@ export const StorageService = {
     return manager?.preferences || {
       theme: 'auto',
       primaryColor: '#7c3aed', // Default roxo
-      // IDs devem bater com Layout: dashboard, ponto, relatorio, espelho, autorizacao, cadastro, hospitais, biometria, auditoria, gestao, perfil
-      visibleTabs: ['dashboard', 'ponto', 'relatorio', 'espelho', 'autorizacao', 'cadastro', 'hospitais', 'biometria', 'auditoria', 'gestao', 'perfil'],
-      tabOrder: ['dashboard', 'ponto', 'relatorio', 'espelho', 'autorizacao', 'cadastro', 'hospitais', 'biometria', 'auditoria', 'gestao', 'perfil']
+      // IDs devem bater com Layout: dashboard, ponto, relatorio, relatorios, espelho, autorizacao, cadastro, hospitais, biometria, auditoria, gestao, perfil
+      visibleTabs: ['dashboard', 'ponto', 'relatorio', 'relatorios', 'espelho', 'autorizacao', 'cadastro', 'hospitais', 'biometria', 'auditoria', 'gestao', 'perfil'],
+      tabOrder: ['dashboard', 'ponto', 'relatorio', 'relatorios', 'espelho', 'autorizacao', 'cadastro', 'hospitais', 'biometria', 'auditoria', 'gestao', 'perfil']
     };
   },
 
