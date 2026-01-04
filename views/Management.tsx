@@ -119,6 +119,7 @@ export const Management: React.FC = () => {
       id: formData.id || crypto.randomUUID(),
     };
 
+    console.log('💾 Salvando gestor:', newManager.username, 'Permissões:', newManager.permissoes);
     StorageService.saveManager(newManager);
     
     // Se estiver editando o usuário atual, atualiza a sessão com as novas permissões
@@ -130,6 +131,7 @@ export const Management: React.FC = () => {
       };
       StorageService.setSession(updatedSession);
       
+      console.log('🔄 Sessão atualizada com novas permissões:', updatedSession.permissions);
       // Dispara evento customizado para atualizar as abas SOMENTE após salvar
       window.dispatchEvent(new CustomEvent('permissionsUpdated'));
     }
@@ -197,13 +199,17 @@ export const Management: React.FC = () => {
   ];
 
   const togglePermission = (key: keyof HospitalPermissions) => {
-    setFormData(prev => ({
-      ...prev,
-      permissoes: {
-        ...prev.permissoes,
-        [key]: !prev.permissoes[key]
-      }
-    }));
+    setFormData(prev => {
+      const updated = {
+        ...prev,
+        permissoes: {
+          ...prev.permissoes,
+          [key]: !prev.permissoes[key]
+        }
+      };
+      console.log(`🔘 Toggle ${key}: ${prev.permissoes[key]} → ${!prev.permissoes[key]}`);
+      return updated;
+    });
   };
 
   return (
