@@ -263,30 +263,49 @@ export const StorageService = {
   },
 
   saveManager: (manager: Manager): void => {
+    console.log('[saveManager] 🟡 Iniciando...');
     const list = StorageService.getManagers();
     const clean = (s: string) => (s || '').replace(/\D/g, '');
     const cpfNovo = clean(manager.cpf);
+    
+    console.log('[saveManager] CPF limpo:', cpfNovo, 'Original:', manager.cpf);
+    
     if (!cpfNovo) {
+      console.error('[saveManager] ❌ CPF vazio!');
       alert('CPF é obrigatório para gestores.');
       return;
     }
+    
     const cpfDuplicado = StorageService.checkDuplicateCpf(manager.cpf, manager.id);
     if (cpfDuplicado) {
+      console.error('[saveManager] ❌ CPF duplicado:', cpfDuplicado.username);
+      alert('Já existe um gestor com este CPF!');
       return;
     }
+    
+    console.log('[saveManager] ✅ Validações OK');
+    
     // Garante que todo gestor tenha acesso a setores
     if (!manager.permissoes) manager.permissoes = {} as any;
     manager.permissoes.setores = true;
+    
     const index = list.findIndex(m => m.id === manager.id);
     if (index >= 0) {
+      console.log('[saveManager] 🔄 Atualizando gestor existente');
       list[index] = manager;
     } else {
+      console.log('[saveManager] ➕ Adicionando novo gestor');
       list.push(manager);
     }
+    
+    console.log('[saveManager] 💾 Salvando no localStorage...');
     localStorage.setItem(MANAGERS_KEY, JSON.stringify(list));
+    console.log('[saveManager] ✅ Salvo com sucesso!');
+    
     StorageService.logAudit('ATUALIZACAO_GESTOR', `Gestor ${manager.username} atualizado/criado.`);
 
     // Sincronizar manager com Neon
+    console.log('[saveManager] 🌐 Sincronizando com NEON...');
     syncToNeon('sync_manager', manager);
   },
 
