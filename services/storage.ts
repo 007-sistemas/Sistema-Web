@@ -174,12 +174,14 @@ export const StorageService = {
     const data = localStorage.getItem(MANAGERS_KEY);
     let managers = data ? JSON.parse(data) : [];
     
-    // Em modo dev, todas as permissões são habilitadas por padrão
+    // Garantir que todos os gestores tenham permissões definidas corretamente
     managers = managers.map((m: Manager) => {
-      if (!m.permissoes) m.permissoes = {} as any;
+      if (!m.permissoes) {
+        m.permissoes = {} as any;
+      }
       
-      // Garantir que todas as permissões existem e estão TRUE em dev
-      m.permissoes = {
+      // Apenas garantir que as permissões existem, sem sobrescrever valores salvos
+      const defaultPerms: HospitalPermissions = {
         dashboard: true,
         ponto: true,
         relatorio: true,
@@ -193,6 +195,12 @@ export const StorageService = {
         autorizacao: true,
         perfil: true,
         setores: true
+      };
+      
+      // Mesclar apenas campos que não existem, preservando os salvos
+      m.permissoes = {
+        ...defaultPerms,
+        ...m.permissoes
       };
       
       return m;
@@ -270,27 +278,41 @@ export const StorageService = {
   },
 
   saveManager: (manager: Manager): void => {
+    console.log('[saveManager] Iniciando salvamento:', manager.username);
     const list = StorageService.getManagers();
     const clean = (s: string) => (s || '').replace(/\D/g, '');
     const cpfNovo = clean(manager.cpf);
+    
     if (!cpfNovo) {
+      console.error('[saveManager] CPF vazio:', manager.cpf);
       alert('CPF é obrigatório para gestores.');
       return;
     }
+    
     const cpfDuplicado = StorageService.checkDuplicateCpf(manager.cpf, manager.id);
     if (cpfDuplicado) {
+      console.error('[saveManager] CPF duplicado encontrado:', cpfDuplicado.username);
+      alert('Já existe um gestor com este CPF!');
       return;
     }
+    
     // Garante que todo gestor tenha acesso a setores
     if (!manager.permissoes) manager.permissoes = {} as any;
     manager.permissoes.setores = true;
+    
     const index = list.findIndex(m => m.id === manager.id);
     if (index >= 0) {
+      console.log('[saveManager] Atualizando gestor existente, index:', index);
       list[index] = manager;
     } else {
+      console.log('[saveManager] Criando novo gestor');
       list.push(manager);
     }
+    
+    console.log('[saveManager] Lista antes de salvar:', JSON.stringify(list));
     localStorage.setItem(MANAGERS_KEY, JSON.stringify(list));
+    console.log('[saveManager] ✅ Salvo no localStorage');
+    
     StorageService.logAudit('ATUALIZACAO_GESTOR', `Gestor ${manager.username} atualizado/criado.`);
 
     // Sincronizar manager com Neon

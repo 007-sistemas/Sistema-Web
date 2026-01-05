@@ -102,14 +102,31 @@ export const Management: React.FC = () => {
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.username) return alert('Nome de usuário é obrigatório');
-    if (!formData.password) return alert('Senha é obrigatória');
-    if (!formData.cpf) return alert('CPF é obrigatório');
-    if (!formData.email) return alert('Email é obrigatório');
+    console.log('[Management.handleSave] Iniciando salvamento...');
+    
+    if (!formData.username) {
+      console.error('[Management.handleSave] Username vazio');
+      return alert('Nome de usuário é obrigatório');
+    }
+    if (!formData.password) {
+      console.error('[Management.handleSave] Password vazio');
+      return alert('Senha é obrigatória');
+    }
+    if (!formData.cpf) {
+      console.error('[Management.handleSave] CPF vazio');
+      return alert('CPF é obrigatório');
+    }
+    if (!formData.email) {
+      console.error('[Management.handleSave] Email vazio');
+      return alert('Email é obrigatório');
+    }
+    
+    console.log('[Management.handleSave] Validações passaram. FormData:', formData);
     
     // Verificar se existe CPF duplicado
     const duplicate = StorageService.checkDuplicateCpf(formData.cpf, formData.id);
     if (duplicate) {
+      console.warn('[Management.handleSave] CPF duplicado encontrado:', duplicate.username);
       setDuplicateManager(duplicate);
       return;
     }
@@ -119,8 +136,9 @@ export const Management: React.FC = () => {
       id: formData.id || crypto.randomUUID(),
     };
 
-    console.log('💾 Salvando gestor:', newManager.username, 'Permissões:', newManager.permissoes);
+    console.log('💾 Salvando gestor:', newManager.username, 'ID:', newManager.id, 'Permissões:', newManager.permissoes);
     StorageService.saveManager(newManager);
+    console.log('✅ Gestor salvo com sucesso');
     
     // Se estiver editando o usuário atual, atualiza a sessão com as novas permissões
     const currentSession = StorageService.getSession();
