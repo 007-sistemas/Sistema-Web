@@ -193,12 +193,14 @@ export const RelatorioProducao: React.FC = () => {
           cooperadoNome: log.cooperadoNome,
           local: log.local,
           setorNome: (() => {
-            const setorName = log.setorId ? todosSetores.find(s => s.id === log.setorId)?.nome : '';
+            const setorId = String(log.setorId); // Converter para string para comparação
+            const setorName = log.setorId ? todosSetores.find(s => String(s.id) === setorId)?.nome : '';
             const hospital = hospitais.find(h => h.id === log.hospitalId);
-            const result = filterHospital
+            const isFiltered = filterHospital && filterHospital !== '';
+            const result = isFiltered
               ? (setorName || log.local)
               : `${hospital?.nome || log.local}${setorName ? ' - ' + setorName : ''}`;
-            console.log('[setorNome] filterHospital:', filterHospital, 'setorName:', setorName, 'hospital:', hospital?.nome, 'result:', result);
+            console.log('[setorNome] filterHospital:', filterHospital, 'setorId:', log.setorId, 'setorName:', setorName, 'hospital:', hospital?.nome, 'result:', result);
             return result;
           })(),
           data: new Date(log.timestamp).toLocaleDateString(),
@@ -219,12 +221,14 @@ export const RelatorioProducao: React.FC = () => {
           cooperadoNome: log.cooperadoNome,
           local: log.local,
           setorNome: (() => {
-            const setorName = log.setorId ? todosSetores.find(s => s.id === log.setorId)?.nome : '';
+            const setorId = String(log.setorId); // Converter para string para comparação
+            const setorName = log.setorId ? todosSetores.find(s => String(s.id) === setorId)?.nome : '';
             const hospital = hospitais.find(h => h.id === log.hospitalId);
-            const result = filterHospital
+            const isFiltered = filterHospital && filterHospital !== '';
+            const result = isFiltered
               ? (setorName || log.local)
               : `${hospital?.nome || log.local}${setorName ? ' - ' + setorName : ''}`;
-            console.log('[setorNome orphan] filterHospital:', filterHospital, 'setorName:', setorName, 'hospital:', hospital?.nome, 'result:', result);
+            console.log('[setorNome orphan] filterHospital:', filterHospital, 'setorId:', log.setorId, 'setorName:', setorName, 'hospital:', hospital?.nome, 'result:', result);
             return result;
           })(),
           data: new Date(log.timestamp).toLocaleDateString(),
