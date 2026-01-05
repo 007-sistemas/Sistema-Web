@@ -422,26 +422,36 @@ export const StorageService = {
       const rows = await apiGet<any[]>('pontos');
       if (!Array.isArray(rows)) return;
 
-      const mapped: RegistroPonto[] = rows.map((row: any) => ({
-        id: row.id,
-        codigo: row.codigo || `PONTO-${row.id}`,
-        cooperadoId: row.cooperadoId,
-        cooperadoNome: row.cooperadoNome,
-        timestamp: row.timestamp || row.createdAt,
-        tipo: row.tipo,
-        data: row.date,
-        entrada: row.entrada,
-        saida: row.saida,
-        local: row.hospitalId ? `Hospital-${row.hospitalId}` : 'Não especificado',
-        hospitalId: row.hospitalId,
-        setorId: row.setorId,
-        observacao: row.observacao || '',
-        relatedId: row.relatedId,
-        status: row.tipo === 'SAIDA' ? 'Fechado' : 'Aberto',
-        isManual: row.isManual || false,
-        biometriaEntradaHash: row.biometriaEntradaHash,
-        biometriaSaidaHash: row.biometriaSaidaHash
-      }));
+      const mapped: RegistroPonto[] = rows.map((row: any) => {
+        // Gerar código de 6 dígitos baseado no timestamp ou ID se não existir
+        let codigo = row.codigo;
+        if (!codigo) {
+          // Usar últimos 6 caracteres do ID sem hífens para gerar código numérico
+          const idNumerico = row.id.replace(/-/g, '').slice(-6);
+          codigo = parseInt(idNumerico, 16).toString().slice(-6).padStart(6, '0');
+        }
+        
+        return {
+          id: row.id,
+          codigo: codigo,
+          cooperadoId: row.cooperadoId,
+          cooperadoNome: row.cooperadoNome,
+          timestamp: row.timestamp || row.createdAt,
+          tipo: row.tipo,
+          data: row.date,
+          entrada: row.entrada,
+          saida: row.saida,
+          local: row.hospitalId ? `Hospital-${row.hospitalId}` : 'Não especificado',
+          hospitalId: row.hospitalId,
+          setorId: row.setorId,
+          observacao: row.observacao || '',
+          relatedId: row.relatedId,
+          status: row.tipo === 'SAIDA' ? 'Fechado' : 'Aberto',
+          isManual: row.isManual || false,
+          biometriaEntradaHash: row.biometriaEntradaHash,
+          biometriaSaidaHash: row.biometriaSaidaHash
+        };
+      });
 
       localStorage.setItem(PONTOS_KEY, JSON.stringify(mapped));
       console.log(`[StorageService] ✅ ${mapped.length} pontos sincronizados do Neon`);
