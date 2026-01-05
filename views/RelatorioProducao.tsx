@@ -53,7 +53,10 @@ export const RelatorioProducao: React.FC = () => {
   const [formInputCodigo, setFormInputCodigo] = useState(''); // For Exit to reference Entry
 
   useEffect(() => {
-    loadData();
+    const init = async () => {
+      await loadData();
+    };
+    init();
   }, []);
 
   // Carregar setores quando o filtro de hospital mudar
@@ -128,6 +131,7 @@ export const RelatorioProducao: React.FC = () => {
       const flattened = setoresByHospital.flat();
       const unique = flattened.filter((setor, index, self) => index === self.findIndex(s => s.id === setor.id));
       setTodosSetores(unique);
+      console.log('[RelatorioProducao] Setores carregados:', unique.length, unique);
     } catch (error) {
       console.error('[RelatorioProducao] Erro ao carregar todos os setores:', error);
     }
@@ -191,10 +195,11 @@ export const RelatorioProducao: React.FC = () => {
           setorNome: (() => {
             const setorName = log.setorId ? todosSetores.find(s => s.id === log.setorId)?.nome : '';
             const hospital = hospitais.find(h => h.id === log.hospitalId);
-            if (filterHospital) {
-              return setorName || log.local;
-            }
-            return `${hospital?.nome || log.local}${setorName ? ' - ' + setorName : ''}`;
+            const result = filterHospital
+              ? (setorName || log.local)
+              : `${hospital?.nome || log.local}${setorName ? ' - ' + setorName : ''}`;
+            console.log('[setorNome] filterHospital:', filterHospital, 'setorName:', setorName, 'hospital:', hospital?.nome, 'result:', result);
+            return result;
           })(),
           data: new Date(log.timestamp).toLocaleDateString(),
           entry: log,
@@ -216,10 +221,11 @@ export const RelatorioProducao: React.FC = () => {
           setorNome: (() => {
             const setorName = log.setorId ? todosSetores.find(s => s.id === log.setorId)?.nome : '';
             const hospital = hospitais.find(h => h.id === log.hospitalId);
-            if (filterHospital) {
-              return setorName || log.local;
-            }
-            return `${hospital?.nome || log.local}${setorName ? ' - ' + setorName : ''}`;
+            const result = filterHospital
+              ? (setorName || log.local)
+              : `${hospital?.nome || log.local}${setorName ? ' - ' + setorName : ''}`;
+            console.log('[setorNome orphan] filterHospital:', filterHospital, 'setorName:', setorName, 'hospital:', hospital?.nome, 'result:', result);
+            return result;
           })(),
           data: new Date(log.timestamp).toLocaleDateString(),
           entry: undefined,
