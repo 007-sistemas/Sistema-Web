@@ -166,12 +166,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const result = await sql`
         INSERT INTO pontos (
           id, cooperado_id, cooperado_nome, date, tipo, entrada, saida,
-          hospital_id, setor_id, biometria_entrada_hash, biometria_saida_hash
+          hospital_id, setor_id, biometria_entrada_hash, biometria_saida_hash, timestamp
         )
         VALUES (
           ${p.id}, ${p.cooperadoId}, ${p.cooperadoNome || null}, ${p.data || p.date}, ${p.tipo},
           ${p.entrada || null}, ${p.saida || null}, ${p.hospitalId || null}, ${p.setorId || null},
-          ${p.biometriaEntradaHash || null}, ${p.biometriaSaidaHash || null}
+          ${p.biometriaEntradaHash || null}, ${p.biometriaSaidaHash || null}, ${p.timestamp || new Date().toISOString()}
         )
         ON CONFLICT (id) DO UPDATE SET
           tipo = ${p.tipo},
@@ -180,7 +180,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           hospital_id = ${p.hospitalId || null},
           setor_id = ${p.setorId || null},
           biometria_entrada_hash = ${p.biometriaEntradaHash || null},
-          biometria_saida_hash = ${p.biometriaSaidaHash || null}
+          biometria_saida_hash = ${p.biometriaSaidaHash || null},
+          timestamp = ${p.timestamp || new Date().toISOString()}
         RETURNING id;
       `;
       console.log('[sync] Ponto salvo:', result);
