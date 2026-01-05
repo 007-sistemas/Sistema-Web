@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { StorageService } from '../services/storage';
 import { RegistroPonto, Hospital, TipoPonto, Justificativa } from '../types';
 import { Calendar, Building2, Filter, FileClock, Clock, AlertTriangle, X, CheckCircle, AlertCircle } from 'lucide-react';
+import { apiGet } from '../services/api';
 
 // Interface auxiliar para exibição (Mesma do Relatório)
 interface ShiftRow {
@@ -18,6 +19,7 @@ interface ShiftRow {
 export const EspelhoBiometria: React.FC = () => {
   const [logs, setLogs] = useState<RegistroPonto[]>([]);
   const [hospitais, setHospitais] = useState<Hospital[]>([]);
+  const [loading, setLoading] = useState(true);
   
   // User Session
   const session = StorageService.getSession();
@@ -47,22 +49,43 @@ export const EspelhoBiometria: React.FC = () => {
     loadData();
   }, []);
 
-  const loadData = () => {
+  const loadData = async () => {
     if (!cooperadoId) return;
 
-    // 1. Get all points for this Cooperado
-    const allPontos = StorageService.getPontos().filter(p => p.cooperadoId === cooperadoId && p.status !== 'Rejeitado');
-    
-    // Sort descending (newest first) for initial state, though pairing logic handles sorting
-    const sorted = allPontos.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-    setLogs(sorted);
+    try {
+      setLoading(true);
+      console.log('[EspelhoBiometria] Carregando pontos do NEON para cooperado:', cooperadoId);
+      
+      // Buscar pontos do NEON
+      const pontos = await apiGet<any[]>(`pontos?cooperadoId=${cooperadoId}`);
+      console.log('[EspelhoBiometria] Pontos carregados do NEON:', pontos.length);
+      
+      // Filtrar pontos rejeitados e ordenar
+      const filtered = pontos.filter(p => p.status !== 'Rejeitado');
+      const sorted = filtered.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      setLogs(sorted);
 
-    // 2. Identify Hospitals where the user has records to populate the dropdown
-    const uniqueHospitalIds = [...new Set(sorted.map(p => p.hospitalId).filter(Boolean))];
-    const allHospitais = StorageService.getHospitais();
-    const myHospitais = allHospitais.filter(h => uniqueHospitalIds.includes(h.id));
-    
-    setHospitais(myHospitais);
+      // Identificar hospitais onde o usuário tem registros
+      const uniqueHospitalIds = [...new Set(sorted.map(p => p.hospitalId).filter(Boolean))];
+      const allHospitais = StorageService.getHospitais();
+      const myHospitais = allHospitais.filter(h => uniqueHospitalIds.includes(h.id));
+      
+      setHospitais(myHospitais);
+    } catch (err) {
+      console.error('[EspelhoBiometria] Erro ao carregar pontos do NEON:', err);
+      // Fallback para localStorage se a API falhar
+      console.warn('[EspelhoBiometria] Usando fallback para localStorage');
+      const allPontos = StorageService.getPontos().filter(p => p.cooperadoId === cooperadoId && p.status !== 'Rejeitado');
+      const sorted = allPontos.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      setLogs(sorted);
+
+      const uniqueHospitalIds = [...new Set(sorted.map(p => p.hospitalId).filter(Boolean))];
+      const allHospitais = StorageService.getHospitais();
+      const myHospitais = allHospitais.filter(h => uniqueHospitalIds.includes(h.id));
+      setHospitais(myHospitais);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getFilteredLogs = () => {
