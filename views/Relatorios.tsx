@@ -21,6 +21,7 @@ export const Relatorios: React.FC = () => {
   const [cooperados, setCooperados] = useState<Cooperado[]>([]);
   const [hospitais, setHospitais] = useState<Hospital[]>([]);
   const [setoresDisponiveis, setSetoresDisponiveis] = useState<Setor[]>([]);
+  const [todosSetores, setTodosSetores] = useState<Setor[]>([]); // Todos os setores de todos hospitais
   
   // Filtros
   const [filterHospital, setFilterHospital] = useState('');
@@ -51,7 +52,7 @@ export const Relatorios: React.FC = () => {
   // Reprocessar dados quando filtros mudarem
   useEffect(() => {
     processarRelatorio();
-  }, [logs, cooperados, hospitais, setoresDisponiveis, filterHospital, filterSetor, filterCooperado, filterCategoria, filterDataIni, filterDataFim]);
+  }, [logs, cooperados, hospitais, todosSetores, filterHospital, filterSetor, filterCooperado, filterCategoria, filterDataIni, filterDataFim]);
 
   const loadData = async () => {
     try {
@@ -71,6 +72,35 @@ export const Relatorios: React.FC = () => {
     setLogs(pontosData);
     setCooperados(cooperadosData);
     setHospitais(hospitaisData);
+    
+    // Carregar setores de todos os hospitais
+    await loadAllSetores(hospitaisData);
+  };
+
+  const loadAllSetores = async (hospitaisList: Hospital[]) => {
+    try {
+      const todosSetoresPromises = hospitaisList.map(async (hospital) => {
+        try {
+          const setores = await apiGet<Setor[]>(`hospital-setores?hospitalId=${hospital.id}`);
+          return setores || [];
+        } catch {
+          return [];
+        }
+      });
+      
+      const setoresArrays = await Promise.all(todosSetoresPromises);
+      const setoresUnificados = setoresArrays.flat();
+      
+      // Remover duplicatas baseado no ID
+      const setoresUnicos = setoresUnificados.filter((setor, index, self) =>
+        index === self.findIndex((s) => s.id === setor.id)
+      );
+      
+      setTodosSetores(setoresUnicos);
+      console.log('[Relatorios] Setores carregados:', setoresUnicos.length);
+    } catch (error) {
+      console.error('Erro ao carregar todos os setores:', error);
+    }
   };
 
   const loadSetores = async (hospitalId: string) => {
@@ -116,7 +146,7 @@ export const Relatorios: React.FC = () => {
       
       const cooperado = cooperados.find(c => c.id === entrada.cooperadoId);
       const hospital = hospitais.find(h => h.id === entrada.hospitalId);
-      const setor = setoresDisponiveis.find(s => s.id.toString() === entrada.setorId);
+      const setor = todosSetores.find(s => s.id.toString() === entrada.setorId);
 
       if (!cooperado || !hospital) return;
 

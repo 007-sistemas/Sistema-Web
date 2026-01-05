@@ -422,6 +422,9 @@ export const StorageService = {
       const rows = await apiGet<any[]>('pontos');
       if (!Array.isArray(rows)) return;
 
+      // Buscar hospitais e setores para montar o campo local corretamente
+      const hospitais = StorageService.getHospitais();
+      
       const mapped: RegistroPonto[] = rows.map((row: any) => {
         // Gerar código de 6 dígitos baseado no timestamp ou ID se não existir
         let codigo = row.codigo;
@@ -429,6 +432,16 @@ export const StorageService = {
           // Usar últimos 6 caracteres do ID sem hífens para gerar código numérico
           const idNumerico = row.id.replace(/-/g, '').slice(-6);
           codigo = parseInt(idNumerico, 16).toString().slice(-6).padStart(6, '0');
+        }
+        
+        // Montar campo local com nomes reais
+        let local = 'Não especificado';
+        if (row.hospitalId) {
+          const hospital = hospitais.find(h => h.id === row.hospitalId);
+          if (hospital) {
+            local = hospital.nome;
+            // Se tiver setor, pode adicionar também (mas geralmente o setorId é usado separadamente)
+          }
         }
         
         return {
@@ -441,7 +454,7 @@ export const StorageService = {
           data: row.date,
           entrada: row.entrada,
           saida: row.saida,
-          local: row.hospitalId ? `Hospital-${row.hospitalId}` : 'Não especificado',
+          local: local,
           hospitalId: row.hospitalId,
           setorId: row.setorId,
           observacao: row.observacao || '',
