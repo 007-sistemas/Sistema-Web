@@ -59,8 +59,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           password = ${manager.password},
           cpf = ${manager.cpf || null},
           email = ${manager.email || null},
-          permissoes = ${JSON.stringify(manager.permissoes || {})},
-          updated_at = NOW()
+          permissoes = ${JSON.stringify(manager.permissoes || {})}
         RETURNING id;
       `;
       console.log('[sync] Manager salvo com sucesso:', result);

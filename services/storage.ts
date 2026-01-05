@@ -591,8 +591,8 @@ export const StorageService = {
     logs.unshift(newLog);
     localStorage.setItem(AUDIT_KEY, JSON.stringify(logs.slice(0, 100))); // Keep last 100
 
-    // Sincronizar audit log com Neon
-    syncToNeon('sync_audit', newLog);
+    // TODO: Sincronizar audit log com Neon quando endpoint estiver disponível
+    // syncToNeon('sync_audit', newLog);
   },
 
   getAuditLogs: (): AuditLog[] => {
