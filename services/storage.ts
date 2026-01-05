@@ -70,23 +70,11 @@ export const StorageService = {
     const manager = managers.find(m => m.username === usernameOrCode && m.password === password);
     
     if (manager) {
-      // Em modo dev, retorna todas as permissões habilitadas
-      const permissions: HospitalPermissions = {
-        dashboard: true,
-        ponto: true,
-        relatorio: true,
-        relatorios: true,
-        cadastro: true,
-        hospitais: true,
-        biometria: true,
-        auditoria: true,
-        gestao: true,
-        espelho: true,
-        autorizacao: true,
-        perfil: true,
-        setores: true
-      };
-      
+      // Garantir que permissão 'relatorios' existe
+      const permissions = { ...manager.permissoes };
+      if (!('relatorios' in permissions)) {
+        permissions.relatorios = true;
+      }
       return { 
         type: 'MANAGER', 
         user: manager,
@@ -174,35 +162,12 @@ export const StorageService = {
     const data = localStorage.getItem(MANAGERS_KEY);
     let managers = data ? JSON.parse(data) : [];
     
-    // Garantir que todos os gestores tenham permissões definidas corretamente
+    // Garantir que todo manager tem a permissão 'relatorios'
     managers = managers.map((m: Manager) => {
-      if (!m.permissoes) {
-        m.permissoes = {} as any;
+      if (!m.permissoes) m.permissoes = {} as any;
+      if (!('relatorios' in m.permissoes)) {
+        m.permissoes.relatorios = true; // Default: habilitado para novos gestores
       }
-      
-      // Apenas garantir que as permissões existem, sem sobrescrever valores salvos
-      const defaultPerms: HospitalPermissions = {
-        dashboard: true,
-        ponto: true,
-        relatorio: true,
-        relatorios: true,
-        cadastro: true,
-        hospitais: true,
-        biometria: true,
-        auditoria: true,
-        gestao: true,
-        espelho: true,
-        autorizacao: true,
-        perfil: true,
-        setores: true
-      };
-      
-      // Mesclar apenas campos que não existem, preservando os salvos
-      m.permissoes = {
-        ...defaultPerms,
-        ...m.permissoes
-      };
-      
       return m;
     });
     
@@ -278,58 +243,31 @@ export const StorageService = {
   },
 
   saveManager: (manager: Manager): void => {
-    console.log('[saveManager] Iniciando salvamento:', manager.username);
     const list = StorageService.getManagers();
     const clean = (s: string) => (s || '').replace(/\D/g, '');
     const cpfNovo = clean(manager.cpf);
-    
     if (!cpfNovo) {
-      console.error('[saveManager] CPF vazio:', manager.cpf);
       alert('CPF é obrigatório para gestores.');
       return;
     }
-    
     const cpfDuplicado = StorageService.checkDuplicateCpf(manager.cpf, manager.id);
     if (cpfDuplicado) {
-      console.error('[saveManager] CPF duplicado encontrado:', cpfDuplicado.username);
-      alert('Já existe um gestor com este CPF!');
       return;
     }
-    
     // Garante que todo gestor tenha acesso a setores
     if (!manager.permissoes) manager.permissoes = {} as any;
     manager.permissoes.setores = true;
-    
     const index = list.findIndex(m => m.id === manager.id);
     if (index >= 0) {
-      console.log('[saveManager] Atualizando gestor existente, index:', index);
       list[index] = manager;
     } else {
-      console.log('[saveManager] Criando novo gestor');
       list.push(manager);
     }
-    
-    console.log('[saveManager] Lista antes de salvar:', JSON.stringify(list).substring(0, 200) + '...');
-    
-    // Tentar salvar no localStorage com tratamento de erro
-    try {
-      localStorage.setItem(MANAGERS_KEY, JSON.stringify(list));
-      console.log('[saveManager] ✅ Salvo no localStorage com sucesso');
-    } catch (storageErr: any) {
-      console.error('[saveManager] ❌ Erro ao salvar no localStorage:', storageErr);
-      alert('Erro ao salvar dados localmente: ' + storageErr.message);
-      return;
-    }
-    
+    localStorage.setItem(MANAGERS_KEY, JSON.stringify(list));
     StorageService.logAudit('ATUALIZACAO_GESTOR', `Gestor ${manager.username} atualizado/criado.`);
 
-    // Sincronizar manager com Neon (assíncrono, não bloqueia)
-    console.log('[saveManager] Iniciando sincronização com NEON...');
-    syncToNeon('sync_manager', manager).then(() => {
-      console.log('[saveManager] ✅ Sincronização NEON completada');
-    }).catch((err) => {
-      console.error('[saveManager] ⚠️ Falha na sincronização NEON:', err);
-    });
+    // Sincronizar manager com Neon
+    syncToNeon('sync_manager', manager);
   },
 
   deleteManager: (id: string): void => {
