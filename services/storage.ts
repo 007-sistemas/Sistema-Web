@@ -162,14 +162,34 @@ export const StorageService = {
     const data = localStorage.getItem(MANAGERS_KEY);
     let managers = data ? JSON.parse(data) : [];
     
-    // Garantir que todo manager tem a permissão 'relatorios'
+    let hasChanges = false;
+    
+    // Garantir que todo manager tem as permissões esperadas
     managers = managers.map((m: Manager) => {
-      if (!m.permissoes) m.permissoes = {} as any;
-      if (!('relatorios' in m.permissoes)) {
-        m.permissoes.relatorios = true; // Default: habilitado para novos gestores
+      if (!m.permissoes) {
+        m.permissoes = {} as any;
+        hasChanges = true;
       }
+      
+      // Garantir que 'relatorios' existe
+      if (!('relatorios' in m.permissoes)) {
+        m.permissoes.relatorios = true;
+        hasChanges = true;
+      }
+      
+      // Garantir que 'setores' existe
+      if (!('setores' in m.permissoes)) {
+        m.permissoes.setores = true;
+        hasChanges = true;
+      }
+      
       return m;
     });
+    
+    // Se houve mudanças, salvar de volta ao localStorage
+    if (hasChanges) {
+      localStorage.setItem(MANAGERS_KEY, JSON.stringify(managers));
+    }
     
     return managers;
   },
