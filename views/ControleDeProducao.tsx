@@ -482,8 +482,16 @@ export const ControleDeProducao: React.FC = () => {
     
     if (confirm("Tem certeza? Se for uma Entrada, a Saída vinculada também será excluída.")) {
         StorageService.deletePonto(selectedPontoId);
-        loadData();
+        
+        // Atualizar estado imediatamente (sem aguardar Neon)
+        const updated = StorageService.getPontos();
+        const sorted = updated.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+        setLogs(sorted);
+        
         handleNovoPlantao();
+        
+        // Sincronizar com Neon em background (assíncrono)
+        loadData();
     }
   };
 
