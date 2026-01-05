@@ -309,14 +309,27 @@ export const StorageService = {
       list.push(manager);
     }
     
-    console.log('[saveManager] Lista antes de salvar:', JSON.stringify(list));
-    localStorage.setItem(MANAGERS_KEY, JSON.stringify(list));
-    console.log('[saveManager] ✅ Salvo no localStorage');
+    console.log('[saveManager] Lista antes de salvar:', JSON.stringify(list).substring(0, 200) + '...');
+    
+    // Tentar salvar no localStorage com tratamento de erro
+    try {
+      localStorage.setItem(MANAGERS_KEY, JSON.stringify(list));
+      console.log('[saveManager] ✅ Salvo no localStorage com sucesso');
+    } catch (storageErr: any) {
+      console.error('[saveManager] ❌ Erro ao salvar no localStorage:', storageErr);
+      alert('Erro ao salvar dados localmente: ' + storageErr.message);
+      return;
+    }
     
     StorageService.logAudit('ATUALIZACAO_GESTOR', `Gestor ${manager.username} atualizado/criado.`);
 
-    // Sincronizar manager com Neon
-    syncToNeon('sync_manager', manager);
+    // Sincronizar manager com Neon (assíncrono, não bloqueia)
+    console.log('[saveManager] Iniciando sincronização com NEON...');
+    syncToNeon('sync_manager', manager).then(() => {
+      console.log('[saveManager] ✅ Sincronização NEON completada');
+    }).catch((err) => {
+      console.error('[saveManager] ⚠️ Falha na sincronização NEON:', err);
+    });
   },
 
   deleteManager: (id: string): void => {
