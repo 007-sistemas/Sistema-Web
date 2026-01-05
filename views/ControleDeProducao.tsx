@@ -174,77 +174,100 @@ export const ControleDeProducao: React.FC = () => {
   const getShiftRows = (): ShiftRow[] => {
     const shifts: ShiftRow[] = [];
     const processedExits = new Set<string>();
+    const processedEntries = new Set<string>();
 
-    const setoresDisponiveis = getAvailableSetoresForFilter();
-
-    // 1. Process Entries
+    // 1. Agrupar registros por cooperado
+    const gruposPorCooperado = new Map<string, RegistroPonto[]>();
     filteredLogs.forEach(log => {
-      if (log.tipo === TipoPonto.ENTRADA) {
-        // Try to find matching exit in the filtered logs
-        // Logic: Find an exit that points to this entry via relatedId
-        const matchingExit = filteredLogs.find(l => l.tipo === TipoPonto.SAIDA && l.relatedId === log.id);
-        
-        if (matchingExit) {
-          processedExits.add(matchingExit.id);
+      if (!gruposPorCooperado.has(log.cooperadoId)) {
+        gruposPorCooperado.set(log.cooperadoId, []);
+      }
+      gruposPorCooperado.get(log.cooperadoId)!.push(log);
+    });
+
+    // 2. Para cada cooperado, ordenar cronologicamente e parear
+    gruposPorCooperado.forEach((registros) => {
+      // Ordenar por timestamp (ascendente = mais antigo primeiro)
+      const ordenados = registros.sort((a, b) => 
+        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+      );
+
+      const entradas = ordenados.filter(r => r.tipo === TipoPonto.ENTRADA);
+      const saidas = ordenados.filter(r => r.tipo === TipoPonto.SAIDA);
+
+      // 3. Parear cada ENTRADA com a próxima SAÍDA disponível
+      entradas.forEach(entrada => {
+        // Procurar SAÍDA posterior não pareada
+        const saidaIndex = saidas.findIndex(s => 
+          new Date(s.timestamp).getTime() > new Date(entrada.timestamp).getTime() &&
+          !processedExits.has(s.id)
+        );
+
+        let saidaPareada: RegistroPonto | undefined;
+        if (saidaIndex !== -1) {
+          saidaPareada = saidas[saidaIndex];
+          processedExits.add(saidaPareada.id);
         }
 
+        processedEntries.add(entrada.id);
+
+        // Construir setor nome
+        const getSetorNome = (log: RegistroPonto) => {
+          const setorId = String(log.setorId);
+          const setorName = log.setorId ? todosSetores.find(s => String(s.id) === setorId)?.nome : '';
+          const hospital = hospitais.find(h => h.id === log.hospitalId);
+          const isFiltered = filterHospital && filterHospital !== '';
+          return isFiltered
+            ? (setorName || log.local)
+            : `${hospital?.nome || log.local}${setorName ? ' - ' + setorName : ''}`;
+        };
+
         shifts.push({
-          id: log.id,
-          cooperadoNome: log.cooperadoNome,
-          local: log.local,
-          setorNome: (() => {
-            const setorId = String(log.setorId); // Converter para string para comparação
+          id: entrada.id,
+          cooperadoNome: entrada.cooperadoNome,
+          local: entrada.local,
+          setorNome: getSetorNome(entrada),
+          data: new Date(entrada.timestamp).toLocaleDateString(),
+          entry: entrada,
+          exit: saidaPareada,
+          status: saidaPareada ? 'Fechado' : 'Em Aberto'
+        });
+      });
+
+      // 4. Processar SAÍDAs órfãs (saídas sem entrada anterior)
+      saidas.forEach(saida => {
+        if (!processedExits.has(saida.id)) {
+          // Esta é uma SAÍDA sem ENTRADA - ANOMALIA!
+          const getSetorNome = (log: RegistroPonto) => {
+            const setorId = String(log.setorId);
             const setorName = log.setorId ? todosSetores.find(s => String(s.id) === setorId)?.nome : '';
             const hospital = hospitais.find(h => h.id === log.hospitalId);
             const isFiltered = filterHospital && filterHospital !== '';
-            const result = isFiltered
+            return isFiltered
               ? (setorName || log.local)
               : `${hospital?.nome || log.local}${setorName ? ' - ' + setorName : ''}`;
-            console.log('[setorNome] filterHospital:', filterHospital, 'setorId:', log.setorId, 'setorName:', setorName, 'hospital:', hospital?.nome, 'result:', result);
-            return result;
-          })(),
-          data: new Date(log.timestamp).toLocaleDateString(),
-          entry: log,
-          exit: matchingExit,
-          status: matchingExit ? 'Fechado' : 'Em Aberto'
-        });
-      }
+          };
+
+          shifts.push({
+            id: saida.id,
+            cooperadoNome: saida.cooperadoNome,
+            local: saida.local,
+            setorNome: getSetorNome(saida),
+            data: new Date(saida.timestamp).toLocaleDateString(),
+            entry: undefined,
+            exit: saida,
+            status: '⚠️ ANOMALIA - Saída sem Entrada' // Alerta visual
+          });
+          processedExits.add(saida.id);
+        }
+      });
     });
 
-    // 2. Process Orphan Exits (Exits without Entry in the current view)
-    filteredLogs.forEach(log => {
-      if (log.tipo === TipoPonto.SAIDA && !processedExits.has(log.id)) {
-        // Only add if we haven't processed this exit paired with an entry above
-        // This happens if the Entry was deleted OR if the Entry is outside the current filter date range
-        shifts.push({
-          id: log.id,
-          cooperadoNome: log.cooperadoNome,
-          local: log.local,
-          setorNome: (() => {
-            const setorId = String(log.setorId); // Converter para string para comparação
-            const setorName = log.setorId ? todosSetores.find(s => String(s.id) === setorId)?.nome : '';
-            const hospital = hospitais.find(h => h.id === log.hospitalId);
-            const isFiltered = filterHospital && filterHospital !== '';
-            const result = isFiltered
-              ? (setorName || log.local)
-              : `${hospital?.nome || log.local}${setorName ? ' - ' + setorName : ''}`;
-            console.log('[setorNome orphan] filterHospital:', filterHospital, 'setorId:', log.setorId, 'setorName:', setorName, 'hospital:', hospital?.nome, 'result:', result);
-            return result;
-          })(),
-          data: new Date(log.timestamp).toLocaleDateString(),
-          entry: undefined,
-          exit: log,
-          status: 'Fechado (S/E)' // Fechado sem entrada vinculada
-        });
-      }
-    });
-
-    // Sort by Date/Time descending (Newest first usually better for reports, but keeping Ascending per logic)
-    // Re-sorting based on the Entry time (or Exit time if orphan)
+    // 5. Ordenar por timestamp descrescente (mais recentes primeiro)
     return shifts.sort((a, b) => {
       const timeA = a.entry ? new Date(a.entry.timestamp).getTime() : new Date(a.exit!.timestamp).getTime();
       const timeB = b.entry ? new Date(b.entry.timestamp).getTime() : new Date(b.exit!.timestamp).getTime();
-      return timeB - timeA; // Changed to DESCENDING for better UX (latest first)
+      return timeB - timeA;
     });
   };
 
