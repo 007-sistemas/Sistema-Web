@@ -49,7 +49,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         cooperado_id TEXT NOT NULL,
         cooperado_nome TEXT,
         tipo TEXT NOT NULL,
-        data TEXT NOT NULL,
+        date TEXT NOT NULL,
         entrada TEXT,
         saida TEXT,
         motivo TEXT,
@@ -67,7 +67,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         id TEXT PRIMARY KEY,
         cooperado_id TEXT NOT NULL,
         cooperado_nome TEXT,
-        data TEXT NOT NULL,
+        date TEXT NOT NULL,
         tipo TEXT NOT NULL,
         entrada TEXT,
         saida TEXT,
@@ -125,11 +125,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const result = await sql`
         INSERT INTO justificativas (
-          id, cooperado_id, cooperado_nome, tipo, data, entrada, saida, 
+          id, cooperado_id, cooperado_nome, tipo, date, entrada, saida, 
           motivo, observacao, status, aprovado_por, data_aprovacao, motivo_rejeicao
         )
         VALUES (
-          ${j.id}, ${j.cooperadoId}, ${j.cooperadoNome || null}, ${j.tipo}, ${j.data},
+          ${j.id}, ${j.cooperadoId}, ${j.cooperadoNome || null}, ${j.tipo}, ${j.data || j.date},
           ${j.entrada || null}, ${j.saida || null}, ${j.motivo || null}, ${j.observacao || null},
           ${j.status || 'Pendente'}, ${j.aprovadoPor || null}, ${j.dataAprovacao || null}, ${j.motivoRejeicao || null}
         )
@@ -157,11 +157,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const result = await sql`
         INSERT INTO pontos (
-          id, cooperado_id, cooperado_nome, data, tipo, entrada, saida,
+          id, cooperado_id, cooperado_nome, date, tipo, entrada, saida,
           hospital_id, setor_id, biometria_entrada_hash, biometria_saida_hash
         )
         VALUES (
-          ${p.id}, ${p.cooperadoId}, ${p.cooperadoNome || null}, ${p.data}, ${p.tipo},
+          ${p.id}, ${p.cooperadoId}, ${p.cooperadoNome || null}, ${p.data || p.date}, ${p.tipo},
           ${p.entrada || null}, ${p.saida || null}, ${p.hospitalId || null}, ${p.setorId || null},
           ${p.biometriaEntradaHash || null}, ${p.biometriaSaidaHash || null}
         )
