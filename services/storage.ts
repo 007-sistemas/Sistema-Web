@@ -529,6 +529,9 @@ export const StorageService = {
 
     localStorage.setItem(PONTOS_KEY, JSON.stringify(list));
     StorageService.logAudit('REMOCAO_PONTO', `Registro ${target.codigo} removido.`);
+
+    // Sincronizar exclusão com Neon
+    syncToNeon('delete_ponto', { id });
   },
 
   getLastPonto: (cooperadoId: string): RegistroPonto | undefined => {

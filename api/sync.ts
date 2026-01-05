@@ -74,6 +74,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     // Adicionar colunas que podem estar faltando na tabela pontos
     try {
+      await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS codigo TEXT`;
       await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS cooperado_nome TEXT`;
       await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS date TEXT`;
       await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS tipo TEXT`;
@@ -83,6 +84,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS setor_id TEXT`;
       await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS biometria_entrada_hash TEXT`;
       await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS biometria_saida_hash TEXT`;
+      await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS related_id TEXT`;
+      await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS status TEXT`;
+      await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS is_manual BOOLEAN`;
+      await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS local TEXT`;
     } catch (alterErr) {
       console.log('[sync] Erro ao adicionar colunas (pode ser ignorado se já existirem):', alterErr);
     }
@@ -166,12 +171,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const result = await sql`
         INSERT INTO pontos (
           id, codigo, cooperado_id, cooperado_nome, date, tipo, entrada, saida,
-          hospital_id, setor_id, biometria_entrada_hash, biometria_saida_hash, timestamp
+          hospital_id, setor_id, biometria_entrada_hash, biometria_saida_hash, timestamp,
+          related_id, status, is_manual, local
         )
         VALUES (
           ${p.id}, ${p.codigo || null}, ${p.cooperadoId}, ${p.cooperadoNome || null}, ${p.data || p.date}, ${p.tipo},
           ${p.entrada || null}, ${p.saida || null}, ${p.hospitalId || null}, ${p.setorId || null},
-          ${p.biometriaEntradaHash || null}, ${p.biometriaSaidaHash || null}, ${p.timestamp || new Date().toISOString()}
+          ${p.biometriaEntradaHash || null}, ${p.biometriaSaidaHash || null}, ${p.timestamp || new Date().toISOString()},
+          ${p.relatedId || null}, ${p.status || null}, ${p.isManual ?? null}, ${p.local || null}
         )
         ON CONFLICT (id) DO UPDATE SET
           codigo = ${p.codigo || null},
@@ -182,11 +189,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           setor_id = ${p.setorId || null},
           biometria_entrada_hash = ${p.biometriaEntradaHash || null},
           biometria_saida_hash = ${p.biometriaSaidaHash || null},
-          timestamp = ${p.timestamp || new Date().toISOString()}
+          timestamp = ${p.timestamp || new Date().toISOString()},
+          related_id = ${p.relatedId || null},
+          status = ${p.status || null},
+          is_manual = ${p.isManual ?? null},
+          local = ${p.local || null}
         RETURNING id;
       `;
       console.log('[sync] Ponto salvo:', result);
       return res.status(200).json({ success: true, id: result[0]?.id });
+    }
+
+    if (action === 'delete_ponto') {
+      const { id } = data;
+      if (!id) {
+        return res.status(400).json({ error: 'Ponto ID é obrigatório para exclusão' });
+      }
+
+      await sql`DELETE FROM pontos WHERE id = ${id} OR related_id = ${id}`;
+      console.log('[sync] Ponto deletado:', id);
+      return res.status(200).json({ success: true, deleted: id });
     }
 
     // Suporte a outras ações (hospital, cooperado, etc.)

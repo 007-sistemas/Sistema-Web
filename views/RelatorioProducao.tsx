@@ -22,6 +22,7 @@ export const RelatorioProducao: React.FC = () => {
   const [cooperados, setCooperados] = useState<Cooperado[]>([]);
   const [hospitais, setHospitais] = useState<Hospital[]>([]);
   const [setoresDisponiveis, setSetoresDisponiveis] = useState<Setor[]>([]);
+  const [todosSetores, setTodosSetores] = useState<Setor[]>([]); // Setores de todos os hospitais para exibição
   
   // --- FILTER STATE ---
   const [filterHospital, setFilterHospital] = useState('');
@@ -104,9 +105,32 @@ export const RelatorioProducao: React.FC = () => {
     setCooperados(StorageService.getCooperados());
     setHospitais(StorageService.getHospitais());
     const allPontos = StorageService.getPontos();
+    // Carregar setores de todos os hospitais para exibição (Hospital - Setor quando filtro vazio)
+    await loadAllSetores(StorageService.getHospitais());
     // Order: Ascending (Oldest top, Newest bottom)
     const sorted = allPontos.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
     setLogs(sorted);
+  };
+
+  const loadAllSetores = async (hospitaisList: Hospital[]) => {
+    try {
+      const setoresByHospital = await Promise.all(
+        hospitaisList.map(async (hospital) => {
+          try {
+            const setores = await apiGet<Setor[]>(`hospital-setores?hospitalId=${hospital.id}`);
+            return setores || [];
+          } catch {
+            return [];
+          }
+        })
+      );
+
+      const flattened = setoresByHospital.flat();
+      const unique = flattened.filter((setor, index, self) => index === self.findIndex(s => s.id === setor.id));
+      setTodosSetores(unique);
+    } catch (error) {
+      console.error('[RelatorioProducao] Erro ao carregar todos os setores:', error);
+    }
   };
 
   // --- FILTER LOGIC ---
@@ -164,7 +188,14 @@ export const RelatorioProducao: React.FC = () => {
           id: log.id,
           cooperadoNome: log.cooperadoNome,
           local: log.local,
-          setorNome: log.setorId && filterHospital ? (setoresDisponiveis.find(s => s.id === log.setorId)?.nome || log.local) : log.local,
+          setorNome: (() => {
+            const setorName = log.setorId ? todosSetores.find(s => s.id === log.setorId)?.nome : '';
+            const hospital = hospitais.find(h => h.id === log.hospitalId);
+            if (filterHospital) {
+              return setorName || log.local;
+            }
+            return `${hospital?.nome || log.local}${setorName ? ' - ' + setorName : ''}`;
+          })(),
           data: new Date(log.timestamp).toLocaleDateString(),
           entry: log,
           exit: matchingExit,
@@ -182,7 +213,14 @@ export const RelatorioProducao: React.FC = () => {
           id: log.id,
           cooperadoNome: log.cooperadoNome,
           local: log.local,
-          setorNome: log.setorId && filterHospital ? (setoresDisponiveis.find(s => s.id === log.setorId)?.nome || log.local) : log.local,
+          setorNome: (() => {
+            const setorName = log.setorId ? todosSetores.find(s => s.id === log.setorId)?.nome : '';
+            const hospital = hospitais.find(h => h.id === log.hospitalId);
+            if (filterHospital) {
+              return setorName || log.local;
+            }
+            return `${hospital?.nome || log.local}${setorName ? ' - ' + setorName : ''}`;
+          })(),
           data: new Date(log.timestamp).toLocaleDateString(),
           entry: undefined,
           exit: log,

@@ -173,11 +173,16 @@ export const Relatorios: React.FC = () => {
 
       const status = saida ? 'Fechado' : 'Em Aberto';
 
+      // Se não houver filtro de hospital, exibir "Hospital - Setor" para facilitar identificação
+      const setorLabel = filterHospital
+        ? (setor?.nome || 'Setor não informado')
+        : `${hospital.nome}${setor?.nome ? ' - ' + setor.nome : ''}`;
+
       rows.push({
         cooperadoNome: cooperado.nome,
         categoriaProfissional: cooperado.categoriaProfissional,
         hospital: hospital.nome,
-        setor: setor?.nome || 'N/A',
+        setor: setorLabel,
         data: dataEntrada.toLocaleDateString('pt-BR'),
         entrada: entradaHora,
         saida: saidaHora,
