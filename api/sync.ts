@@ -30,7 +30,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     console.log(`[sync] Ação: ${action}`, data);
 
-    // Garantir que as tabelas existem
+    // Garantir que a tabela managers existe
     await sql`
       CREATE TABLE IF NOT EXISTS managers (
         id TEXT PRIMARY KEY,
@@ -43,6 +43,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       );
     `;
 
+    // Garantir que a tabela justificativas existe com as colunas corretas
     await sql`
       CREATE TABLE IF NOT EXISTS justificativas (
         id TEXT PRIMARY KEY,
@@ -62,22 +63,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       );
     `;
 
+    // Para a tabela pontos, verificar se as colunas existem e adicionar se necessário
     await sql`
       CREATE TABLE IF NOT EXISTS pontos (
         id TEXT PRIMARY KEY,
         cooperado_id TEXT NOT NULL,
-        cooperado_nome TEXT,
-        date TEXT NOT NULL,
-        tipo TEXT NOT NULL,
-        entrada TEXT,
-        saida TEXT,
-        hospital_id TEXT,
-        setor_id TEXT,
-        biometria_entrada_hash TEXT,
-        biometria_saida_hash TEXT,
         created_at TIMESTAMP DEFAULT NOW()
       );
     `;
+    
+    // Adicionar colunas que podem estar faltando na tabela pontos
+    try {
+      await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS cooperado_nome TEXT`;
+      await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS date TEXT`;
+      await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS tipo TEXT`;
+      await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS entrada TEXT`;
+      await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS saida TEXT`;
+      await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS hospital_id TEXT`;
+      await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS setor_id TEXT`;
+      await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS biometria_entrada_hash TEXT`;
+      await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS biometria_saida_hash TEXT`;
+    } catch (alterErr) {
+      console.log('[sync] Erro ao adicionar colunas (pode ser ignorado se já existirem):', alterErr);
+    }
 
     if (action === 'sync_manager') {
       const manager = data;
