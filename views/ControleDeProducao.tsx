@@ -17,7 +17,7 @@ interface ShiftRow {
   status: string;
 }
 
-export const RelatorioProducao: React.FC = () => {
+export const ControleDeProducao: React.FC = () => {
   const [logs, setLogs] = useState<RegistroPonto[]>([]);
   const [cooperados, setCooperados] = useState<Cooperado[]>([]);
   const [hospitais, setHospitais] = useState<Hospital[]>([]);
@@ -131,9 +131,9 @@ export const RelatorioProducao: React.FC = () => {
       const flattened = setoresByHospital.flat();
       const unique = flattened.filter((setor, index, self) => index === self.findIndex(s => s.id === setor.id));
       setTodosSetores(unique);
-      console.log('[RelatorioProducao] Setores carregados:', unique.length, unique);
+      console.log('[ControleDeProducao] Setores carregados:', unique.length, unique);
     } catch (error) {
-      console.error('[RelatorioProducao] Erro ao carregar todos os setores:', error);
+      console.error('[ControleDeProducao] Erro ao carregar todos os setores:', error);
     }
   };
 

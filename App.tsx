@@ -9,7 +9,7 @@ import { PontoMachine } from './views/PontoMachine';
 import { Dashboard } from './views/Dashboard';
 import { AuditLogViewer } from './views/AuditLogViewer';
 import { HospitalRegister } from './views/HospitalRegister';
-import { RelatorioProducao } from './views/RelatorioProducao';
+import { ControleDeProducao } from './views/ControleDeProducao';
 import { Relatorios } from './views/Relatorios';
 import { Management } from './views/Management';
 import { Login } from './views/Login';
@@ -129,7 +129,7 @@ export default function App() {
     switch(currentView) {
       case 'dashboard': return <Dashboard />;
       case 'ponto': return <PontoMachine />;
-      case 'relatorio': return <RelatorioProducao />;
+      case 'relatorio': return <ControleDeProducao />;
       case 'relatorios': return <Relatorios />;
       case 'espelho': return <EspelhoBiometria />; 
       case 'autorizacao': return <AutorizacaoPonto />;
