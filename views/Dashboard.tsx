@@ -10,8 +10,17 @@ export const Dashboard: React.FC = () => {
   const [filterCooperado, setFilterCooperado] = useState('');
   
   useEffect(() => {
-    setPontos(StorageService.getPontos().reverse());
-    setHospitais(StorageService.getHospitais());
+    const loadData = async () => {
+      try {
+        await StorageService.refreshPontosFromRemote();
+        await StorageService.refreshHospitaisFromRemote();
+      } catch (error) {
+        console.error('Erro ao sincronizar dados:', error);
+      }
+      setPontos(StorageService.getPontos().reverse());
+      setHospitais(StorageService.getHospitais());
+    };
+    loadData();
   }, []);
 
   // Simple aggregation for chart (Points per day)

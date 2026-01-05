@@ -92,7 +92,15 @@ export const RelatorioProducao: React.FC = () => {
     loadSetores();
   }, [filterHospital]);
 
-  const loadData = () => {
+  const loadData = async () => {
+    try {
+      await StorageService.refreshPontosFromRemote();
+      await StorageService.refreshCooperadosFromRemote();
+      await StorageService.refreshHospitaisFromRemote();
+    } catch (error) {
+      console.error('Erro ao sincronizar dados do Neon:', error);
+    }
+    
     setCooperados(StorageService.getCooperados());
     setHospitais(StorageService.getHospitais());
     const allPontos = StorageService.getPontos();

@@ -53,7 +53,17 @@ export const Relatorios: React.FC = () => {
     processarRelatorio();
   }, [logs, cooperados, hospitais, setoresDisponiveis, filterHospital, filterSetor, filterCooperado, filterCategoria, filterDataIni, filterDataFim]);
 
-  const loadData = () => {
+  const loadData = async () => {
+    try {
+      // Buscar dados do Neon antes de carregar do localStorage
+      await StorageService.refreshPontosFromRemote();
+      await StorageService.refreshCooperadosFromRemote();
+      await StorageService.refreshHospitaisFromRemote();
+    } catch (error) {
+      console.error('Erro ao sincronizar dados do Neon:', error);
+    }
+    
+    // Agora carrega dados atualizados do localStorage
     const pontosData = StorageService.getPontos();
     const cooperadosData = StorageService.getCooperados();
     const hospitaisData = StorageService.getHospitais();

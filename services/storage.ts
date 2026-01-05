@@ -417,6 +417,39 @@ export const StorageService = {
     return data ? JSON.parse(data) : [];
   },
 
+  refreshPontosFromRemote: async () => {
+    try {
+      const rows = await apiGet<any[]>('pontos');
+      if (!Array.isArray(rows)) return;
+
+      const mapped: RegistroPonto[] = rows.map((row: any) => ({
+        id: row.id,
+        codigo: row.codigo || `PONTO-${row.id}`,
+        cooperadoId: row.cooperadoId,
+        cooperadoNome: row.cooperadoNome,
+        timestamp: row.timestamp || row.createdAt,
+        tipo: row.tipo,
+        data: row.date,
+        entrada: row.entrada,
+        saida: row.saida,
+        local: row.hospitalId ? `Hospital-${row.hospitalId}` : 'Não especificado',
+        hospitalId: row.hospitalId,
+        setorId: row.setorId,
+        observacao: row.observacao || '',
+        relatedId: row.relatedId,
+        status: row.tipo === 'SAIDA' ? 'Fechado' : 'Aberto',
+        isManual: row.isManual || false,
+        biometriaEntradaHash: row.biometriaEntradaHash,
+        biometriaSaidaHash: row.biometriaSaidaHash
+      }));
+
+      localStorage.setItem(PONTOS_KEY, JSON.stringify(mapped));
+      console.log(`[StorageService] ✅ ${mapped.length} pontos sincronizados do Neon`);
+    } catch (err) {
+      console.error('[StorageService] Erro ao sincronizar pontos do Neon:', err);
+    }
+  },
+
   savePonto: (ponto: RegistroPonto): void => {
     const list = StorageService.getPontos();
     list.push(ponto);

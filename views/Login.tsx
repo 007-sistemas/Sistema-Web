@@ -52,6 +52,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       await StorageService.refreshManagersFromRemote();
       await StorageService.refreshCooperadosFromRemote();
       await StorageService.refreshHospitaisFromRemote();
+      await StorageService.refreshPontosFromRemote();
 
       const authResult = StorageService.authenticate(username, password);
 
