@@ -194,11 +194,11 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
         || (p as any).isManual === 1 
         || (p as any).isManual === '1' 
         || (p.codigo && String(p.codigo).startsWith('MAN-'))
-        || p.status === 'Aguardando autorização'
+        || p.status === 'aguardando autorização'
         || p.status === 'Pendente';
 
       if (manualFlag && !p.validadoPor) {
-        return { ...p, isManual: true, status: 'Aguardando autorização' };
+        return { ...p, isManual: true, status: 'aguardando autorização' };
       }
 
       return { ...p, isManual: manualFlag || p.isManual };
@@ -386,17 +386,17 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
         const entradaManual = entrada.isManual === true || entrada.isManual === 'true' || entrada.status === 'Aguardando autorização' || entrada.status === 'Pendente';
         const saidaManual = saidaPareada && (saidaPareada.isManual === true || saidaPareada.isManual === 'true' || saidaPareada.status === 'Aguardando autorização' || saidaPareada.status === 'Pendente');
 
-        const aguardandoEntrada = entrada.status === 'Aguardando autorização' || entrada.status === 'Pendente' || (!entrada.status && entradaManual);
-        const aguardandoSaida = saidaPareada && (saidaPareada.status === 'Aguardando autorização' || saidaPareada.status === 'Pendente' || (!saidaPareada.status && saidaManual));
+        const aguardandoEntrada = entrada.status === 'aguardando autorização' || entrada.status === 'Pendente' || (!entrada.status && entradaManual);
+        const aguardandoSaida = saidaPareada && (saidaPareada.status === 'aguardando autorização' || saidaPareada.status === 'Pendente' || (!saidaPareada.status && saidaManual));
 
         const manualPair = entradaManual || saidaManual;
         const hasApproval = (entrada.validadoPor && entrada.status === 'Fechado') || (saidaPareada && saidaPareada.validadoPor && saidaPareada.status === 'Fechado');
 
         let statusLabel = 'Em Aberto';
         if (manualPair && !hasApproval) {
-          statusLabel = 'Aguardando autorização';
+          statusLabel = 'aguardando autorização';
         } else if (aguardandoEntrada || aguardandoSaida) {
-          statusLabel = 'Aguardando autorização';
+          statusLabel = 'aguardando autorização';
         } else if (saidaPareada) {
           statusLabel = 'Fechado';
         }
