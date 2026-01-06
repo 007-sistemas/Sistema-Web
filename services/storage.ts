@@ -236,13 +236,17 @@ export const StorageService = {
           try { prefs = JSON.parse(prefs); } catch (err) { prefs = null; }
         }
 
+        // Garantir que 'espelho' é sempre false para managers (nunca pode ser true)
+        const mergedPerms = { ...defaultPerms, ...(perms || {}) };
+        mergedPerms.espelho = false;
+
         return {
           id: row.id,
           username: row.username,
           password: row.password,
           cpf: row.cpf || '',
           email: row.email || '',
-          permissoes: { ...defaultPerms, ...(perms || {}) },
+          permissoes: mergedPerms,
           // Usar preferences do Neon se existir, senão manter local
           preferences: prefs || prefsMap.get(row.id),
         };
