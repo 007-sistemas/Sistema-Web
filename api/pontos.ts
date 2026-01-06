@@ -34,8 +34,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Buscar pontos de um cooperado específico
       rows = await sql`
         SELECT 
-          id, cooperado_id as "cooperadoId", cooperado_nome as "cooperadoNome",
+          id, codigo, cooperado_id as "cooperadoId", cooperado_nome as "cooperadoNome",
           date, tipo, entrada, saida, hospital_id as "hospitalId", setor_id as "setorId",
+          local, observacao, related_id as "relatedId", status, is_manual as "isManual",
+          validado_por as "validadoPor", justificativa,
           biometria_entrada_hash as "biometriaEntradaHash", 
           biometria_saida_hash as "biometriaSaidaHash",
           timestamp, created_at as "createdAt"
@@ -47,8 +49,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Buscar todos os pontos
       rows = await sql`
         SELECT 
-          id, cooperado_id as "cooperadoId", cooperado_nome as "cooperadoNome",
+          id, codigo, cooperado_id as "cooperadoId", cooperado_nome as "cooperadoNome",
           date, tipo, entrada, saida, hospital_id as "hospitalId", setor_id as "setorId",
+          local, observacao, related_id as "relatedId", status, is_manual as "isManual",
+          validado_por as "validadoPor", justificativa,
           biometria_entrada_hash as "biometriaEntradaHash", 
           biometria_saida_hash as "biometriaSaidaHash",
           timestamp, created_at as "createdAt"

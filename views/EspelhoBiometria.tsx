@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { StorageService } from '../services/storage';
-import { RegistroPonto, Hospital, TipoPonto, Justificativa } from '../types';
+import { RegistroPonto, Hospital, TipoPonto, Justificativa, Setor } from '../types';
 import { Calendar, Building2, Filter, FileClock, Clock, AlertTriangle, X, CheckCircle, AlertCircle } from 'lucide-react';
 import { apiGet } from '../services/api';
 
@@ -19,6 +19,7 @@ interface ShiftRow {
 export const EspelhoBiometria: React.FC = () => {
   const [logs, setLogs] = useState<RegistroPonto[]>([]);
   const [hospitais, setHospitais] = useState<Hospital[]>([]);
+  const [setores, setSetores] = useState<Setor[]>([]);
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<any>(null);
   
@@ -51,12 +52,16 @@ export const EspelhoBiometria: React.FC = () => {
     setDateEnd(lastDay);
 
     if (currentSession?.type === 'COOPERADO') {
-      loadData();
+      const cooperadoIdFromSession = currentSession?.user?.id;
+      loadData(cooperadoIdFromSession, currentSession);
     }
   }, []);
 
-  const loadData = async () => {
-    if (!cooperadoId || !session) {
+  const loadData = async (coopId?: string, sess?: any) => {
+    const effectiveCoopId = coopId || cooperadoId;
+    const effectiveSession = sess || session;
+    
+    if (!effectiveCoopId || !effectiveSession) {
       console.warn('[EspelhoBiometria] Sem session ou cooperadoId, abortando loadData');
       setLoading(false);
       return;
@@ -66,7 +71,7 @@ export const EspelhoBiometria: React.FC = () => {
       setLoading(true);
       
       // Buscar pontos do NEON
-      const pontos = await apiGet<any[]>(`pontos?cooperadoId=${cooperadoId}`);
+      const pontos = await apiGet<any[]>(`pontos?cooperadoId=${effectiveCoopId}`);
       
       if (!Array.isArray(pontos)) {
         throw new Error('Resposta inválida da API');
@@ -83,11 +88,14 @@ export const EspelhoBiometria: React.FC = () => {
       const myHospitais = allHospitais.filter(h => uniqueHospitalIds.includes(h.id));
       
       setHospitais(myHospitais);
+      
+      // Carregar setores de todos os hospitais
+      await loadAllSetores(myHospitais);
     } catch (err) {
       console.error('[EspelhoBiometria] Erro ao carregar pontos do NEON:', err);
       // Fallback para localStorage se a API falhar
       console.warn('[EspelhoBiometria] Usando fallback para localStorage');
-      const allPontos = StorageService.getPontos().filter(p => p.cooperadoId === cooperadoId && p.status !== 'Rejeitado');
+      const allPontos = StorageService.getPontos().filter(p => p.cooperadoId === effectiveCoopId && p.status !== 'Rejeitado');
       const sorted = allPontos.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       setLogs(sorted);
 
@@ -95,8 +103,32 @@ export const EspelhoBiometria: React.FC = () => {
       const allHospitais = StorageService.getHospitais();
       const myHospitais = allHospitais.filter(h => uniqueHospitalIds.includes(h.id));
       setHospitais(myHospitais);
+      
+      // Carregar setores
+      await loadAllSetores(myHospitais);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadAllSetores = async (hospitaisList: Hospital[]) => {
+    try {
+      const setoresByHospital = await Promise.all(
+        hospitaisList.map(async (hospital) => {
+          try {
+            const setores = await apiGet<Setor[]>(`hospital-setores?hospitalId=${hospital.id}`);
+            return setores || [];
+          } catch {
+            return [];
+          }
+        })
+      );
+
+      const flattened = setoresByHospital.flat();
+      const unique = flattened.filter((setor, index, self) => index === self.findIndex(s => s.id === setor.id));
+      setSetores(unique);
+    } catch (error) {
+      console.error('[EspelhoBiometria] Erro ao carregar setores:', error);
     }
   };
 
@@ -122,61 +154,76 @@ export const EspelhoBiometria: React.FC = () => {
     const shifts: ShiftRow[] = [];
     const processedExits = new Set<string>();
 
-    // 1. Process Entries
-    filtered.forEach(log => {
-      if (log.tipo === TipoPonto.ENTRADA) {
-        // Try to find matching exit (can be Closed or Pending)
-        const matchingExit = filtered.find(l => l.tipo === TipoPonto.SAIDA && l.relatedId === log.id);
-        
-        if (matchingExit) {
-          processedExits.add(matchingExit.id);
-        }
+    // Ordenar por timestamp ascendente (mais antigo primeiro) para pareamento correto
+    const sortedFiltered = filtered.sort((a, b) => 
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
 
-        // Extract clean sector name
-        const parts = log.local.split(' - ');
-        const setorNome = parts.length > 1 ? parts[1] : parts[0];
+    const entradas = sortedFiltered.filter(r => r.tipo === TipoPonto.ENTRADA);
+    const saidas = sortedFiltered.filter(r => r.tipo === TipoPonto.SAIDA);
 
-        let statusDisplay = 'Em Aberto';
-        if (matchingExit) {
-            if (matchingExit.status === 'Pendente') statusDisplay = 'Aguardando Autorização';
-            else if (matchingExit.status === 'Fechado') statusDisplay = 'Fechado';
-        }
+    // Função auxiliar para construir nome do setor
+    const getSetorNome = (log: RegistroPonto) => {
+      const setorId = String(log.setorId);
+      const setorName = log.setorId ? setores.find(s => String(s.id) === setorId)?.nome : '';
+      const hospital = hospitais.find(h => h.id === log.hospitalId);
+      const isFiltered = filterHospital && filterHospital !== '';
+      return isFiltered
+        ? (setorName || log.local || 'Não especificado')
+        : `${hospital?.nome || log.local || 'Não especificado'}${setorName ? ' - ' + setorName : ''}`;
+    };
 
-        shifts.push({
-          id: log.id,
-          local: log.local,
-          setorNome: setorNome,
-          data: new Date(log.timestamp).toLocaleDateString('pt-BR'),
-          entry: log,
-          exit: matchingExit,
-          status: statusDisplay
-        });
+    // 1. Parear cada ENTRADA com a próxima SAÍDA disponível
+    entradas.forEach(entrada => {
+      // Procurar SAÍDA posterior não pareada
+      const saidaIndex = saidas.findIndex(s => 
+        new Date(s.timestamp).getTime() > new Date(entrada.timestamp).getTime() &&
+        !processedExits.has(s.id)
+      );
+
+      let saidaPareada: RegistroPonto | undefined;
+      if (saidaIndex !== -1) {
+        saidaPareada = saidas[saidaIndex];
+        processedExits.add(saidaPareada.id);
       }
+
+      let statusDisplay = 'Em Aberto';
+      if (saidaPareada) {
+        if (saidaPareada.status === 'Pendente') statusDisplay = 'Aguardando Autorização';
+        else if (saidaPareada.status === 'Fechado') statusDisplay = 'Fechado';
+        else statusDisplay = 'Fechado';
+      }
+
+      shifts.push({
+        id: entrada.id,
+        local: entrada.local || 'Não especificado',
+        setorNome: getSetorNome(entrada),
+        data: new Date(entrada.timestamp).toLocaleDateString('pt-BR'),
+        entry: entrada,
+        exit: saidaPareada,
+        status: statusDisplay
+      });
     });
 
-    // 2. Process Orphan Exits
-    filtered.forEach(log => {
-      if (log.tipo === TipoPonto.SAIDA && !processedExits.has(log.id)) {
-        // Extract clean sector name
-        const parts = log.local.split(' - ');
-        const setorNome = parts.length > 1 ? parts[1] : parts[0];
-
+    // 2. Processar SAÍDAs órfãs (saídas sem entrada anterior)
+    saidas.forEach(saida => {
+      if (!processedExits.has(saida.id)) {
         let statusDisplay = 'Fechado (S/E)';
-        if (log.status === 'Pendente') statusDisplay = 'Aguardando Autorização';
+        if (saida.status === 'Pendente') statusDisplay = 'Aguardando Autorização';
 
         shifts.push({
-          id: log.id,
-          local: log.local,
-          setorNome: setorNome,
-          data: new Date(log.timestamp).toLocaleDateString('pt-BR'),
+          id: saida.id,
+          local: saida.local || 'Não especificado',
+          setorNome: getSetorNome(saida),
+          data: new Date(saida.timestamp).toLocaleDateString('pt-BR'),
           entry: undefined,
-          exit: log,
+          exit: saida,
           status: statusDisplay
         });
       }
     });
 
-    // Sort by Date/Time descending
+    // Sort by Date/Time descending (mais recente primeiro)
     return shifts.sort((a, b) => {
       const timeA = a.entry ? new Date(a.entry.timestamp).getTime() : new Date(a.exit!.timestamp).getTime();
       const timeB = b.entry ? new Date(b.entry.timestamp).getTime() : new Date(b.exit!.timestamp).getTime();
@@ -248,6 +295,14 @@ export const EspelhoBiometria: React.FC = () => {
     loadData();
     alert('Justificativa enviada com sucesso! Aguarde a aprovação do gestor.');
   };
+
+  if (loading && !session) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
+      </div>
+    );
+  }
 
   if (!cooperadoId || !session || session.type !== 'COOPERADO') {
     return (

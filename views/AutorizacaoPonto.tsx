@@ -12,7 +12,10 @@ export const AutorizacaoPonto: React.FC = () => {
   }, []);
 
   const loadData = () => {
-    const pending = StorageService.getJustificativasByStatus('Pendente');
+    const pending = StorageService.getJustificativas().filter(j => 
+      j.status === 'Pendente' || j.status === 'Aguardando autorização'
+    );
+
     // Sort oldest first (FIFO)
     setPendingJustificativas(pending.sort((a, b) => 
       new Date(a.dataSolicitacao).getTime() - new Date(b.dataSolicitacao).getTime()
@@ -30,13 +33,13 @@ export const AutorizacaoPonto: React.FC = () => {
 
         // Se a justificativa referencia um ponto específico, atualizar o status do ponto também
         if (justificativa.pontoId) {
-            const pontos = StorageService.getPontos();
-            const ponto = pontos.find(p => p.id === justificativa.pontoId);
+          const pontos = StorageService.getPontos();
+          const ponto = pontos.find(p => p.id === justificativa.pontoId);
             
-            if (ponto && ponto.status === 'Pendente') {
-                const updatedPonto = { ...ponto, status: 'Fechado' as const, validadoPor: aprovador };
-                StorageService.updatePonto(updatedPonto);
-            }
+          if (ponto && (ponto.status === 'Pendente' || ponto.status === 'Aguardando autorização')) {
+            const updatedPonto = { ...ponto, status: 'Fechado' as const, validadoPor: aprovador };
+            StorageService.updatePonto(updatedPonto);
+          }
         }
 
         alert('Justificativa aprovada com sucesso!');
@@ -63,17 +66,17 @@ export const AutorizacaoPonto: React.FC = () => {
 
         // Se a justificativa referencia um ponto, marcar como rejeitado
         if (justificativa.pontoId) {
-            const pontos = StorageService.getPontos();
-            const ponto = pontos.find(p => p.id === justificativa.pontoId);
+          const pontos = StorageService.getPontos();
+          const ponto = pontos.find(p => p.id === justificativa.pontoId);
             
-            if (ponto && ponto.status === 'Pendente') {
-                const updatedPonto = { 
-                    ...ponto, 
-                    status: 'Rejeitado' as const, 
-                    observacao: `Rejeitado: ${reason}`
-                };
-                StorageService.updatePonto(updatedPonto);
-            }
+          if (ponto && (ponto.status === 'Pendente' || ponto.status === 'Aguardando autorização')) {
+            const updatedPonto = { 
+              ...ponto, 
+              status: 'Rejeitado' as const, 
+              observacao: `Rejeitado: ${reason}`
+            };
+            StorageService.updatePonto(updatedPonto);
+          }
         }
         
         alert('Justificativa rejeitada.');

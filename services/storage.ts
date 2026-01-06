@@ -430,7 +430,7 @@ export const StorageService = {
       const hospitais = StorageService.getHospitais();
       
       const mapped: RegistroPonto[] = rows.map((row: any) => {
-        // Gerar código de 6 dígitos baseado no timestamp ou ID se não existir
+        // Usar código do banco se existir, caso contrário gerar
         let codigo = row.codigo;
         if (!codigo) {
           // Usar últimos 6 caracteres do ID sem hífens para gerar código numérico
@@ -438,14 +438,31 @@ export const StorageService = {
           codigo = parseInt(idNumerico, 16).toString().slice(-6).padStart(6, '0');
         }
         
-        // Montar campo local com nomes reais
-        let local = 'Não especificado';
-        if (row.hospitalId) {
+        // Usar local do banco se existir, caso contrário buscar nome do hospital
+        let local = row.local || 'Não especificado';
+        if (!row.local && row.hospitalId) {
           const hospital = hospitais.find(h => h.id === row.hospitalId);
           if (hospital) {
             local = hospital.nome;
-            // Se tiver setor, pode adicionar também (mas geralmente o setorId é usado separadamente)
           }
+        }
+
+        const isManual = row.isManual === true 
+          || row.isManual === 'true' 
+          || row.isManual === 1 
+          || row.isManual === '1'
+          || (row.codigo && String(row.codigo).startsWith('MAN-'))
+          || row.status === 'Aguardando autorização'
+          || row.status === 'Pendente';
+
+        let status: string | undefined = row.status;
+        if (isManual) {
+          // Força aguardando para qualquer manual não validado
+          if (!status || status === 'Fechado' || status === 'Aberto' || status === 'Pendente') {
+            status = 'Aguardando autorização';
+          }
+        } else {
+          status = status || (row.tipo === 'SAIDA' ? 'Fechado' : 'Aberto');
         }
         
         return {
@@ -463,15 +480,25 @@ export const StorageService = {
           setorId: row.setorId,
           observacao: row.observacao || '',
           relatedId: row.relatedId,
-          status: row.tipo === 'SAIDA' ? 'Fechado' : 'Aberto',
-          isManual: row.isManual || false,
+          status,
+          isManual,
+          validadoPor: row.validadoPor,
+          justificativa: row.justificativa,
           biometriaEntradaHash: row.biometriaEntradaHash,
           biometriaSaidaHash: row.biometriaSaidaHash
         };
       });
 
-      localStorage.setItem(PONTOS_KEY, JSON.stringify(mapped));
-      console.log(`[StorageService] ✅ ${mapped.length} pontos sincronizados do Neon`);
+      // Preservar registros manuais locais que ainda não estão no Neon
+      const localExisting = StorageService.getPontos();
+      const localManual = localExisting.filter(p => p.isManual === true || p.isManual === 'true' || p.isManual === 1 || p.isManual === '1' || (p.codigo && String(p.codigo).startsWith('MAN-')));
+      const merged = [
+        ...mapped,
+        ...localManual.filter(l => !mapped.some(r => r.id === l.id))
+      ];
+
+      localStorage.setItem(PONTOS_KEY, JSON.stringify(merged));
+      console.log(`[StorageService] ✅ ${mapped.length} pontos do Neon + ${localManual.length} manuais locais preservados`);
     } catch (err) {
       console.error('[StorageService] Erro ao sincronizar pontos do Neon:', err);
     }
@@ -679,7 +706,22 @@ export const StorageService = {
   
   getJustificativas: (): Justificativa[] => {
     const data = localStorage.getItem(JUSTIFICATIVAS_KEY);
-    return data ? JSON.parse(data) : [];
+    const parsed: Justificativa[] = data ? JSON.parse(data) : [];
+
+    // Normalizar status antigos "Aguardando autorização" para "Pendente" para que apareçam na fila do gestor
+    const normalized = parsed.map(j => {
+      if (j.status === 'Aguardando autorização') {
+        return { ...j, status: 'Pendente' as const };
+      }
+      return j;
+    });
+
+    // Persistir normalização
+    if (normalized.length !== parsed.length || normalized.some((j, idx) => j.status !== parsed[idx].status)) {
+      localStorage.setItem(JUSTIFICATIVAS_KEY, JSON.stringify(normalized));
+    }
+
+    return normalized;
   },
 
   getJustificativasByStatus: (status: 'Pendente' | 'Aprovada' | 'Rejeitada'): Justificativa[] => {

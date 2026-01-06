@@ -13,7 +13,6 @@ import { ControleDeProducao } from './views/ControleDeProducao';
 import { Relatorios } from './views/Relatorios';
 import { Management } from './views/Management';
 import { Login } from './views/Login';
-import { EspelhoBiometria } from './views/EspelhoBiometria';
 import { AutorizacaoPonto } from './views/AutorizacaoPonto';
 import { UserProfile } from './views/UserProfile';
 
@@ -129,9 +128,9 @@ export default function App() {
     switch(currentView) {
       case 'dashboard': return <Dashboard />;
       case 'ponto': return <PontoMachine />;
-      case 'relatorio': return <ControleDeProducao />;
+      case 'relatorio': return <ControleDeProducao mode="manager" />;
       case 'relatorios': return <Relatorios />;
-      case 'espelho': return <EspelhoBiometria />;
+      case 'espelho': return <ControleDeProducao mode="cooperado" />;
       case 'autorizacao': return <AutorizacaoPonto />;
       case 'cadastro': return <CooperadoRegister />;
       case 'hospitais': return <HospitalRegister />;

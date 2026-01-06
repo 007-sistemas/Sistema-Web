@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { StorageService } from '../services/storage';
-import { RegistroPonto, Cooperado, Hospital, TipoPonto, Setor } from '../types';
+import { RegistroPonto, Cooperado, Hospital, TipoPonto, Setor, Justificativa } from '../types';
 import { apiGet } from '../services/api';
-import { Search, Save, Trash2, Clock, Filter, X, ArrowRight } from 'lucide-react';
+import { Search, Save, Trash2, Clock, Filter, X, ArrowRight, AlertTriangle, AlertCircle, CheckCircle, PlusCircle } from 'lucide-react';
 
 // Interface auxiliar para exibição
 interface ShiftRow {
@@ -17,12 +17,17 @@ interface ShiftRow {
   status: string;
 }
 
-export const ControleDeProducao: React.FC = () => {
+interface Props {
+  mode?: 'manager' | 'cooperado';
+}
+
+export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
   const [logs, setLogs] = useState<RegistroPonto[]>([]);
   const [cooperados, setCooperados] = useState<Cooperado[]>([]);
   const [hospitais, setHospitais] = useState<Hospital[]>([]);
   const [setoresDisponiveis, setSetoresDisponiveis] = useState<Setor[]>([]);
   const [todosSetores, setTodosSetores] = useState<Setor[]>([]); // Setores de todos os hospitais para exibição
+  const [session, setSession] = useState<any>(null);
   
   // --- FILTER STATE ---
   const [filterHospital, setFilterHospital] = useState('');
@@ -52,12 +57,46 @@ export const ControleDeProducao: React.FC = () => {
   const [formTipo, setFormTipo] = useState<TipoPonto>(TipoPonto.ENTRADA);
   const [formInputCodigo, setFormInputCodigo] = useState(''); // For Exit to reference Entry
 
+  // Justificativa State (modo cooperado)
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [justificationTarget, setJustificationTarget] = useState<{ entryId: string; type: 'SAIDA' | 'ENTRADA' } | null>(null);
+  const [justificationTime, setJustificationTime] = useState('');
+  const [justificationReason, setJustificationReason] = useState('Esquecimento');
+  const [justificationDesc, setJustificationDesc] = useState('');
+
+  // Registro completo de plantão não registrado (modo cooperado)
+  const [missingHospitalId, setMissingHospitalId] = useState('');
+  const [missingSetorId, setMissingSetorId] = useState('');
+  const [missingDate, setMissingDate] = useState('');
+  const [missingEntrada, setMissingEntrada] = useState('');
+  const [missingSaida, setMissingSaida] = useState('');
+  const [missingReason, setMissingReason] = useState('Esquecimento');
+  const [missingDesc, setMissingDesc] = useState('');
+  const [missingSetores, setMissingSetores] = useState<Setor[]>([]);
+
+  // Dados do cooperado logado (modo cooperado)
+  const cooperadoLogadoId = mode === 'cooperado' && session?.type === 'COOPERADO' ? session?.user?.id : null;
+  const cooperadoLogadoData = mode === 'cooperado' && session?.type === 'COOPERADO' ? session?.user : null;
+
   useEffect(() => {
+    // Carregar sessão se mode=cooperado
+    if (mode === 'cooperado') {
+      const currentSession = StorageService.getSession();
+      setSession(currentSession);
+      
+      // Definir filtro de data padrão (mês atual)
+      const now = new Date();
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+      setFilterDataIni(firstDay);
+      setFilterDataFim(lastDay);
+    }
+    
     const init = async () => {
       await loadData();
     };
     init();
-  }, []);
+  }, [mode]);
 
   // Carregar setores quando o filtro de hospital mudar
   useEffect(() => {
@@ -96,6 +135,42 @@ export const ControleDeProducao: React.FC = () => {
     loadSetores();
   }, [filterHospital]);
 
+  // Carregar setores para o formulário de plantão ausente (cooperado)
+  useEffect(() => {
+    if (!missingHospitalId) {
+      setMissingSetores([]);
+      return;
+    }
+
+    const loadSetoresMissing = async () => {
+      try {
+        const setores = await apiGet<Setor[]>(`hospital-setores?hospitalId=${missingHospitalId}`);
+        if (!setores || setores.length === 0) {
+          setMissingSetores([
+            { id: 1, nome: 'UTI' },
+            { id: 2, nome: 'Pronto Atendimento' },
+            { id: 3, nome: 'Centro Cirúrgico' },
+            { id: 4, nome: 'Ambulatório' },
+            { id: 5, nome: 'Maternidade' }
+          ]);
+        } else {
+          setMissingSetores(setores);
+        }
+      } catch (err) {
+        console.error('Erro ao carregar setores (plantão ausente):', err);
+        setMissingSetores([
+          { id: 1, nome: 'UTI' },
+          { id: 2, nome: 'Pronto Atendimento' },
+          { id: 3, nome: 'Centro Cirúrgico' },
+          { id: 4, nome: 'Ambulatório' },
+          { id: 5, nome: 'Maternidade' }
+        ]);
+      }
+    };
+
+    loadSetoresMissing();
+  }, [missingHospitalId]);
+
   const loadData = async () => {
     try {
       await StorageService.refreshPontosFromRemote();
@@ -112,41 +187,109 @@ export const ControleDeProducao: React.FC = () => {
     await loadAllSetores(StorageService.getHospitais());
     // Order: Ascending (Oldest top, Newest bottom)
     const sorted = allPontos.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-    setLogs(sorted);
+
+    const normalized = sorted.map((p) => {
+      const manualFlag = p.isManual === true 
+        || (p as any).isManual === 'true' 
+        || (p as any).isManual === 1 
+        || (p as any).isManual === '1' 
+        || (p.codigo && String(p.codigo).startsWith('MAN-'))
+        || p.status === 'Aguardando autorização'
+        || p.status === 'Pendente';
+
+      if (manualFlag && !p.validadoPor) {
+        return { ...p, isManual: true, status: 'Aguardando autorização' };
+      }
+
+      return { ...p, isManual: manualFlag || p.isManual };
+    });
+
+    // Persistir normalização no storage oficial (biohealth_pontos)
+    localStorage.setItem('biohealth_pontos', JSON.stringify(normalized));
+
+    setLogs(normalized);
   };
 
   const loadAllSetores = async (hospitaisList: Hospital[]) => {
+    console.log('[DEBUG loadAllSetores] Carregando setores para hospitais:', hospitaisList);
+    
+    if (!hospitaisList || hospitaisList.length === 0) {
+      console.warn('[DEBUG] Lista de hospitais vazia, usando setores padrão');
+      // Setores padrão para quando não há hospitais carregados ainda
+      const setoresPadrao = [
+        { id: '1', nome: 'CENTRO CIRURGICO' },
+        { id: '2', nome: 'UTI' },
+        { id: '3', nome: 'PRONTO ATENDIMENTO' },
+        { id: '4', nome: 'AMBULATORIO' },
+        { id: '5', nome: 'MATERNIDADE' }
+      ];
+      setTodosSetores(setoresPadrao);
+      return;
+    }
+    
     try {
       const setoresByHospital = await Promise.all(
         hospitaisList.map(async (hospital) => {
           try {
             const setores = await apiGet<Setor[]>(`hospital-setores?hospitalId=${hospital.id}`);
+            console.log('[DEBUG] Setores do hospital', hospital.nome, ':', setores);
             return setores || [];
-          } catch {
+          } catch (err) {
+            console.warn('[DEBUG] Erro ao buscar setores do hospital', hospital.nome, err);
             return [];
           }
         })
       );
 
       const flattened = setoresByHospital.flat();
+      
+      // Se não encontrou nenhum setor, usar padrão
+      if (flattened.length === 0) {
+        console.warn('[DEBUG] Nenhum setor encontrado na API, usando setores padrão');
+        const setoresPadrao = [
+          { id: '1', nome: 'CENTRO CIRURGICO' },
+          { id: '2', nome: 'UTI' },
+          { id: '3', nome: 'PRONTO ATENDIMENTO' },
+          { id: '4', nome: 'AMBULATORIO' },
+          { id: '5', nome: 'MATERNIDADE' }
+        ];
+        setTodosSetores(setoresPadrao);
+        return;
+      }
+      
       const unique = flattened.filter((setor, index, self) => index === self.findIndex(s => s.id === setor.id));
+      console.log('[DEBUG] todosSetores final:', unique);
       setTodosSetores(unique);
     } catch (error) {
       console.error('[ControleDeProducao] Erro ao carregar todos os setores:', error);
+      // Fallback para setores padrão em caso de erro
+      const setoresPadrao = [
+        { id: '1', nome: 'CENTRO CIRURGICO' },
+        { id: '2', nome: 'UTI' },
+        { id: '3', nome: 'PRONTO ATENDIMENTO' },
+        { id: '4', nome: 'AMBULATORIO' },
+        { id: '5', nome: 'MATERNIDADE' }
+      ];
+      setTodosSetores(setoresPadrao);
     }
   };
 
   // --- FILTER LOGIC ---
   const getFilteredLogs = () => {
     return logs.filter(log => {
+      // 0. Modo Cooperado: filtrar apenas registros do cooperado logado
+      if (mode === 'cooperado' && cooperadoLogadoId && log.cooperadoId !== cooperadoLogadoId) {
+        return false;
+      }
+
       // 1. Hospital Filter
       if (filterHospital && log.hospitalId !== filterHospital) return false;
       
       // 2. Setor Filter
       if (filterSetor && log.setorId !== filterSetor) return false;
 
-      // 3. Cooperado Filter
-      if (filterCooperado && log.cooperadoId !== filterCooperado) return false;
+      // 3. Cooperado Filter (apenas para mode=manager)
+      if (mode === 'manager' && filterCooperado && log.cooperadoId !== filterCooperado) return false;
 
       // 4. Date Range
       if (filterDataIni) {
@@ -212,14 +355,51 @@ export const ControleDeProducao: React.FC = () => {
 
         // Construir setor nome
         const getSetorNome = (log: RegistroPonto) => {
-          const setorId = String(log.setorId);
-          const setorName = log.setorId ? todosSetores.find(s => String(s.id) === setorId)?.nome : '';
+          console.log('[DEBUG] log.setorId:', log.setorId, 'todosSetores:', todosSetores);
+          
           const hospital = hospitais.find(h => h.id === log.hospitalId);
+          const hospitalNome = hospital?.nome || log.local || 'Não especificado';
+          
+          // Buscar nome do setor
+          let setorNome = '';
+          if (log.setorId) {
+            const setorId = String(log.setorId);
+            const setor = todosSetores.find(s => String(s.id) === setorId);
+            console.log('[DEBUG] Procurando setor:', setorId, 'encontrado:', setor);
+            setorNome = setor?.nome || '';
+          }
+          
+          // Se está filtrando por hospital, mostrar apenas setor
           const isFiltered = filterHospital && filterHospital !== '';
-          return isFiltered
-            ? (setorName || log.local)
-            : `${hospital?.nome || log.local}${setorName ? ' - ' + setorName : ''}`;
+          if (isFiltered) {
+            return setorNome || hospitalNome;
+          }
+          
+          // Senão, mostrar Hospital - Setor
+          if (setorNome) {
+            return `${hospitalNome} - ${setorNome}`;
+          }
+          
+          return hospitalNome;
         };
+
+        const entradaManual = entrada.isManual === true || entrada.isManual === 'true' || entrada.status === 'Aguardando autorização' || entrada.status === 'Pendente';
+        const saidaManual = saidaPareada && (saidaPareada.isManual === true || saidaPareada.isManual === 'true' || saidaPareada.status === 'Aguardando autorização' || saidaPareada.status === 'Pendente');
+
+        const aguardandoEntrada = entrada.status === 'Aguardando autorização' || entrada.status === 'Pendente' || (!entrada.status && entradaManual);
+        const aguardandoSaida = saidaPareada && (saidaPareada.status === 'Aguardando autorização' || saidaPareada.status === 'Pendente' || (!saidaPareada.status && saidaManual));
+
+        const manualPair = entradaManual || saidaManual;
+        const hasApproval = (entrada.validadoPor && entrada.status === 'Fechado') || (saidaPareada && saidaPareada.validadoPor && saidaPareada.status === 'Fechado');
+
+        let statusLabel = 'Em Aberto';
+        if (manualPair && !hasApproval) {
+          statusLabel = 'Aguardando autorização';
+        } else if (aguardandoEntrada || aguardandoSaida) {
+          statusLabel = 'Aguardando autorização';
+        } else if (saidaPareada) {
+          statusLabel = 'Fechado';
+        }
 
         shifts.push({
           id: entrada.id,
@@ -229,7 +409,7 @@ export const ControleDeProducao: React.FC = () => {
           data: new Date(entrada.timestamp).toLocaleDateString(),
           entry: entrada,
           exit: saidaPareada,
-          status: saidaPareada ? 'Fechado' : 'Em Aberto'
+          status: statusLabel
         });
       });
 
@@ -237,21 +417,37 @@ export const ControleDeProducao: React.FC = () => {
       saidas.forEach(saida => {
         if (!processedExits.has(saida.id)) {
           // Esta é uma SAÍDA sem ENTRADA - ANOMALIA!
-          const getSetorNome = (log: RegistroPonto) => {
-            const setorId = String(log.setorId);
-            const setorName = log.setorId ? todosSetores.find(s => String(s.id) === setorId)?.nome : '';
+          const getSetorNomeOrfao = (log: RegistroPonto) => {
             const hospital = hospitais.find(h => h.id === log.hospitalId);
+            const hospitalNome = hospital?.nome || log.local || 'Não especificado';
+            
+            // Buscar nome do setor
+            let setorNome = '';
+            if (log.setorId) {
+              const setorId = String(log.setorId);
+              const setor = todosSetores.find(s => String(s.id) === setorId);
+              setorNome = setor?.nome || '';
+            }
+            
+            // Se está filtrando por hospital, mostrar apenas setor
             const isFiltered = filterHospital && filterHospital !== '';
-            return isFiltered
-              ? (setorName || log.local)
-              : `${hospital?.nome || log.local}${setorName ? ' - ' + setorName : ''}`;
+            if (isFiltered) {
+              return setorNome || hospitalNome;
+            }
+            
+            // Senão, mostrar Hospital - Setor
+            if (setorNome) {
+              return `${hospitalNome} - ${setorNome}`;
+            }
+            
+            return hospitalNome;
           };
 
           shifts.push({
             id: saida.id,
             cooperadoNome: saida.cooperadoNome,
             local: saida.local,
-            setorNome: getSetorNome(saida),
+            setorNome: getSetorNomeOrfao(saida),
             data: new Date(saida.timestamp).toLocaleDateString(),
             entry: undefined,
             exit: saida,
@@ -526,20 +722,182 @@ export const ControleDeProducao: React.FC = () => {
     setFilterDataFim('');
   }
 
+  // Handlers de Justificativa (modo cooperado)
+  const handleOpenJustification = (entryId: string, type: 'SAIDA' | 'ENTRADA') => {
+    setJustificationTarget({ entryId, type });
+    setJustificationTime('');
+    setJustificationReason('Esquecimento');
+    setJustificationDesc('');
+    setIsModalOpen(true);
+  };
+
+  const submitJustification = () => {
+    if (!justificationTarget || !justificationTime) return;
+    if (!cooperadoLogadoData) return;
+
+    // Find the original Entry
+    const entry = logs.find(l => l.id === justificationTarget.entryId);
+    if (!entry) return;
+
+    // Construct timestamp based on Entry Date + Justification Time
+    const entryDate = new Date(entry.timestamp).toISOString().split('T')[0];
+    const newTimestamp = new Date(`${entryDate}T${justificationTime}:00`).toISOString();
+
+    // Criar justificativa na tabela separada
+    const novaJustificativa: Justificativa = {
+      id: crypto.randomUUID(),
+      cooperadoId: cooperadoLogadoData.id,
+      cooperadoNome: cooperadoLogadoData.nome,
+      pontoId: undefined, // Será criado após aprovação
+      motivo: justificationReason,
+      descricao: justificationDesc,
+      dataSolicitacao: new Date().toISOString(),
+      status: 'Pendente',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    StorageService.saveJustificativa(novaJustificativa);
+
+    // Criar ponto vinculado à justificativa
+    const novoPonto: RegistroPonto = {
+        id: crypto.randomUUID(),
+        codigo: entry.codigo,
+        cooperadoId: cooperadoLogadoData.id,
+        cooperadoNome: cooperadoLogadoData.nome,
+        timestamp: newTimestamp,
+        tipo: justificationTarget.type === 'SAIDA' ? TipoPonto.SAIDA : TipoPonto.ENTRADA,
+        local: entry.local,
+        hospitalId: entry.hospitalId,
+        setorId: entry.setorId,
+        isManual: true,
+        status: 'Aguardando autorização',
+        relatedId: entry.id
+    };
+
+    StorageService.savePonto(novoPonto);
+    
+    // Vincular ponto à justificativa
+    novaJustificativa.pontoId = novoPonto.id;
+    StorageService.saveJustificativa(novaJustificativa);
+
+    setIsModalOpen(false);
+    loadData();
+    alert('Justificativa enviada com sucesso! Aguarde a aprovação do gestor.');
+  };
+
+  const resetMissingShiftForm = () => {
+    setMissingHospitalId('');
+    setMissingSetorId('');
+    setMissingDate('');
+    setMissingEntrada('');
+    setMissingSaida('');
+    setMissingReason('Esquecimento');
+    setMissingDesc('');
+  };
+
+  const submitMissingShift = () => {
+    if (mode !== 'cooperado') return;
+    if (!cooperadoLogadoData) return;
+
+    if (!missingHospitalId || !missingSetorId || !missingDate || !missingEntrada || !missingSaida) {
+      alert('Preencha data, entrada, saída, hospital e setor.');
+      return;
+    }
+
+    if (missingEntrada >= missingSaida) {
+      alert('O horário de saída deve ser maior que o de entrada.');
+      return;
+    }
+
+    if (missingReason === 'Outro Motivo' && !missingDesc.trim()) {
+      alert('Descreva o motivo quando selecionar "Outro Motivo".');
+      return;
+    }
+
+    const hospital = hospitais.find(h => String(h.id) === String(missingHospitalId));
+    const localNome = hospital?.nome || 'Hospital não informado';
+
+    const entradaTimestamp = new Date(`${missingDate}T${missingEntrada}:00`).toISOString();
+    const saidaTimestamp = new Date(`${missingDate}T${missingSaida}:00`).toISOString();
+
+    const entryId = crypto.randomUUID();
+    const exitId = crypto.randomUUID();
+    const codigoBase = `MAN-${Date.now()}`;
+
+    const justificativa: Justificativa = {
+      id: crypto.randomUUID(),
+      cooperadoId: cooperadoLogadoData.id,
+      cooperadoNome: cooperadoLogadoData.nome,
+      pontoId: undefined,
+      motivo: missingReason,
+      descricao: missingDesc,
+      dataSolicitacao: new Date().toISOString(),
+      status: 'Pendente',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    const pontoEntrada: RegistroPonto = {
+      id: entryId,
+      codigo: codigoBase,
+      cooperadoId: cooperadoLogadoData.id,
+      cooperadoNome: cooperadoLogadoData.nome,
+      timestamp: entradaTimestamp,
+      tipo: TipoPonto.ENTRADA,
+      local: localNome,
+      hospitalId: hospital?.id || missingHospitalId,
+      setorId: missingSetorId,
+      isManual: true,
+      status: 'Aguardando autorização'
+    };
+
+    const pontoSaida: RegistroPonto = {
+      id: exitId,
+      codigo: codigoBase,
+      cooperadoId: cooperadoLogadoData.id,
+      cooperadoNome: cooperadoLogadoData.nome,
+      timestamp: saidaTimestamp,
+      tipo: TipoPonto.SAIDA,
+      local: localNome,
+      hospitalId: hospital?.id || missingHospitalId,
+      setorId: missingSetorId,
+      isManual: true,
+      status: 'Aguardando autorização',
+      relatedId: entryId
+    };
+
+    StorageService.saveJustificativa(justificativa);
+    StorageService.savePonto(pontoEntrada);
+    StorageService.savePonto(pontoSaida);
+
+    justificativa.pontoId = pontoSaida.id;
+    StorageService.saveJustificativa(justificativa);
+
+    alert('Plantão incluído e enviado para aprovação do gestor.');
+    resetMissingShiftForm();
+    loadData();
+  };
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-20">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">Controle de Produção</h2>
+        <h2 className="text-2xl font-bold text-gray-800">
+          {mode === 'cooperado' ? 'Espelho da Biometria' : 'Controle de Produção'}
+        </h2>
+        {mode === 'cooperado' && (
+          <p className="text-sm text-gray-600">Consulte seu histórico de produção e registros de ponto</p>
+        )}
       </div>
 
       {/* --- FILTERS SECTION --- */}
       <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
         <div className="flex items-center gap-2 mb-3 text-primary-700 font-semibold border-b pb-2">
             <Filter className="h-5 w-5" />
-            <h3>Filtros de Visualização</h3>
+            <h3>Filtros de {mode === 'cooperado' ? 'Consulta' : 'Visualização'}</h3>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className={`grid grid-cols-1 md:grid-cols-2 ${mode === 'manager' ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-4`}>
             {/* Hospital Filter */}
             <div className="space-y-1">
                 <label className="text-xs font-bold text-gray-500 uppercase">Hospital</label>
@@ -548,7 +906,7 @@ export const ControleDeProducao: React.FC = () => {
                     value={filterHospital}
                     onChange={e => { setFilterHospital(e.target.value); setFilterSetor(''); }}
                 >
-                    <option value="">Todos os Hospitais</option>
+                    <option value="">Todos os {mode === 'cooperado' ? 'Locais' : 'Hospitais'}</option>
                     {hospitais.map(h => (
                         <option key={h.id} value={h.id}>{h.nome}</option>
                     ))}
@@ -571,7 +929,8 @@ export const ControleDeProducao: React.FC = () => {
                 </select>
             </div>
 
-            {/* Cooperado Filter - Autocomplete */}
+            {/* Cooperado Filter - Apenas para mode=manager */}
+            {mode === 'manager' && (
             <div className="relative space-y-1">
                 <label className="text-xs font-bold text-gray-500 uppercase">Cooperado</label>
                 <div className="relative">
@@ -626,6 +985,7 @@ export const ControleDeProducao: React.FC = () => {
                     )}
                 </div>
             </div>
+            )}
 
             {/* Date Filters */}
             <div className="space-y-1">
@@ -658,40 +1018,160 @@ export const ControleDeProducao: React.FC = () => {
         </div>
       </div>
 
+      {/* Plantão não registrado (modo cooperado) */}
+      {mode === 'cooperado' && (
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-amber-200">
+          <div className="flex items-center gap-2 mb-3 text-amber-700 font-semibold border-b pb-2">
+            <PlusCircle className="h-5 w-5" />
+            <h3>Justificativa de Plantão</h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-500 uppercase">Hospital</label>
+              <select
+                className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none"
+                value={missingHospitalId}
+                onChange={e => { setMissingHospitalId(e.target.value); setMissingSetorId(''); }}
+              >
+                <option value="">Selecione</option>
+                {hospitais.map(h => (
+                  <option key={h.id} value={h.id}>{h.nome}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-500 uppercase">Setor</label>
+              <select
+                className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none disabled:bg-gray-100"
+                value={missingSetorId}
+                onChange={e => setMissingSetorId(e.target.value)}
+                disabled={!missingHospitalId}
+              >
+                <option value="">Selecione</option>
+                {missingSetores.map(s => (
+                  <option key={s.id} value={s.id}>{s.nome}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-500 uppercase">Data do plantão</label>
+              <input
+                type="date"
+                className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg p-2 text-sm outline-none"
+                value={missingDate}
+                onChange={e => setMissingDate(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-500 uppercase">Horário de entrada</label>
+              <input
+                type="time"
+                className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg p-2 text-sm outline-none"
+                value={missingEntrada}
+                onChange={e => setMissingEntrada(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-500 uppercase">Horário de saída</label>
+              <input
+                type="time"
+                className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg p-2 text-sm outline-none"
+                value={missingSaida}
+                onChange={e => setMissingSaida(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gray-500 uppercase">Motivo da falha</label>
+              <select
+                className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none"
+                value={missingReason}
+                onChange={e => setMissingReason(e.target.value)}
+              >
+                <option value="Esquecimento">Esquecimento</option>
+                <option value="Computador Inoperante">Computador Inoperante</option>
+                <option value="Falta de Energia">Falta de Energia</option>
+                <option value="Outro Motivo">Outro Motivo</option>
+              </select>
+            </div>
+
+            {missingReason === 'Outro Motivo' && (
+              <div className="space-y-1 md:col-span-2 lg:col-span-3">
+                <label className="text-xs font-bold text-gray-500 uppercase">Descrição detalhada</label>
+                <textarea
+                  className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-primary-500"
+                  rows={3}
+                  placeholder="Descreva o motivo..."
+                  value={missingDesc}
+                  onChange={e => setMissingDesc(e.target.value)}
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mt-4">
+            <div className="text-xs text-gray-500">Use este formulário apenas quando não houve registro de entrada e saída.</div>
+            <div className="flex gap-2">
+              <button
+                onClick={resetMissingShiftForm}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                Limpar
+              </button>
+              <button
+                onClick={submitMissingShift}
+                className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg flex items-center gap-2"
+              >
+                <PlusCircle className="h-4 w-4" />
+                Incluir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* TABLE SECTION */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="max-h-[500px] overflow-y-auto">
           <table className="w-full text-left text-sm text-gray-600">
             <thead className="bg-primary-600 text-white font-bold sticky top-0 z-10">
               <tr>
-                <th className="px-4 py-3">Selecionar</th>
-                <th className="px-4 py-3">Setor</th>
-                <th className="px-4 py-3">Cooperado</th>
+                {mode === 'manager' && <th className="px-4 py-3">Selecionar</th>}
+                <th className="px-4 py-3">Local / Setor</th>
+                {mode === 'manager' && <th className="px-4 py-3">Cooperado</th>}
                 <th className="px-4 py-3">Data</th>
                 <th className="px-4 py-3 text-center">Entrada</th>
                 <th className="px-4 py-3 text-center">Saída</th>
                 <th className="px-4 py-3 text-center">Status</th>
-                <th className="px-4 py-3">Código</th>
+                {mode === 'cooperado' && <th className="px-4 py-3 text-center">Origem</th>}
+                {mode === 'manager' && <th className="px-4 py-3">Código</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 bg-white dark:bg-gray-900">
               {shiftRows.map((row) => (
                 <tr 
                     key={row.id} 
-                    onClick={() => handleSelectRow(row)}
-                    className={`cursor-pointer transition-colors ${
+                    onClick={mode === 'manager' ? () => handleSelectRow(row) : undefined}
+                    className={mode === 'manager' ? `cursor-pointer transition-colors ${
                         (selectedPontoId === row.entry?.id || selectedPontoId === row.exit?.id) 
                           ? 'bg-primary-200 dark:bg-primary-800 font-semibold' 
                           : 'hover:bg-gray-100 dark:hover:bg-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100'
-                    }`}
+                    }` : 'bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100'}
                 >
-                  <td className="px-4 py-3">
-                    <button className="text-xs text-primary-600 dark:text-primary-400 underline font-medium">Selecionar</button>
-                  </td>
+                  {mode === 'manager' && (
+                    <td className="px-4 py-3">
+                      <button className="text-xs text-primary-600 dark:text-primary-400 underline font-medium">Selecionar</button>
+                    </td>
+                  )}
                   <td className="px-4 py-3 truncate max-w-[200px] text-gray-700 dark:text-gray-300" title={row.local}>
                     {row.setorNome}
                   </td>
-                  <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{row.cooperadoNome}</td>
+                  {mode === 'manager' && <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{row.cooperadoNome}</td>}
                   <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{row.data}</td>
                   
                   {/* Coluna Entrada */}
@@ -701,25 +1181,69 @@ export const ControleDeProducao: React.FC = () => {
 
                   {/* Coluna Saída */}
                   <td className="px-4 py-3 text-center font-mono font-bold text-red-700 dark:text-red-400 bg-red-50/50 dark:bg-red-950/30">
-                    {row.exit ? new Date(row.exit.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--'}
+                    {row.exit ? (
+                      new Date(row.exit.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                    ) : (
+                      mode === 'cooperado' && row.entry && row.entry.status !== 'Aguardando autorização' ? (
+                        <button 
+                          onClick={() => handleOpenJustification(row.id, 'SAIDA')}
+                          className="text-primary-600 hover:text-primary-800 underline text-xs flex items-center justify-center w-full gap-1"
+                          title="Justificar horário em aberto"
+                        >
+                          <AlertTriangle className="h-3 w-3" /> --:--
+                        </button>
+                      ) : '--:--'
+                    )}
                   </td>
 
                   <td className="px-4 py-3 text-center">
-                    <span className={`px-2 py-1 text-xs rounded-full text-white font-bold shadow-sm ${row.status.includes('Aberto') ? 'bg-amber-500' : 'bg-green-600'}`}>
-                        {row.status === 'Aberto' ? 'Em Aberto' : row.status}
-                    </span>
+                    {(() => {
+                      const isAnomalia = row.status.startsWith('⚠️');
+                      const isAguardando = row.status.includes('Aguardando') || row.status.includes('Pendente');
+                      const isAberto = row.status.includes('Aberto');
+                      const badgeClass = isAnomalia
+                        ? 'bg-red-600'
+                        : isAguardando
+                          ? 'bg-amber-500'
+                          : isAberto
+                            ? 'bg-amber-500'
+                            : 'bg-green-600';
+                      const label = isAguardando ? 'Aguardando autorização' : (isAberto ? 'Em Aberto' : row.status);
+                      return (
+                        <span className={`px-2 py-1 text-xs rounded-full text-white font-bold shadow-sm ${badgeClass}`}>
+                          {label}
+                        </span>
+                      );
+                    })()}
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs text-gray-600 dark:text-gray-400">
-                    {row.entry?.codigo || row.exit?.codigo}
-                  </td>
+                  
+                  {mode === 'cooperado' && (
+                    <td className="px-4 py-3 text-center text-xs text-gray-600">
+                      {(() => {
+                        const manualEntrada = row.entry?.isManual === true || row.entry?.isManual === 'true' || row.entry?.status === 'Aguardando autorização' || row.entry?.status === 'Pendente';
+                        const manualSaida = row.exit?.isManual === true || row.exit?.isManual === 'true' || row.exit?.status === 'Aguardando autorização' || row.exit?.status === 'Pendente';
+                        const hasManual = manualEntrada || manualSaida;
+                        const hasBio = (!manualEntrada && row.entry) || (!manualSaida && row.exit);
+                        if (hasManual && hasBio) return 'Biometria/Manual';
+                        if (hasManual) return 'Manual';
+                        return 'Biometria';
+                      })()}
+                    </td>
+                  )}
+                  
+                  {mode === 'manager' && (
+                    <td className="px-4 py-3 font-mono text-xs text-gray-600 dark:text-gray-400">
+                      {row.entry?.codigo || row.exit?.codigo}
+                    </td>
+                  )}
                 </tr>
               ))}
               {shiftRows.length === 0 && (
                 <tr>
-                    <td colSpan={8} className="text-center py-12 text-gray-400">
+                    <td colSpan={mode === 'manager' ? 8 : 6} className="text-center py-12 text-gray-400">
                         <div className="flex flex-col items-center">
                             <Clock className="h-8 w-8 mb-2 opacity-30" />
-                            <span>Nenhum registro encontrado.</span>
+                            <span>Nenhum registro encontrado{mode === 'cooperado' ? ' para o período selecionado.' : '.'}</span>
                         </div>
                     </td>
                 </tr>
@@ -729,7 +1253,8 @@ export const ControleDeProducao: React.FC = () => {
         </div>
       </div>
 
-      {/* FORM SECTION */}
+      {/* FORM SECTION - Apenas para mode=manager */}
+      {mode === 'manager' && (
       <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200 mt-6">
         <h3 className="text-lg font-bold text-gray-800 border-b border-gray-200 pb-2 mb-4 flex items-center gap-2">
             <Clock className="h-5 w-5 text-primary-600" />
@@ -903,6 +1428,84 @@ export const ControleDeProducao: React.FC = () => {
             </button>
         </div>
       </div>
+      )}
+
+      {/* Modal de Justificativa */}
+      {mode === 'cooperado' && isModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md animate-fade-in mx-4">
+                <div className="flex justify-between items-center mb-4 border-b pb-2">
+                    <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                        <AlertCircle className="h-5 w-5 text-amber-500" />
+                        Justificativa de Horário
+                    </h3>
+                    <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                        <X className="h-5 w-5" />
+                    </button>
+                </div>
+
+                <div className="space-y-4">
+                    <div className="bg-amber-50 text-amber-800 p-3 rounded-lg text-sm mb-4">
+                        Preencha os dados abaixo. Sua solicitação será enviada para aprovação do gestor.
+                    </div>
+
+                    <div className="space-y-1">
+                        <label className="text-sm font-bold text-gray-700">Horário Realizado</label>
+                        <input 
+                            type="time" 
+                            className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-primary-500"
+                            value={justificationTime}
+                            onChange={e => setJustificationTime(e.target.value)}
+                        />
+                    </div>
+
+                    <div className="space-y-1">
+                        <label className="text-sm font-bold text-gray-700">Motivo da Falha</label>
+                        <select 
+                            className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-primary-500 bg-white"
+                            value={justificationReason}
+                            onChange={e => setJustificationReason(e.target.value)}
+                        >
+                            <option value="Esquecimento">Esquecimento</option>
+                            <option value="Computador Inoperante">Computador Inoperante</option>
+                            <option value="Falta de Energia">Falta de Energia</option>
+                            <option value="Outro Motivo">Outro Motivo</option>
+                        </select>
+                    </div>
+
+                    {justificationReason === 'Outro Motivo' && (
+                        <div className="space-y-1">
+                            <label className="text-sm font-bold text-gray-700">Descrição Detalhada</label>
+                            <textarea 
+                                className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                                rows={3}
+                                placeholder="Descreva o motivo..."
+                                value={justificationDesc}
+                                onChange={e => setJustificationDesc(e.target.value)}
+                            />
+                        </div>
+                    )}
+
+                    <div className="flex justify-end space-x-2 pt-2">
+                        <button 
+                            onClick={() => setIsModalOpen(false)}
+                            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                        >
+                            Cancelar
+                        </button>
+                        <button 
+                            onClick={submitJustification}
+                            disabled={!justificationTime || (justificationReason === 'Outro Motivo' && !justificationDesc)}
+                            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                        >
+                            <CheckCircle className="h-4 w-4" />
+                            Concluir
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+      )}
     </div>
   );
 };
