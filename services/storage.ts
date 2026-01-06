@@ -1,5 +1,5 @@
 
-import { Cooperado, RegistroPonto, AuditLog, StatusCooperado, Hospital, Manager, HospitalPermissions, Justificativa } from '../types';
+import { Cooperado, RegistroPonto, AuditLog, StatusCooperado, Hospital, Manager, HospitalPermissions, Justificativa, UserPreferences } from '../types';
 import { apiGet, syncToNeon } from './api';
 
 const COOPERADOS_KEY = 'biohealth_cooperados';
@@ -11,6 +11,15 @@ const CATEGORIAS_KEY = 'biohealth_categorias';
 const SETORES_KEY = 'biohealth_setores';
 const JUSTIFICATIVAS_KEY = 'biohealth_justificativas';
 const SESSION_KEY = 'biohealth_session';
+const USER_PREFS_KEY = 'biohealth_user_prefs';
+
+const DEFAULT_USER_PREFERENCES: UserPreferences = {
+  theme: 'auto',
+  primaryColor: '#7c3aed',
+  // IDs devem bater com Layout: dashboard, ponto, relatorio, relatorios, autorizacao, cadastro, hospitais, biometria, auditoria, gestao, perfil
+  visibleTabs: ['dashboard', 'ponto', 'relatorio', 'relatorios', 'autorizacao', 'cadastro', 'hospitais', 'biometria', 'auditoria', 'gestao', 'perfil'],
+  tabOrder: ['dashboard', 'ponto', 'relatorio', 'relatorios', 'autorizacao', 'cadastro', 'hospitais', 'biometria', 'auditoria', 'gestao', 'perfil']
+};
 
 // Initial Seed Data
 const seedData = () => {
@@ -793,34 +802,47 @@ export const StorageService = {
   },
 
   // USER PREFERENCES
-  getUserPreferences: () => {
+  getUserPreferences: (): UserPreferences | null => {
     const session = StorageService.getSession();
     if (!session?.user?.id) return null;
 
+    const prefsMapRaw = localStorage.getItem(USER_PREFS_KEY);
+    const prefsMap: Record<string, UserPreferences> = prefsMapRaw ? JSON.parse(prefsMapRaw) : {};
+    const savedPrefs = prefsMap[String(session.user.id)];
+    if (savedPrefs) {
+      return { ...DEFAULT_USER_PREFERENCES, ...savedPrefs };
+    }
+
     const managers = StorageService.getManagers();
-    const manager = managers.find(m => m.id === session.user.id);
-    
-    return manager?.preferences || {
-      theme: 'auto',
-      primaryColor: '#7c3aed', // Default roxo
-      // IDs devem bater com Layout: dashboard, ponto, relatorio, relatorios, autorizacao, cadastro, hospitais, biometria, auditoria, gestao, perfil
-      visibleTabs: ['dashboard', 'ponto', 'relatorio', 'relatorios', 'autorizacao', 'cadastro', 'hospitais', 'biometria', 'auditoria', 'gestao', 'perfil'],
-      tabOrder: ['dashboard', 'ponto', 'relatorio', 'relatorios', 'autorizacao', 'cadastro', 'hospitais', 'biometria', 'auditoria', 'gestao', 'perfil']
-    };
+    const manager = managers.find(m => String(m.id) === String(session.user.id));
+    if (manager?.preferences) {
+      return { ...DEFAULT_USER_PREFERENCES, ...manager.preferences };
+    }
+
+    return DEFAULT_USER_PREFERENCES;
   },
 
-  saveUserPreferences: (preferences: any) => {
+  saveUserPreferences: (preferences: UserPreferences) => {
     const session = StorageService.getSession();
     if (!session?.user?.id) return;
 
+    const normalizedPrefs: UserPreferences = { ...DEFAULT_USER_PREFERENCES, ...preferences, theme: preferences.theme ?? 'auto' };
+
+    const prefsMapRaw = localStorage.getItem(USER_PREFS_KEY);
+    const prefsMap: Record<string, UserPreferences> = prefsMapRaw ? JSON.parse(prefsMapRaw) : {};
+    prefsMap[String(session.user.id)] = normalizedPrefs;
+    localStorage.setItem(USER_PREFS_KEY, JSON.stringify(prefsMap));
+
     const managers = StorageService.getManagers();
-    const index = managers.findIndex(m => m.id === session.user.id);
+    const index = managers.findIndex(m => String(m.id) === String(session.user.id));
     
     if (index >= 0) {
-      managers[index].preferences = preferences;
+      managers[index].preferences = normalizedPrefs;
       localStorage.setItem(MANAGERS_KEY, JSON.stringify(managers));
       StorageService.logAudit('PREFERENCIAS_ATUALIZADAS', `Preferências de tema e abas atualizadas`);
       syncToNeon('sync_manager', managers[index]);
+    } else {
+      StorageService.logAudit('PREFERENCIAS_ATUALIZADAS', `Preferências de tema e abas atualizadas`);
     }
   }
 };

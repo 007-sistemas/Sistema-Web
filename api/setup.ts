@@ -92,6 +92,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         cpf TEXT UNIQUE,
         email TEXT,
         permissoes JSONB,
+        preferences JSONB,
         created_at TIMESTAMPTZ NOT NULL DEFAULT now()
       );
     `;

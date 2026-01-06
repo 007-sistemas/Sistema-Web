@@ -39,9 +39,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         cpf TEXT UNIQUE,
         email TEXT,
         permissoes JSONB DEFAULT '{}'::jsonb,
+        preferences JSONB,
         created_at TIMESTAMP DEFAULT NOW()
       );
     `;
+
+    try {
+      await sql`ALTER TABLE managers ADD COLUMN IF NOT EXISTS preferences JSONB`;
+    } catch (alterErr) {
+      console.log('[sync] Erro ao garantir coluna preferences:', alterErr);
+    }
 
     // Garantir que a tabela justificativas existe com as colunas corretas
     await sql`
@@ -100,14 +107,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Upsert: inserir se não existe, atualizar se existe
       const result = await sql`
-        INSERT INTO managers (id, username, password, cpf, email, permissoes)
-        VALUES (${manager.id}, ${manager.username}, ${manager.password}, ${manager.cpf || null}, ${manager.email || null}, ${JSON.stringify(manager.permissoes || {})})
+        INSERT INTO managers (id, username, password, cpf, email, permissoes, preferences)
+        VALUES (
+          ${manager.id},
+          ${manager.username},
+          ${manager.password},
+          ${manager.cpf || null},
+          ${manager.email || null},
+          ${JSON.stringify(manager.permissoes || {})},
+          ${manager.preferences ? JSON.stringify(manager.preferences) : null}
+        )
         ON CONFLICT (id) DO UPDATE SET
           username = ${manager.username},
           password = ${manager.password},
           cpf = ${manager.cpf || null},
           email = ${manager.email || null},
-          permissoes = ${JSON.stringify(manager.permissoes || {})}
+          permissoes = ${JSON.stringify(manager.permissoes || {})},
+          preferences = ${manager.preferences ? JSON.stringify(manager.preferences) : null}
         RETURNING id;
       `;
       console.log('[sync] Manager salvo com sucesso:', result);

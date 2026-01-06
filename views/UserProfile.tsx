@@ -55,6 +55,9 @@ export const UserProfile: React.FC = () => {
   const handleThemeChange = (theme: 'light' | 'dark' | 'auto') => {
     const updated = { ...preferences, theme };
     setPreferences(updated);
+    setIsSaving(true);
+    StorageService.saveUserPreferences(updated);
+    setIsSaving(false);
     
     // Apply theme immediately
     if (theme === 'dark') {
@@ -75,6 +78,9 @@ export const UserProfile: React.FC = () => {
   const handleColorChange = (color: string) => {
     const updated = { ...preferences, primaryColor: color };
     setPreferences(updated);
+    setIsSaving(true);
+    StorageService.saveUserPreferences(updated);
+    setIsSaving(false);
     
     // Apply color to CSS variable
     document.documentElement.style.setProperty('--primary-color', color);

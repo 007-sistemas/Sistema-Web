@@ -30,8 +30,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     await sql`ALTER TABLE managers ADD COLUMN IF NOT EXISTS cpf text`;
     await sql`ALTER TABLE managers ADD COLUMN IF NOT EXISTS email text`;
     await sql`ALTER TABLE managers ADD COLUMN IF NOT EXISTS permissoes jsonb DEFAULT '{}'::jsonb`;
+    await sql`ALTER TABLE managers ADD COLUMN IF NOT EXISTS preferences jsonb`;
 
-    const rows = await sql`SELECT id, username, password, cpf, email, permissoes FROM managers ORDER BY created_at DESC`;
+    const rows = await sql`SELECT id, username, password, cpf, email, permissoes, preferences FROM managers ORDER BY created_at DESC`;
     res.status(200).json(rows);
   } catch (err: any) {
     res.status(500).json({ error: err?.message || 'Unknown error' });
