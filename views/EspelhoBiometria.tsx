@@ -64,11 +64,9 @@ export const EspelhoBiometria: React.FC = () => {
 
     try {
       setLoading(true);
-      console.log('[EspelhoBiometria] Carregando pontos do NEON para cooperado:', cooperadoId);
       
       // Buscar pontos do NEON
       const pontos = await apiGet<any[]>(`pontos?cooperadoId=${cooperadoId}`);
-      console.log('[EspelhoBiometria] Pontos carregados do NEON:', pontos?.length || 0);
       
       if (!Array.isArray(pontos)) {
         throw new Error('Resposta inválida da API');
