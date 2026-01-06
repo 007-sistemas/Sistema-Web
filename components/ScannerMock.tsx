@@ -19,8 +19,8 @@ export const ScannerMock: React.FC<ScannerMockProps> = ({
   isVerifying = false,
   allowSimulation = false
 }) => {
-  // Se allowSimulation for false, forçamos DEVICE. Se for true, iniciamos em DEVICE mas permitimos troca.
-  const [mode, setMode] = useState<'DEVICE' | 'SIMULATION'>('DEVICE');
+  // Forçamos modo simulação por padrão e removemos opção de USB
+  const [mode, setMode] = useState<'DEVICE' | 'SIMULATION'>('SIMULATION');
   
   const [status, setStatus] = useState<'IDLE' | 'SCANNING' | 'SUCCESS' | 'ERROR'>('IDLE');
   const [deviceMessage, setDeviceMessage] = useState<string>('Inicializando...');
@@ -41,12 +41,6 @@ export const ScannerMock: React.FC<ScannerMockProps> = ({
     onScanErrorRef.current = onScanError;
   }, [onScanError]);
 
-  // Forçar modo DEVICE se simulação for desativada externamente
-  useEffect(() => {
-    if (!allowSimulation) {
-      setMode('DEVICE');
-    }
-  }, [allowSimulation]);
 
   // 1. Detectar SDK Globalmente
   useEffect(() => {
@@ -163,7 +157,7 @@ export const ScannerMock: React.FC<ScannerMockProps> = ({
   return (
     <div className="flex flex-col items-center justify-center p-6 bg-white rounded-xl shadow-lg border border-gray-200 max-w-sm mx-auto transition-all">
       
-      {/* Toggle de Modo (Apenas se permitido) */}
+      {/* Toggle de Modo removido: apenas simulador visível */}
       {allowSimulation && (
         <div className="flex bg-gray-100 p-1 rounded-lg mb-4 w-full max-w-[200px]">
           <button 
@@ -172,32 +166,15 @@ export const ScannerMock: React.FC<ScannerMockProps> = ({
           >
             Simulador
           </button>
-          <button 
-            onClick={() => setMode('DEVICE')}
-            className={`flex-1 py-1 text-xs font-medium rounded-md transition-all ${mode === 'DEVICE' ? 'bg-white shadow text-primary-700' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            Leitor USB
-          </button>
         </div>
       )}
 
       {/* Header Visual Compacto */}
       <div className={`flex items-center space-x-2 text-gray-500 mb-4 bg-gray-50 px-3 py-1 rounded-full border border-gray-100 ${allowSimulation ? '' : 'mt-2'}`}>
-        {mode === 'DEVICE' ? (
-            <>
-                {sdkLoaded ? <Usb className="h-4 w-4 text-green-500" /> : <Loader2 className="h-4 w-4 animate-spin text-amber-500" />}
-                <span className="text-xs font-semibold uppercase tracking-wide">
-                    {sdkLoaded ? 'Leitor Biométrico Ativo' : 'Carregando Drivers...'}
-                </span>
-            </>
-        ) : (
-            <>
-                <MousePointer2 className="h-4 w-4 text-blue-500" />
-                <span className="text-xs font-semibold uppercase tracking-wide text-blue-600">
-                    Clique para Simular
-                </span>
-            </>
-        )}
+        <MousePointer2 className="h-4 w-4 text-blue-500" />
+        <span className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+          Clique para Simular
+        </span>
       </div>
 
       {/* Interface Visual do Sensor */}
