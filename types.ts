@@ -48,7 +48,7 @@ export interface HospitalPermissions {
   auditoria: boolean;
   gestao: boolean; // New permission for Manager management
   testes?: boolean; // Permissão opcional para área de testes
-  espelho: boolean; // New permission for Cooperado View
+  espelho: boolean; // Permission for Espelho da Biometria (apenas Cooperados)
   autorizacao: boolean; // New permission for Justification Approval
   perfil: boolean; // New permission for User Profile
 }

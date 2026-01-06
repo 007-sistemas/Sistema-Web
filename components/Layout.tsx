@@ -92,7 +92,6 @@ export const Layout: React.FC<LayoutProps> = ({
   const mainNavItems = [
     { id: 'autorizacao', label: 'Justificativa de Plantão', icon: CheckSquare, permissionKey: 'autorizacao' },
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, permissionKey: 'dashboard' },
-    { id: 'espelho', label: 'Espelho da Biometria', icon: FileClock, permissionKey: 'espelho' },
     { id: 'ponto', label: 'Registrar Produção', icon: ClipboardCheck, permissionKey: 'ponto' },
     { id: 'relatorio', label: 'Controle de Produção', icon: FileText, permissionKey: 'relatorio' },
     { id: 'relatorios', label: 'Relatórios', icon: FileText, permissionKey: 'relatorios' },

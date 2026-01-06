@@ -132,7 +132,7 @@ export const StorageService = {
                 auditoria: false,
                 gestao: false,
                 testes: false,
-                espelho: true, // Only access to Mirror
+                espelho: true, // Only access to Mirror (Cooperados only)
                 autorizacao: false,
                 perfil: true
             }
@@ -209,7 +209,7 @@ export const StorageService = {
         biometria: false,
         auditoria: false,
         gestao: false,
-        espelho: false,
+        espelho: false, // Managers não têm acesso (removido do menu)
         autorizacao: false,
         // Perfil deve existir e vir habilitado por padrão para gestores
         perfil: true,
@@ -757,9 +757,9 @@ export const StorageService = {
     return manager?.preferences || {
       theme: 'auto',
       primaryColor: '#7c3aed', // Default roxo
-      // IDs devem bater com Layout: dashboard, ponto, relatorio, relatorios, espelho, autorizacao, cadastro, hospitais, biometria, auditoria, gestao, perfil
-      visibleTabs: ['dashboard', 'ponto', 'relatorio', 'relatorios', 'espelho', 'autorizacao', 'cadastro', 'hospitais', 'biometria', 'auditoria', 'gestao', 'perfil'],
-      tabOrder: ['dashboard', 'ponto', 'relatorio', 'relatorios', 'espelho', 'autorizacao', 'cadastro', 'hospitais', 'biometria', 'auditoria', 'gestao', 'perfil']
+      // IDs devem bater com Layout: dashboard, ponto, relatorio, relatorios, autorizacao, cadastro, hospitais, biometria, auditoria, gestao, perfil
+      visibleTabs: ['dashboard', 'ponto', 'relatorio', 'relatorios', 'autorizacao', 'cadastro', 'hospitais', 'biometria', 'auditoria', 'gestao', 'perfil'],
+      tabOrder: ['dashboard', 'ponto', 'relatorio', 'relatorios', 'autorizacao', 'cadastro', 'hospitais', 'biometria', 'auditoria', 'gestao', 'perfil']
     };
   },
 
