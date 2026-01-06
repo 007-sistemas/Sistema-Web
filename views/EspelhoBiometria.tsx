@@ -20,12 +20,8 @@ export const EspelhoBiometria: React.FC = () => {
   const [logs, setLogs] = useState<RegistroPonto[]>([]);
   const [hospitais, setHospitais] = useState<Hospital[]>([]);
   const [loading, setLoading] = useState(true);
+  const [session, setSession] = useState<any>(null);
   
-  // User Session
-  const session = StorageService.getSession();
-  const cooperadoId = session?.type === 'COOPERADO' ? session.user.id : null;
-  const cooperadoData = session?.type === 'COOPERADO' ? session.user : null;
-
   // Filters
   const [filterHospital, setFilterHospital] = useState('');
   const [dateStart, setDateStart] = useState('');
@@ -38,7 +34,15 @@ export const EspelhoBiometria: React.FC = () => {
   const [justificationReason, setJustificationReason] = useState('Esquecimento');
   const [justificationDesc, setJustificationDesc] = useState('');
 
+  // Derived states
+  const cooperadoId = session?.type === 'COOPERADO' ? session?.user?.id : null;
+  const cooperadoData = session?.type === 'COOPERADO' ? session?.user : null;
+
   useEffect(() => {
+    // Recarregar session ao montar o componente
+    const currentSession = StorageService.getSession();
+    setSession(currentSession);
+    
     // Set default date range (Current Month)
     const now = new Date();
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
@@ -46,11 +50,17 @@ export const EspelhoBiometria: React.FC = () => {
     setDateStart(firstDay);
     setDateEnd(lastDay);
 
-    loadData();
+    if (currentSession?.type === 'COOPERADO') {
+      loadData();
+    }
   }, []);
 
   const loadData = async () => {
-    if (!cooperadoId) return;
+    if (!cooperadoId || !session) {
+      console.warn('[EspelhoBiometria] Sem session ou cooperadoId, abortando loadData');
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);
@@ -58,7 +68,11 @@ export const EspelhoBiometria: React.FC = () => {
       
       // Buscar pontos do NEON
       const pontos = await apiGet<any[]>(`pontos?cooperadoId=${cooperadoId}`);
-      console.log('[EspelhoBiometria] Pontos carregados do NEON:', pontos.length);
+      console.log('[EspelhoBiometria] Pontos carregados do NEON:', pontos?.length || 0);
+      
+      if (!Array.isArray(pontos)) {
+        throw new Error('Resposta inválida da API');
+      }
       
       // Filtrar pontos rejeitados e ordenar
       const filtered = pontos.filter(p => p.status !== 'Rejeitado');
@@ -237,11 +251,23 @@ export const EspelhoBiometria: React.FC = () => {
     alert('Justificativa enviada com sucesso! Aguarde a aprovação do gestor.');
   };
 
-  if (!cooperadoId) {
+  if (!cooperadoId || !session || session.type !== 'COOPERADO') {
     return (
       <div className="flex flex-col items-center justify-center h-64 text-gray-500">
         <FileClock className="h-12 w-12 mb-2 opacity-50" />
         <p>Acesso restrito a cooperados.</p>
+        <p className="text-xs mt-2">Faça login como cooperado para acessar seu espelho de biometria.</p>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+        <div className="animate-spin">
+          <Clock className="h-8 w-8" />
+        </div>
+        <p className="mt-4">Carregando dados...</p>
       </div>
     );
   }
