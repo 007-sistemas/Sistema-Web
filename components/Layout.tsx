@@ -116,12 +116,14 @@ export const Layout: React.FC<LayoutProps> = ({
 
   React.useEffect(() => {
     const filtered = mainNavItems.filter(item => {
-      if (!permissions) return true;
+      // Sem permissões definidas, não mostrar nada (mais seguro)
+      if (!permissions) return false;
       return permissions[item.permissionKey as keyof HospitalPermissions] === true;
     });
 
     const cadastroFiltered = cadastroNavItems.filter(item => {
-      if (!permissions) return true;
+      // Sem permissões definidas, não mostrar nada (mais seguro)
+      if (!permissions) return false;
       return permissions[item.permissionKey as keyof HospitalPermissions] === true;
     });
 
