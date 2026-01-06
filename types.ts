@@ -113,7 +113,9 @@ export interface RegistroPonto {
   hospitalId?: string; // Helper for filtering
   setorId?: string; // Helper for filtering
   observacao?: string;
-  validadoPor?: string; // If manual override
+  validadoPor?: string; // If manual override (Aprovado por)
+  rejeitadoPor?: string; // Who rejected (Recusado por)
+  motivoRejeicao?: string; // Reason for rejection
   isManual: boolean;
   status: 'Aberto' | 'Fechado' | 'Pendente' | 'Rejeitado';
   relatedId?: string; // ID of the paired record (Exit points to Entry)

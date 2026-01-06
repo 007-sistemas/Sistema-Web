@@ -194,11 +194,10 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
         || (p as any).isManual === 1 
         || (p as any).isManual === '1' 
         || (p.codigo && String(p.codigo).startsWith('MAN-'))
-        || p.status === 'aguardando autorização'
         || p.status === 'Pendente';
 
       if (manualFlag && !p.validadoPor) {
-        return { ...p, isManual: true, status: 'aguardando autorização' };
+        return { ...p, isManual: true, status: 'Pendente' };
       }
 
       return { ...p, isManual: manualFlag || p.isManual };
@@ -383,20 +382,20 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
           return hospitalNome;
         };
 
-        const entradaManual = entrada.isManual === true || entrada.isManual === 'true' || entrada.status === 'Aguardando autorização' || entrada.status === 'Pendente';
-        const saidaManual = saidaPareada && (saidaPareada.isManual === true || saidaPareada.isManual === 'true' || saidaPareada.status === 'Aguardando autorização' || saidaPareada.status === 'Pendente');
+        const entradaManual = entrada.isManual === true || entrada.isManual === 'true' || entrada.status === 'Pendente';
+        const saidaManual = saidaPareada && (saidaPareada.isManual === true || saidaPareada.isManual === 'true' || saidaPareada.status === 'Pendente');
 
-        const aguardandoEntrada = entrada.status === 'aguardando autorização' || entrada.status === 'Pendente' || (!entrada.status && entradaManual);
-        const aguardandoSaida = saidaPareada && (saidaPareada.status === 'aguardando autorização' || saidaPareada.status === 'Pendente' || (!saidaPareada.status && saidaManual));
+        const aguardandoEntrada = entrada.status === 'Pendente' || (!entrada.status && entradaManual);
+        const aguardandoSaida = saidaPareada && (saidaPareada.status === 'Pendente' || (!saidaPareada.status && saidaManual));
 
         const manualPair = entradaManual || saidaManual;
         const hasApproval = (entrada.validadoPor && entrada.status === 'Fechado') || (saidaPareada && saidaPareada.validadoPor && saidaPareada.status === 'Fechado');
 
         let statusLabel = 'Em Aberto';
         if (manualPair && !hasApproval) {
-          statusLabel = 'aguardando autorização';
+          statusLabel = 'Pendente';
         } else if (aguardandoEntrada || aguardandoSaida) {
-          statusLabel = 'aguardando autorização';
+          statusLabel = 'Pendente';
         } else if (saidaPareada) {
           statusLabel = 'Fechado';
         }
@@ -451,7 +450,7 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
             data: new Date(saida.timestamp).toLocaleDateString(),
             entry: undefined,
             exit: saida,
-            status: '⚠️ ANOMALIA - Saída sem Entrada' // Alerta visual
+            status: 'Em Aberto'
           });
           processedExits.add(saida.id);
         }
@@ -771,7 +770,7 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
         hospitalId: entry.hospitalId,
         setorId: entry.setorId,
         isManual: true,
-        status: 'Aguardando autorização',
+        status: 'Pendente',
         relatedId: entry.id
     };
 
@@ -849,7 +848,7 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
       hospitalId: hospital?.id || missingHospitalId,
       setorId: missingSetorId,
       isManual: true,
-      status: 'Aguardando autorização'
+      status: 'Pendente'
     };
 
     const pontoSaida: RegistroPonto = {
@@ -863,7 +862,7 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
       hospitalId: hospital?.id || missingHospitalId,
       setorId: missingSetorId,
       isManual: true,
-      status: 'Aguardando autorização',
+      status: 'Pendente',
       relatedId: entryId
     };
 
@@ -1184,7 +1183,7 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
                     {row.exit ? (
                       new Date(row.exit.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
                     ) : (
-                      mode === 'cooperado' && row.entry && row.entry.status !== 'Aguardando autorização' ? (
+                      mode === 'cooperado' && row.entry && row.entry.status !== 'Pendente' ? (
                         <button 
                           onClick={() => handleOpenJustification(row.id, 'SAIDA')}
                           className="text-primary-600 hover:text-primary-800 underline text-xs flex items-center justify-center w-full gap-1"
@@ -1199,20 +1198,49 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
                   <td className="px-4 py-3 text-center">
                     {(() => {
                       const isAnomalia = row.status.startsWith('⚠️');
-                      const isAguardando = row.status.includes('Aguardando') || row.status.includes('Pendente');
+                      const isPendente = row.status === 'Pendente';
                       const isAberto = row.status.includes('Aberto');
-                      const badgeClass = isAnomalia
-                        ? 'bg-red-600'
-                        : isAguardando
-                          ? 'bg-amber-500'
-                          : isAberto
-                            ? 'bg-amber-500'
-                            : 'bg-green-600';
-                      const label = isAguardando ? 'Aguardando autorização' : (isAberto ? 'Em Aberto' : row.status);
+                      const isFechado = row.status === 'Fechado';
+                      const isRejeitado = row.status === 'Rejeitado';
+                      
+                      let badgeClass = 'bg-gray-500';
+                      let label = row.status;
+                      let detailsText = null;
+                      
+                      if (isAnomalia) {
+                        badgeClass = 'bg-red-600';
+                      } else if (isPendente) {
+                        badgeClass = 'bg-amber-500';
+                        label = 'Pendente';
+                      } else if (isAberto) {
+                        badgeClass = 'bg-amber-500';
+                        label = 'Em Aberto';
+                      } else if (isFechado) {
+                        badgeClass = 'bg-green-600';
+                        label = 'Fechado';
+                        const validador = row.entry?.validadoPor || row.exit?.validadoPor;
+                        if (validador) {
+                          detailsText = validador;
+                        }
+                      } else if (isRejeitado) {
+                        badgeClass = 'bg-red-600';
+                        label = 'Recusado';
+                        const rejeitador = row.entry?.rejeitadoPor || row.exit?.rejeitadoPor;
+                        const motivo = row.entry?.motivoRejeicao || row.exit?.motivoRejeicao;
+                        if (rejeitador) {
+                          detailsText = `${rejeitador}${motivo ? ` - ${motivo}` : ''}`;
+                        }
+                      }
+                      
                       return (
-                        <span className={`px-2 py-1 text-xs rounded-full text-white font-bold shadow-sm ${badgeClass}`}>
-                          {label}
-                        </span>
+                        <div className="flex flex-col items-center gap-0.5">
+                          <span className={`px-2 py-1 text-xs rounded-full text-white font-bold shadow-sm ${badgeClass}`}>
+                            {label}
+                          </span>
+                          {detailsText && (
+                            <span className="text-xs text-gray-600 font-medium max-w-xs break-words">{detailsText}</span>
+                          )}
+                        </div>
                       );
                     })()}
                   </td>
@@ -1220,8 +1248,8 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
                   {mode === 'cooperado' && (
                     <td className="px-4 py-3 text-center text-xs text-gray-600">
                       {(() => {
-                        const manualEntrada = row.entry?.isManual === true || row.entry?.isManual === 'true' || row.entry?.status === 'Aguardando autorização' || row.entry?.status === 'Pendente';
-                        const manualSaida = row.exit?.isManual === true || row.exit?.isManual === 'true' || row.exit?.status === 'Aguardando autorização' || row.exit?.status === 'Pendente';
+                        const manualEntrada = row.entry?.isManual === true || row.entry?.isManual === 'true' || row.entry?.status === 'Pendente';
+                        const manualSaida = row.exit?.isManual === true || row.exit?.isManual === 'true' || row.exit?.status === 'Pendente';
                         const hasManual = manualEntrada || manualSaida;
                         const hasBio = (!manualEntrada && row.entry) || (!manualSaida && row.exit);
                         if (hasManual && hasBio) return 'Biometria/Manual';

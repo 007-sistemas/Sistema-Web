@@ -95,6 +95,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS status TEXT`;
       await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS is_manual BOOLEAN`;
       await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS local TEXT`;
+      await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS validado_por TEXT`;
+      await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS rejeitado_por TEXT`;
+      await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS motivo_rejeicao TEXT`;
     } catch (alterErr) {
       console.log('[sync] Erro ao adicionar colunas (pode ser ignorado se já existirem):', alterErr);
     }
@@ -188,13 +191,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         INSERT INTO pontos (
           id, codigo, cooperado_id, cooperado_nome, date, tipo, entrada, saida,
           hospital_id, setor_id, biometria_entrada_hash, biometria_saida_hash, timestamp,
-          related_id, status, is_manual, local
+          related_id, status, is_manual, local, validado_por, rejeitado_por, motivo_rejeicao
         )
         VALUES (
           ${p.id}, ${p.codigo || null}, ${p.cooperadoId}, ${p.cooperadoNome || null}, ${p.data || p.date}, ${p.tipo},
           ${p.entrada || null}, ${p.saida || null}, ${p.hospitalId || null}, ${p.setorId || null},
           ${p.biometriaEntradaHash || null}, ${p.biometriaSaidaHash || null}, ${p.timestamp || new Date().toISOString()},
-          ${p.relatedId || null}, ${p.status || null}, ${p.isManual ?? null}, ${p.local || null}
+          ${p.relatedId || null}, ${p.status || null}, ${p.isManual ?? null}, ${p.local || null}, 
+          ${p.validadoPor || null}, ${p.rejeitadoPor || null}, ${p.motivoRejeicao || null}
         )
         ON CONFLICT (id) DO UPDATE SET
           codigo = ${p.codigo || null},
@@ -209,7 +213,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           related_id = ${p.relatedId || null},
           status = ${p.status || null},
           is_manual = ${p.isManual ?? null},
-          local = ${p.local || null}
+          local = ${p.local || null},
+          validado_por = ${p.validadoPor || null},
+          rejeitado_por = ${p.rejeitadoPor || null},
+          motivo_rejeicao = ${p.motivoRejeicao || null}
         RETURNING id;
       `;
       console.log('[sync] Ponto salvo:', result);

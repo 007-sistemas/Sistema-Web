@@ -531,6 +531,9 @@ export const StorageService = {
       hospitalId: ponto.hospitalId,
       setorId: ponto.setorId,
       observacao: ponto.observacao,
+      validadoPor: ponto.validadoPor,
+      rejeitadoPor: ponto.rejeitadoPor,
+      motivoRejeicao: ponto.motivoRejeicao,
       relatedId: ponto.relatedId,
       status: ponto.status,
       isManual: ponto.isManual
@@ -543,6 +546,26 @@ export const StorageService = {
     if (index !== -1) {
         list[index] = ponto;
         localStorage.setItem(PONTOS_KEY, JSON.stringify(list));
+        
+        // Sincronizar com Neon (assíncrono)
+        syncToNeon('sync_ponto', {
+          id: ponto.id,
+          codigo: ponto.codigo,
+          cooperadoId: ponto.cooperadoId,
+          cooperadoNome: ponto.cooperadoNome,
+          timestamp: ponto.timestamp,
+          tipo: ponto.tipo,
+          local: ponto.local,
+          hospitalId: ponto.hospitalId,
+          setorId: ponto.setorId,
+          observacao: ponto.observacao,
+          validadoPor: ponto.validadoPor,
+          rejeitadoPor: ponto.rejeitadoPor,
+          motivoRejeicao: ponto.motivoRejeicao,
+          relatedId: ponto.relatedId,
+          status: ponto.status,
+          isManual: ponto.isManual
+        });
     }
   },
 
