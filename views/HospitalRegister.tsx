@@ -266,7 +266,6 @@ export const HospitalRegister: React.FC = () => {
     { key: 'ponto', label: 'Registrar Produção' },
     { key: 'relatorio', label: 'Controle de Produção' },
     { key: 'relatorios', label: 'Relatórios' },
-    { key: 'espelho', label: 'Espelho de Ponto' },
     { key: 'autorizacao', label: 'Justificativa de Plantão' },
     { key: 'cadastro', label: 'Cooperados' },
     { key: 'hospitais', label: 'Hospitais & Setores' },
