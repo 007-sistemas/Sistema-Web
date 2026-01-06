@@ -115,10 +115,18 @@ export const Layout: React.FC<LayoutProps> = ({
   const [showPerfil, setShowPerfil] = React.useState(true);
 
   React.useEffect(() => {
+    console.log('[Layout] Permissões:', permissions);
+    console.log('[Layout] mainNavItems:', mainNavItems);
+    
     const filtered = mainNavItems.filter(item => {
       // Sem permissões definidas, não mostrar nada (mais seguro)
-      if (!permissions) return false;
-      return permissions[item.permissionKey as keyof HospitalPermissions] === true;
+      if (!permissions) {
+        console.log('[Layout] Sem permissions, escondendo:', item.label);
+        return false;
+      }
+      const hasPermission = permissions[item.permissionKey as keyof HospitalPermissions] === true;
+      console.log('[Layout] Item:', item.label, 'Permissão:', item.permissionKey, 'Tem acesso?', hasPermission);
+      return hasPermission;
     });
 
     const cadastroFiltered = cadastroNavItems.filter(item => {
@@ -127,6 +135,8 @@ export const Layout: React.FC<LayoutProps> = ({
       return permissions[item.permissionKey as keyof HospitalPermissions] === true;
     });
 
+    console.log('[Layout] Itens filtrados para mostrar:', filtered.length);
+    
     // Só adiciona o agrupador Cadastros se houver pelo menos um subitem visível
     if (cadastroFiltered.length > 0) {
       setNavItems([...filtered, cadastrosGroup].sort((a, b) => a.label.localeCompare(b.label)));
