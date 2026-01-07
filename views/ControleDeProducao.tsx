@@ -1203,6 +1203,9 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
                       const isFechado = row.status === 'Fechado';
                       const isRejeitado = row.status === 'Rejeitado';
                       
+                      // Debug: check what data we have
+                      console.log('[Status Badge] row.status:', row.status, 'entry:', row.entry, 'exit:', row.exit);
+                      
                       let badgeClass = 'bg-gray-500';
                       let label = row.status;
                       let detailsText = null;
