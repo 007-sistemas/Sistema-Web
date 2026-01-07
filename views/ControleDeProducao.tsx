@@ -189,7 +189,16 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
     
     setCooperados(StorageService.getCooperados());
     setHospitais(StorageService.getHospitais());
+    
+    // IMPORTANTE: Ler diretamente do localStorage sem cache
     const allPontos = StorageService.getPontos();
+    
+    console.log('[ControleDeProducao] Total de pontos carregados:', allPontos.length);
+    console.log('[ControleDeProducao] Pontos com status Rejeitado:', allPontos.filter(p => p.status === 'Rejeitado').length);
+    console.log('[ControleDeProducao] Pontos com status Fechado:', allPontos.filter(p => p.status === 'Fechado').length);
+    console.log('[ControleDeProducao] Pontos com validadoPor:', allPontos.filter(p => p.validadoPor).length);
+    console.log('[ControleDeProducao] Pontos com rejeitadoPor:', allPontos.filter(p => p.rejeitadoPor).length);
+    
     // Carregar setores de todos os hospitais para exibição (Hospital - Setor quando filtro vazio)
     await loadAllSetores(StorageService.getHospitais());
     // Order: Ascending (Oldest top, Newest bottom)
@@ -203,16 +212,25 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
         || (p.codigo && String(p.codigo).startsWith('MAN-'))
         || p.status === 'Pendente';
 
+      // CRÍTICO: NÃO sobrescrever se já tem validadoPor, rejeitadoPor ou status Fechado/Rejeitado
+      if (p.validadoPor || p.rejeitadoPor || p.status === 'Fechado' || p.status === 'Rejeitado') {
+        console.log('[ControleDeProducao] Preservando ponto:', p.id, 'status:', p.status, 'validadoPor:', p.validadoPor, 'rejeitadoPor:', p.rejeitadoPor);
+        return { ...p, isManual: manualFlag || p.isManual };
+      }
+
       // Só sobrescrever status para 'Pendente' se for manual E NÃO tiver sido aprovado/rejeitado
-      if (manualFlag && !p.validadoPor && !p.rejeitadoPor && p.status !== 'Fechado' && p.status !== 'Rejeitado') {
+      if (manualFlag && !p.validadoPor && !p.rejeitadoPor) {
         return { ...p, isManual: true, status: 'Pendente' };
       }
 
       return { ...p, isManual: manualFlag || p.isManual };
     });
 
-    // Persistir normalização no storage oficial (biohealth_pontos)
-    localStorage.setItem('biohealth_pontos', JSON.stringify(normalized));
+    console.log('[ControleDeProducao] Após normalização - Rejeitados:', normalized.filter(p => p.status === 'Rejeitado').length);
+    console.log('[ControleDeProducao] Após normalização - Fechados:', normalized.filter(p => p.status === 'Fechado').length);
+
+    // NÃO persistir normalização - isso pode sobrescrever os dados corretos!
+    // localStorage.setItem('biohealth_pontos', JSON.stringify(normalized));
 
     setLogs(normalized);
   };
@@ -1216,7 +1234,18 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
                       const isRejeitado = row.status === 'Rejeitado';
                       
                       // Debug: check what data we have
-                      console.log('[Status Badge] row.status:', row.status, 'entry:', row.entry, 'exit:', row.exit);
+                      console.log('[Status Badge] row:', {
+                        id: row.id,
+                        status: row.status,
+                        entryStatus: row.entry?.status,
+                        exitStatus: row.exit?.status,
+                        entryValidadoPor: row.entry?.validadoPor,
+                        exitValidadoPor: row.exit?.validadoPor,
+                        entryRejeitadoPor: row.entry?.rejeitadoPor,
+                        exitRejeitadoPor: row.exit?.rejeitadoPor,
+                        entryMotivoRejeicao: row.entry?.motivoRejeicao,
+                        exitMotivoRejeicao: row.exit?.motivoRejeicao
+                      });
                       
                       let badgeClass = 'bg-gray-500';
                       let label = row.status;
@@ -1253,7 +1282,7 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
                             {label}
                           </span>
                           {detailsText && (
-                            <span className="text-xs text-gray-600 font-medium max-w-xs break-words">{detailsText}</span>
+                            <span className="text-[10px] text-gray-600 font-medium max-w-xs break-words text-center px-1">{detailsText}</span>
                           )}
                         </div>
                       );
