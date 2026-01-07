@@ -180,9 +180,10 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
 
   const loadData = async () => {
     try {
-      await StorageService.refreshPontosFromRemote();
-      await StorageService.refreshCooperadosFromRemote();
-      await StorageService.refreshHospitaisFromRemote();
+      // TEMPORARIAMENTE DESABILITADO: refresh do Neon está sobrescrevendo dados locais
+      // await StorageService.refreshPontosFromRemote();
+      // await StorageService.refreshCooperadosFromRemote();
+      // await StorageService.refreshHospitaisFromRemote();
     } catch (error) {
       console.error('Erro ao sincronizar dados do Neon:', error);
     }
@@ -408,8 +409,9 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
           return hospitalNome;
         };
 
-        const entradaManual = entrada.isManual === true || entrada.isManual === 'true' || entrada.status === 'Pendente';
-        const saidaManual = saidaPareada && (saidaPareada.isManual === true || saidaPareada.isManual === 'true' || saidaPareada.status === 'Pendente');
+        const isManualVal = (val: any, status?: string) => val === true || val === 'true' || val === 1 || val === '1' || status === 'Pendente';
+        const entradaManual = isManualVal((entrada as any).isManual, entrada.status);
+        const saidaManual = saidaPareada && isManualVal((saidaPareada as any).isManual, saidaPareada.status);
 
         const aguardandoEntrada = entrada.status === 'Pendente' || (!entrada.status && entradaManual);
         const aguardandoSaida = saidaPareada && (saidaPareada.status === 'Pendente' || (!saidaPareada.status && saidaManual));
@@ -1292,8 +1294,9 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
                   {mode === 'cooperado' && (
                     <td className="px-4 py-3 text-center text-xs text-gray-600">
                       {(() => {
-                        const manualEntrada = row.entry?.isManual === true || row.entry?.isManual === 'true' || row.entry?.status === 'Pendente';
-                        const manualSaida = row.exit?.isManual === true || row.exit?.isManual === 'true' || row.exit?.status === 'Pendente';
+                        const isManualVal2 = (val: any, status?: string) => val === true || val === 'true' || val === 1 || val === '1' || status === 'Pendente';
+                        const manualEntrada = isManualVal2((row.entry as any)?.isManual, row.entry?.status);
+                        const manualSaida = isManualVal2((row.exit as any)?.isManual, row.exit?.status);
                         const hasManual = manualEntrada || manualSaida;
                         const hasBio = (!manualEntrada && row.entry) || (!manualSaida && row.exit);
                         if (hasManual && hasBio) return 'Biometria/Manual';

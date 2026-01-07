@@ -50,25 +50,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.log('[sync] Erro ao garantir coluna preferences:', alterErr);
     }
 
-    // Garantir que a tabela justificativas existe com as colunas corretas
+    // Garantir que a tabela justificativas existe com o schema alinhado ao frontend
     await sql`
       CREATE TABLE IF NOT EXISTS justificativas (
         id TEXT PRIMARY KEY,
         cooperado_id TEXT NOT NULL,
         cooperado_nome TEXT,
-        tipo TEXT NOT NULL,
-        date TEXT NOT NULL,
-        entrada TEXT,
-        saida TEXT,
+        ponto_id TEXT,
         motivo TEXT,
-        observacao TEXT,
+        descricao TEXT,
+        data_solicitacao TEXT,
         status TEXT DEFAULT 'Pendente',
         aprovado_por TEXT,
-        data_aprovacao TEXT,
+        rejeitado_por TEXT,
         motivo_rejeicao TEXT,
-        created_at TIMESTAMP DEFAULT NOW()
+        setor_id TEXT,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
       );
     `;
+
+    // Tentar adicionar/ajustar colunas que possam estar faltando em bancos existentes
+    try {
+      await sql`ALTER TABLE justificativas ADD COLUMN IF NOT EXISTS ponto_id TEXT`;
+      await sql`ALTER TABLE justificativas ADD COLUMN IF NOT EXISTS descricao TEXT`;
+      await sql`ALTER TABLE justificativas ADD COLUMN IF NOT EXISTS data_solicitacao TEXT`;
+      await sql`ALTER TABLE justificativas ADD COLUMN IF NOT EXISTS rejeitado_por TEXT`;
+      await sql`ALTER TABLE justificativas ADD COLUMN IF NOT EXISTS setor_id TEXT`;
+      await sql`ALTER TABLE justificativas ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`;
+      // Antigas colunas (tipo, date, entrada, saida, observacao) não são mais usadas
+    } catch (alterErr) {
+      console.log('[sync] Aviso ao ajustar schema de justificativas:', alterErr);
+    }
 
     // Para a tabela pontos, verificar se as colunas existem e adicionar se necessário
     await sql`
@@ -157,24 +170,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       const result = await sql`
         INSERT INTO justificativas (
-          id, cooperado_id, cooperado_nome, tipo, date, entrada, saida, 
-          motivo, observacao, status, aprovado_por, data_aprovacao, motivo_rejeicao
+          id, cooperado_id, cooperado_nome, ponto_id, motivo, descricao, data_solicitacao,
+          status, aprovado_por, rejeitado_por, motivo_rejeicao, setor_id, updated_at
         )
         VALUES (
-          ${j.id}, ${j.cooperadoId}, ${j.cooperadoNome || null}, ${j.tipo}, ${j.data || j.date},
-          ${j.entrada || null}, ${j.saida || null}, ${j.motivo || null}, ${j.observacao || null},
-          ${j.status || 'Pendente'}, ${j.aprovadoPor || null}, ${j.dataAprovacao || null}, ${j.motivoRejeicao || null}
+          ${j.id}, ${j.cooperadoId}, ${j.cooperadoNome || null}, ${j.pontoId || null}, ${j.motivo || null}, ${j.descricao || null}, ${j.dataSolicitacao || null},
+          ${j.status || 'Pendente'}, ${j.aprovadoPor || null}, ${j.rejeitadoPor || null}, ${j.motivoRejeicao || null}, ${j.setorId || null}, NOW()
         )
         ON CONFLICT (id) DO UPDATE SET
-          tipo = ${j.tipo},
-          entrada = ${j.entrada || null},
-          saida = ${j.saida || null},
+          ponto_id = ${j.pontoId || null},
           motivo = ${j.motivo || null},
-          observacao = ${j.observacao || null},
+          descricao = ${j.descricao || null},
+          data_solicitacao = ${j.dataSolicitacao || null},
           status = ${j.status || 'Pendente'},
           aprovado_por = ${j.aprovadoPor || null},
-          data_aprovacao = ${j.dataAprovacao || null},
-          motivo_rejeicao = ${j.motivoRejeicao || null}
+          rejeitado_por = ${j.rejeitadoPor || null},
+          motivo_rejeicao = ${j.motivoRejeicao || null},
+          setor_id = ${j.setorId || null},
+          updated_at = NOW()
         RETURNING id;
       `;
       console.log('[sync] Justificativa salva:', result);

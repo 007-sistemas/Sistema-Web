@@ -4,10 +4,16 @@ const isLocalHost = () => {
   return host === 'localhost' || host === '127.0.0.1';
 };
 
-const API_BASE =
-  (import.meta.env.DEV && isLocalHost())
-    ? (import.meta.env.VITE_API_BASE || 'https://bypass-lime.vercel.app')
-    : (import.meta.env.VITE_API_BASE || '');
+// Em dev local, usar same-origin ("/api") por padrão.
+// Se VITE_API_BASE estiver definido, respeitar.
+const API_BASE = (() => {
+  const envBase = import.meta.env.VITE_API_BASE;
+  if (envBase !== undefined) return envBase;
+  // Dev local: same-origin
+  if (import.meta.env.DEV && isLocalHost()) return '';
+  // Prod/vercel: same-origin (functions sob /api)
+  return '';
+})();
 
 const buildUrl = (path: string) => {
   const trimmedBase = API_BASE.replace(/\/$/, '');

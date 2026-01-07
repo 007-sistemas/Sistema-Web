@@ -57,6 +57,23 @@ export const StorageService = {
       return data ? JSON.parse(data) : [];
     },
 
+    // Retorna setores vinculados a um hospital (via Neon). Fallback: lista local.
+    async getSetoresByHospital(hospitalId: string) {
+      try {
+        if (!hospitalId) return [];
+        const setores = await apiGet<any[]>(`hospital-setores?hospitalId=${hospitalId}`);
+        if (Array.isArray(setores)) return setores;
+        return [];
+      } catch (err) {
+        console.warn('[StorageService] Erro ao buscar setores por hospital:', err);
+        // Fallback: tentar usar setores presentes no objeto do hospital em localStorage
+        const hospitais: Hospital[] = StorageService.getHospitais();
+        const hosp = hospitais.find(h => String(h.id) === String(hospitalId));
+        const setores = (hosp as any)?.setores || [];
+        return setores;
+      }
+    },
+
     saveSetor(nome: string) {
       const setores = StorageService.getSetores();
       const nextId = setores.length > 0 ? Math.max(...setores.map(s => s.id)) + 1 : 1;
