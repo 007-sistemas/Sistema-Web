@@ -393,7 +393,9 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
         const hasApproval = (entrada.validadoPor && entrada.status === 'Fechado') || (saidaPareada && saidaPareada.validadoPor && saidaPareada.status === 'Fechado');
 
         let statusLabel = 'Em Aberto';
-        if (manualPair && !hasApproval) {
+        if (entrada.status === 'Rejeitado' || (saidaPareada?.status === 'Rejeitado')) {
+          statusLabel = 'Rejeitado';
+        } else if (manualPair && !hasApproval) {
           statusLabel = 'Pendente';
         } else if (aguardandoEntrada || aguardandoSaida) {
           statusLabel = 'Pendente';
@@ -753,6 +755,7 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
       descricao: justificationDesc,
       dataSolicitacao: new Date().toISOString(),
       status: 'Pendente',
+      setorId: entry.setorId, // Adicionar setor da entrada original
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -834,6 +837,7 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
       descricao: missingDesc,
       dataSolicitacao: new Date().toISOString(),
       status: 'Pendente',
+      setorId: missingSetorId, // Adicionar setor selecionado
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };

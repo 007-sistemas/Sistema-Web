@@ -1,12 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { StorageService } from '../services/storage';
-import { Justificativa } from '../types';
+import { Justificativa, Setor } from '../types';
 import { CheckCircle, XCircle, AlertCircle, Calendar, Clock, MapPin, User, CheckSquare } from 'lucide-react';
 
 export const AutorizacaoPonto: React.FC = () => {
   const [pendingJustificativas, setPendingJustificativas] = useState<Justificativa[]>([]);
   const [processedJustificativas, setProcessedJustificativas] = useState<Justificativa[]>([]);
+  const [setoresDisponiveis, setSetoresDisponiveis] = useState<Setor[]>([]);
 
   useEffect(() => {
     loadData();
@@ -26,6 +27,22 @@ export const AutorizacaoPonto: React.FC = () => {
     setProcessedJustificativas(processed.sort((a, b) => 
       new Date(b.dataAprovacao || b.dataSolicitacao).getTime() - new Date(a.dataAprovacao || a.dataSolicitacao).getTime()
     ));
+
+    // Carregar setores disponíveis
+    const hospitais = StorageService.getHospitais();
+    const loadSetores = async () => {
+      const allSetores: Setor[] = [];
+      for (const hospital of hospitais) {
+        try {
+          const setores = await StorageService.getSetoresByHospital(hospital.id);
+          allSetores.push(...setores);
+        } catch (err) {
+          console.warn(`Erro ao buscar setores para hospital ${hospital.id}:`, err);
+        }
+      }
+      setSetoresDisponiveis(allSetores);
+    };
+    loadSetores();
   };
 
   // Helper para buscar ponto relacionado e extrair informações
@@ -162,6 +179,7 @@ export const AutorizacaoPonto: React.FC = () => {
                     <th className="px-4 py-3">Cooperado</th>
                     <th className="px-4 py-3">Data do Plantão</th>
                     <th className="px-4 py-3">Entrada / Saída</th>
+                    <th className="px-4 py-3">Setor</th>
                     <th className="px-4 py-3">Motivo</th>
                     <th className="px-4 py-3 text-right">Ações</th>
                   </tr>
@@ -207,6 +225,16 @@ export const AutorizacaoPonto: React.FC = () => {
                                 <span>📤</span> {pontoInfo.horarioSaida || '--:--'}
                               </span>
                             </div>
+                          ) : (
+                            <span className="text-xs text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {just.setorId ? (
+                            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
+                              <MapPin className="h-3 w-3 mr-1" />
+                              {setoresDisponiveis.find(s => String(s.id) === String(just.setorId))?.nome || `ID: ${just.setorId}`}
+                            </span>
                           ) : (
                             <span className="text-xs text-gray-400">-</span>
                           )}
@@ -306,7 +334,7 @@ export const AutorizacaoPonto: React.FC = () => {
                     <td className="px-6 py-4 text-xs">
                       <div className="flex flex-col gap-1">
                         <span className="text-gray-700 font-medium">
-                          {just.status === 'Aprovada' ? '✓' : '✕'} {just.aprovadoPor}
+                          {just.status === 'Aprovada' ? '✓' : '✕'} {just.status === 'Aprovada' ? just.aprovadoPor : just.rejeitadoPor}
                         </span>
                         <span className="text-gray-400">
                           {new Date(just.dataAprovacao || '').toLocaleDateString()}

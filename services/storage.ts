@@ -802,7 +802,7 @@ export const StorageService = {
     }
   },
 
-  rejeitarJustificativa: (id: string, aprovadoPor: string, motivoRejeicao: string): void => {
+  rejeitarJustificativa: (id: string, rejeitadoPor: string, motivoRejeicao: string): void => {
     const list = StorageService.getJustificativas();
     const index = list.findIndex(j => j.id === id);
     
@@ -810,14 +810,14 @@ export const StorageService = {
       list[index] = {
         ...list[index],
         status: 'Rejeitada',
-        aprovadoPor,
+        rejeitadoPor,
         motivoRejeicao,
         dataAprovacao: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
       
       localStorage.setItem(JUSTIFICATIVAS_KEY, JSON.stringify(list));
-      StorageService.logAudit('JUSTIFICATIVA_REJEITADA', `Justificativa ${id} rejeitada por ${aprovadoPor}: ${motivoRejeicao}`);
+      StorageService.logAudit('JUSTIFICATIVA_REJEITADA', `Justificativa ${id} rejeitada por ${rejeitadoPor}: ${motivoRejeicao}`);
       
       // Sincronizar com Neon
       syncToNeon('sync_justificativa', list[index]);

@@ -97,7 +97,9 @@ export interface Justificativa {
   status: 'Pendente' | 'Aprovada' | 'Rejeitada';
   aprovadoPor?: string;
   dataAprovacao?: string;
+  rejeitadoPor?: string;
   motivoRejeicao?: string;
+  setorId?: string; // Setor selecionado pelo cooperado
   createdAt: string;
   updatedAt: string;
 }
