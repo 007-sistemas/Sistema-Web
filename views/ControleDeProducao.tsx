@@ -180,10 +180,10 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
 
   const loadData = async () => {
     try {
-      // TEMPORARIAMENTE DESABILITADO: refresh do Neon está sobrescrevendo dados locais
-      // await StorageService.refreshPontosFromRemote();
-      // await StorageService.refreshCooperadosFromRemote();
-      // await StorageService.refreshHospitaisFromRemote();
+      // Reabilitado: sincronizar do Neon antes de ler localStorage
+      await StorageService.refreshHospitaisFromRemote();
+      await StorageService.refreshCooperadosFromRemote();
+      await StorageService.refreshPontosFromRemote();
     } catch (error) {
       console.error('Erro ao sincronizar dados do Neon:', error);
     }
