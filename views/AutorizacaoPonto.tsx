@@ -92,16 +92,40 @@ export const AutorizacaoPonto: React.FC = () => {
         const session = StorageService.getSession();
         const aprovador = session?.user?.username || session?.user?.nome || 'Gestor';
         
+        console.log('[AutorizacaoPonto] Aprovando justificativa:', justificativa.id, 'por', aprovador);
+        
         StorageService.aprovarJustificativa(justificativa.id, aprovador);
 
-        // Se a justificativa referencia um ponto específico, atualizar o status do ponto também
+        // IMPORTANTE: Atualizar TODOS os pontos relacionados (entrada E saída)
         if (justificativa.pontoId) {
           const pontos = StorageService.getPontos();
           const ponto = pontos.find(p => p.id === justificativa.pontoId);
+          
+          console.log('[AutorizacaoPonto] Ponto encontrado:', ponto);
             
-          if (ponto && (ponto.status === 'Pendente' || ponto.status === 'Aguardando autorização')) {
+          if (ponto) {
+            // Atualizar o ponto principal
             const updatedPonto = { ...ponto, status: 'Fechado' as const, validadoPor: aprovador };
+            console.log('[AutorizacaoPonto] Atualizando ponto principal:', updatedPonto.id, updatedPonto);
             StorageService.updatePonto(updatedPonto);
+            
+            // Se tem relatedId, atualizar o ponto relacionado também
+            if (ponto.relatedId) {
+              const pontoRelacionado = pontos.find(p => p.id === ponto.relatedId);
+              if (pontoRelacionado) {
+                const updatedRelacionado = { ...pontoRelacionado, status: 'Fechado' as const, validadoPor: aprovador };
+                console.log('[AutorizacaoPonto] Atualizando ponto relacionado:', updatedRelacionado.id, updatedRelacionado);
+                StorageService.updatePonto(updatedRelacionado);
+              }
+            }
+            
+            // Procurar se há algum ponto que aponta para este como relatedId
+            const pontosPareados = pontos.filter(p => p.relatedId === ponto.id);
+            pontosPareados.forEach(p => {
+              const updatedPareado = { ...p, status: 'Fechado' as const, validadoPor: aprovador };
+              console.log('[AutorizacaoPonto] Atualizando ponto pareado:', updatedPareado.id, updatedPareado);
+              StorageService.updatePonto(updatedPareado);
+            });
           }
         }
 
@@ -125,21 +149,55 @@ export const AutorizacaoPonto: React.FC = () => {
         const session = StorageService.getSession();
         const rejeitador = session?.user?.username || session?.user?.nome || 'Gestor';
         
+        console.log('[AutorizacaoPonto] Rejeitando justificativa:', justificativa.id, 'por', rejeitador, 'motivo:', reason);
+        
         StorageService.rejeitarJustificativa(justificativa.id, rejeitador, reason);
 
-        // Se a justificativa referencia um ponto, marcar como rejeitado
+        // IMPORTANTE: Atualizar TODOS os pontos relacionados (entrada E saída)
         if (justificativa.pontoId) {
           const pontos = StorageService.getPontos();
           const ponto = pontos.find(p => p.id === justificativa.pontoId);
+          
+          console.log('[AutorizacaoPonto] Ponto encontrado:', ponto);
             
-          if (ponto && (ponto.status === 'Pendente' || ponto.status === 'Aguardando autorização')) {
+          if (ponto) {
+            // Atualizar o ponto principal
             const updatedPonto = { 
               ...ponto, 
               status: 'Rejeitado' as const,
               rejeitadoPor: rejeitador,
               motivoRejeicao: reason
             };
+            console.log('[AutorizacaoPonto] Atualizando ponto principal:', updatedPonto.id, updatedPonto);
             StorageService.updatePonto(updatedPonto);
+            
+            // Se tem relatedId, atualizar o ponto relacionado também
+            if (ponto.relatedId) {
+              const pontoRelacionado = pontos.find(p => p.id === ponto.relatedId);
+              if (pontoRelacionado) {
+                const updatedRelacionado = { 
+                  ...pontoRelacionado, 
+                  status: 'Rejeitado' as const,
+                  rejeitadoPor: rejeitador,
+                  motivoRejeicao: reason
+                };
+                console.log('[AutorizacaoPonto] Atualizando ponto relacionado:', updatedRelacionado.id, updatedRelacionado);
+                StorageService.updatePonto(updatedRelacionado);
+              }
+            }
+            
+            // Procurar se há algum ponto que aponta para este como relatedId
+            const pontosPareados = pontos.filter(p => p.relatedId === ponto.id);
+            pontosPareados.forEach(p => {
+              const updatedPareado = { 
+                ...p, 
+                status: 'Rejeitado' as const,
+                rejeitadoPor: rejeitador,
+                motivoRejeicao: reason
+              };
+              console.log('[AutorizacaoPonto] Atualizando ponto pareado:', updatedPareado.id, updatedPareado);
+              StorageService.updatePonto(updatedPareado);
+            });
           }
         }
         
