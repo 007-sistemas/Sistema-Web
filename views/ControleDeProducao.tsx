@@ -196,7 +196,8 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
         || (p.codigo && String(p.codigo).startsWith('MAN-'))
         || p.status === 'Pendente';
 
-      if (manualFlag && !p.validadoPor) {
+      // Só sobrescrever status para 'Pendente' se for manual E NÃO tiver sido aprovado/rejeitado
+      if (manualFlag && !p.validadoPor && !p.rejeitadoPor && p.status !== 'Fechado' && p.status !== 'Rejeitado') {
         return { ...p, isManual: true, status: 'Pendente' };
       }
 
