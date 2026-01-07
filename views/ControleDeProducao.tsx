@@ -96,6 +96,13 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
       await loadData();
     };
     init();
+
+    // Polling: recarregar dados a cada 3 segundos para refletir mudanças do gestor
+    const pollInterval = setInterval(() => {
+      loadData();
+    }, 3000);
+
+    return () => clearInterval(pollInterval);
   }, [mode]);
 
   // Carregar setores quando o filtro de hospital mudar
@@ -1235,8 +1242,8 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
                         label = 'Recusado';
                         const rejeitador = row.entry?.rejeitadoPor || row.exit?.rejeitadoPor;
                         const motivo = row.entry?.motivoRejeicao || row.exit?.motivoRejeicao;
-                        if (rejeitador) {
-                          detailsText = `${rejeitador}${motivo ? ` - ${motivo}` : ''}`;
+                        if (rejeitador || motivo) {
+                          detailsText = `${rejeitador || 'Gestor'}${motivo ? ' - ' + motivo : ''}`;
                         }
                       }
                       
