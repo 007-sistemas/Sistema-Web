@@ -15,7 +15,14 @@ import https from 'https';
 const BASE_URL = process.env.VERCEL_URL 
   ? `https://${process.env.VERCEL_URL}`
   : 'https://bypass-git-main-007-sistemas-projects.vercel.app';
-const TOKEN = 'fix-justificativas-2026';
+
+const actionMap = {
+  'check': 'check_justificativas',
+  'reprocess': 'reprocess_justificativas',
+  'check-pontos': 'check_pontos',
+  'fix-pontos': 'fix_pontos'
+};
+
 const action = process.argv[2] || 'check';
 
 if (!['check', 'reprocess', 'check-pontos', 'fix-pontos'].includes(action)) {
@@ -24,7 +31,8 @@ if (!['check', 'reprocess', 'check-pontos', 'fix-pontos'].includes(action)) {
   process.exit(1);
 }
 
-const url = `${BASE_URL}/api/fix-justificativas?action=${action}&token=${TOKEN}`;
+const apiAction = actionMap[action];
+const url = `${BASE_URL}/api/sync?action=${apiAction}`;
 
 https.get(url, (res) => {
   let data = '';
