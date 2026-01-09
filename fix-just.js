@@ -12,9 +12,8 @@
 
 import https from 'https';
 
-const BASE_URL = process.env.VERCEL_URL 
-  ? `https://${process.env.VERCEL_URL}`
-  : 'https://bypass-git-main-007-sistemas-projects.vercel.app';
+// Usar domínio customizado sem proteção de preview
+const BASE_URL = 'https://bypass-oezwbvluf-007-sistemas-projects.vercel.app';
 
 const actionMap = {
   'check': 'check_justificativas',

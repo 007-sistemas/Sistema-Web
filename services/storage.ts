@@ -449,7 +449,7 @@ export const StorageService = {
 
   refreshPontosFromRemote: async () => {
     try {
-      const rows = await apiGet<any[]>('pontos');
+      const rows = await apiGet<any[]>('sync?action=list_pontos');
       if (!Array.isArray(rows)) return;
 
       // Buscar hospitais e setores para montar o campo local corretamente
@@ -482,9 +482,15 @@ export const StorageService = {
           || row.status === 'Pendente';
 
         let status: string | undefined = row.status;
-        if (isManual) {
-          // Força aguardando para qualquer manual não validado
-          if (!status || status === 'Fechado' || status === 'Aberto' || status === 'Pendente') {
+        
+        // CRÍTICO: Preservar status de pontos validados/rejeitados
+        if (row.validadoPor || row.status === 'Fechado') {
+          status = 'Fechado';
+        } else if (row.rejeitadoPor || row.status === 'Rejeitado') {
+          status = 'Rejeitado';
+        } else if (isManual) {
+          // Força aguardando APENAS para manuais NÃO validados/rejeitados
+          if (!status || status === 'Aberto' || status === 'Pendente') {
             status = 'Aguardando autorização';
           }
         } else {
@@ -509,6 +515,8 @@ export const StorageService = {
           status,
           isManual,
           validadoPor: row.validadoPor,
+          rejeitadoPor: row.rejeitadoPor,
+          motivoRejeicao: row.motivoRejeicao,
           justificativa: row.justificativa,
           biometriaEntradaHash: row.biometriaEntradaHash,
           biometriaSaidaHash: row.biometriaSaidaHash

@@ -71,8 +71,8 @@ export const EspelhoBiometria: React.FC = () => {
     try {
       setLoading(true);
       
-      // Buscar pontos do NEON
-      const pontos = await apiGet<any[]>(`pontos?cooperadoId=${effectiveCoopId}`);
+      // Buscar pontos do NEON via endpoint sync correto
+      const pontos = await apiGet<any[]>(`sync?action=list_pontos&cooperadoId=${effectiveCoopId}`);
       
       if (!Array.isArray(pontos)) {
         throw new Error('Resposta inválida da API');
