@@ -78,9 +78,8 @@ export const EspelhoBiometria: React.FC = () => {
         throw new Error('Resposta inválida da API');
       }
       
-      // Filtrar pontos rejeitados e ordenar
-      const filtered = pontos.filter(p => p.status !== 'Rejeitado');
-      const sorted = filtered.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      // NÃO filtrar pontos rejeitados - cooperado precisa ver o que foi recusado
+      const sorted = pontos.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       setLogs(sorted);
 
       // Identificar hospitais onde o usuário tem registros

@@ -201,10 +201,14 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
     console.log('[ControleDeProducao] Pontos com validadoPor:', allPontos.filter(p => p.validadoPor).length);
     console.log('[ControleDeProducao] Pontos com rejeitadoPor:', allPontos.filter(p => p.rejeitadoPor).length);
     
+    // FILTRAR pontos rejeitados - não devem aparecer no controle de produção
+    const pontosValidos = allPontos.filter(p => p.status !== 'Rejeitado');
+    console.log('[ControleDeProducao] Pontos após filtrar rejeitados:', pontosValidos.length);
+    
     // Carregar setores de todos os hospitais para exibição (Hospital - Setor quando filtro vazio)
     await loadAllSetores(StorageService.getHospitais());
     // Order: Ascending (Oldest top, Newest bottom)
-    const sorted = allPontos.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    const sorted = pontosValidos.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
     const normalized = sorted.map((p) => {
       const manualFlag = p.isManual === true 
