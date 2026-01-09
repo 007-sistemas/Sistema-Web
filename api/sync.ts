@@ -19,13 +19,46 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Method not allowed' });
-    return;
-  }
-
   try {
     const sql = neon(connectionString);
+
+    // GET helpers (evita criar novo endpoint para listar justificativas)
+    if (req.method === 'GET') {
+      const actionParam = (req.query.action || req.query.resource || '').toString();
+      if (actionParam === 'list_justificativas') {
+        const rows = await sql`
+          SELECT 
+            id,
+            cooperado_id      AS "cooperadoId",
+            cooperado_nome    AS "cooperadoNome",
+            ponto_id          AS "pontoId",
+            motivo,
+            descricao,
+            data_solicitacao  AS "dataSolicitacao",
+            status,
+            aprovado_por      AS "aprovadoPor",
+            rejeitado_por     AS "rejeitadoPor",
+            motivo_rejeicao   AS "motivoRejeicao",
+            setor_id          AS "setorId",
+            created_at        AS "createdAt",
+            updated_at        AS "updatedAt",
+            data_aprovacao    AS "dataAprovacao"
+          FROM justificativas
+          ORDER BY data_solicitacao DESC
+        `;
+
+        return res.status(200).json(rows);
+      }
+
+      res.status(400).json({ error: 'Ação GET não suportada' });
+      return;
+    }
+
+    if (req.method !== 'POST') {
+      res.status(405).json({ error: 'Method not allowed' });
+      return;
+    }
+
     const { action, data } = req.body;
 
     console.log(`[sync] Ação: ${action}`, data);
