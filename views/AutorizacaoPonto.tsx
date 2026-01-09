@@ -185,7 +185,11 @@ export const AutorizacaoPonto: React.FC = () => {
         console.log('[AutorizacaoPonto] Sessão completa:', JSON.stringify(session, null, 2));
         
         // Tentar pegar o nome do gestor de várias formas
-        const aprovador = session?.user?.username || session?.user?.nome || session?.user?.nomeCompleto || 'Gestor';
+        const aprovador = session?.user?.username 
+          || session?.user?.nome 
+          || session?.user?.nomeCompleto 
+          || session?.user?.id
+          || 'Gestor';
         
         console.log('[AutorizacaoPonto] Aprovando justificativa:', justificativa.id, 'por', aprovador);
         
@@ -258,7 +262,11 @@ export const AutorizacaoPonto: React.FC = () => {
         const session = StorageService.getSession();
         console.log('[AutorizacaoPonto] Sessão completa:', JSON.stringify(session, null, 2));
         
-        const rejeitador = session?.user?.username || session?.user?.nome || session?.user?.nomeCompleto || 'Gestor';
+        const rejeitador = session?.user?.username 
+          || session?.user?.nome 
+          || session?.user?.nomeCompleto 
+          || session?.user?.id
+          || 'Gestor';
         
         console.log('[AutorizacaoPonto] Rejeitando justificativa:', justificativa.id, 'por', rejeitador, 'motivo:', reason);
         
