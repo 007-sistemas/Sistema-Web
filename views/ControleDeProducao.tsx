@@ -365,13 +365,37 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
 
       // 3. Parear cada ENTRADA com a próxima SAÍDA disponível
       entradas.forEach(entrada => {
-        // Procurar SAÍDA posterior não pareada
-        const saidaIndex = saidas.findIndex(s => 
-          new Date(s.timestamp).getTime() > new Date(entrada.timestamp).getTime() &&
-          !processedExits.has(s.id)
-        );
-
+        // Procurar SAÍDA vinculada via relatedId primeiro (preferência)
         let saidaPareada: RegistroPonto | undefined;
+        let saidaIndex = -1;
+
+        // 1ª prioridade: relatedId da entrada aponta para saída
+        if (entrada.relatedId) {
+          saidaIndex = saidas.findIndex(s => s.id === entrada.relatedId && !processedExits.has(s.id));
+        }
+
+        // 2ª prioridade: saída tem relatedId apontando para esta entrada
+        if (saidaIndex === -1) {
+          saidaIndex = saidas.findIndex(s => s.relatedId === entrada.id && !processedExits.has(s.id));
+        }
+
+        // 3ª prioridade: mesmo código e timestamp posterior
+        if (saidaIndex === -1) {
+          saidaIndex = saidas.findIndex(s => 
+            s.codigo === entrada.codigo &&
+            new Date(s.timestamp).getTime() > new Date(entrada.timestamp).getTime() &&
+            !processedExits.has(s.id)
+          );
+        }
+
+        // 4ª prioridade: próxima saída cronológica (comportamento antigo)
+        if (saidaIndex === -1) {
+          saidaIndex = saidas.findIndex(s => 
+            new Date(s.timestamp).getTime() > new Date(entrada.timestamp).getTime() &&
+            !processedExits.has(s.id)
+          );
+        }
+
         if (saidaIndex !== -1) {
           saidaPareada = saidas[saidaIndex];
           processedExits.add(saidaPareada.id);
@@ -638,7 +662,8 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
                     relatedId: entryPonto.id
                 };
 
-                const updatedEntry = { ...entryPonto, status: 'Fechado' as const };
+                // Atualizar entrada para vincular bidirecional
+                const updatedEntry = { ...entryPonto, status: 'Fechado' as const, relatedId: exitPonto.id };
                 
                 StorageService.savePonto(exitPonto);
                 StorageService.updatePonto(updatedEntry);
@@ -709,7 +734,8 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
             relatedId: entryPonto.id
         };
 
-        const updatedEntry = { ...entryPonto, status: 'Fechado' as const };
+        // Atualizar entrada para vincular bidirecional e marcar como fechada
+        const updatedEntry = { ...entryPonto, status: 'Fechado' as const, relatedId: exitPonto.id };
         
         StorageService.savePonto(exitPonto);
         StorageService.updatePonto(updatedEntry);
@@ -835,11 +861,6 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
       return;
     }
 
-    if (missingEntrada >= missingSaida) {
-      alert('O horário de saída deve ser maior que o de entrada.');
-      return;
-    }
-
     if (missingReason === 'Outro Motivo' && !missingDesc.trim()) {
       alert('Descreva o motivo quando selecionar "Outro Motivo".');
       return;
@@ -848,8 +869,17 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
     const hospital = hospitais.find(h => String(h.id) === String(missingHospitalId));
     const localNome = hospital?.nome || 'Hospital não informado';
 
+    // Calcular timestamps com lógica automática de dia seguinte
     const entradaTimestamp = new Date(`${missingDate}T${missingEntrada}:00`).toISOString();
-    const saidaTimestamp = new Date(`${missingDate}T${missingSaida}:00`).toISOString();
+    
+    // Se saída < entrada, é plantao noturno: saída é no dia seguinte
+    let dataSaida = missingDate;
+    if (missingSaida < missingEntrada) {
+      const dataEntrada = new Date(missingDate);
+      dataEntrada.setDate(dataEntrada.getDate() + 1);
+      dataSaida = dataEntrada.toISOString().split('T')[0];
+    }
+    const saidaTimestamp = new Date(`${dataSaida}T${missingSaida}:00`).toISOString();
 
     const entryId = crypto.randomUUID();
     const exitId = crypto.randomUUID();
