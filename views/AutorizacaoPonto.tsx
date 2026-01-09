@@ -206,42 +206,54 @@ export const AutorizacaoPonto: React.FC = () => {
         };
         await apiPost('sync', { action: 'sync_justificativa', data: updatedJustificativa });
 
-        // IMPORTANTE: Atualizar TODOS os pontos relacionados (entrada E saída)
+        // IMPORTANTE: Atualizar TODOS os pontos relacionados
+        let pontosParaAtualizar: any[] = [];
+        
         if (justificativa.pontoId) {
+          // Se tem pontoId, buscar por ID
           const pontos = StorageService.getPontos();
           const ponto = pontos.find(p => p.id === justificativa.pontoId);
           
-          console.log('[AutorizacaoPonto] Ponto encontrado:', ponto);
-            
+          console.log('[AutorizacaoPonto] Ponto encontrado por ID:', ponto);
+          
           if (ponto) {
-            // Atualizar o ponto principal
-            const updatedPonto = { ...ponto, status: 'Fechado' as const, validadoPor: aprovador };
-            console.log('[AutorizacaoPonto] Atualizando ponto principal:', updatedPonto.id, updatedPonto);
-            StorageService.updatePonto(updatedPonto);
-            await apiPost('sync', { action: 'sync_ponto', data: updatedPonto });
+            pontosParaAtualizar.push(ponto);
             
-            // Se tem relatedId, atualizar o ponto relacionado também
+            // Buscar relacionados
             if (ponto.relatedId) {
               const pontoRelacionado = pontos.find(p => p.id === ponto.relatedId);
-              if (pontoRelacionado) {
-                const updatedRelacionado = { ...pontoRelacionado, status: 'Fechado' as const, validadoPor: aprovador };
-                console.log('[AutorizacaoPonto] Atualizando ponto relacionado:', updatedRelacionado.id, updatedRelacionado);
-                StorageService.updatePonto(updatedRelacionado);
-                await apiPost('sync', { action: 'sync_ponto', data: updatedRelacionado });
-              }
+              if (pontoRelacionado) pontosParaAtualizar.push(pontoRelacionado);
             }
             
-            // Procurar se há algum ponto que aponta para este como relatedId
+            // Buscar pareados
             const pontosPareados = pontos.filter(p => p.relatedId === ponto.id);
-            for (const p of pontosPareados) {
-              const updatedPareado = { ...p, status: 'Fechado' as const, validadoPor: aprovador };
-              console.log('[AutorizacaoPonto] Atualizando ponto pareado:', updatedPareado.id, updatedPareado);
-              StorageService.updatePonto(updatedPareado);
-              await apiPost('sync', { action: 'sync_ponto', data: updatedPareado });
-            }
+            pontosParaAtualizar.push(...pontosPareados);
           }
+        } else if (justificativa.dataPlantao) {
+          // Se não tem pontoId mas tem dataPlantao, buscar por cooperado + data
+          console.log('[AutorizacaoPonto] Buscando pontos por cooperado + data:', justificativa.cooperadoId, justificativa.dataPlantao);
+          const pontos = StorageService.getPontos();
+          const dataPlantao = new Date(justificativa.dataPlantao).toISOString().split('T')[0];
+          
+          const pontosNaData = pontos.filter(p => {
+            if (p.cooperadoId !== justificativa.cooperadoId) return false;
+            const pontoData = new Date(p.timestamp).toISOString().split('T')[0];
+            return pontoData === dataPlantao && (p.status === 'Pendente' || p.status === 'Aguardando autorização');
+          });
+          
+          console.log('[AutorizacaoPonto] Pontos encontrados na data:', pontosNaData.length);
+          pontosParaAtualizar.push(...pontosNaData);
+        }
+        
+        // Atualizar todos os pontos encontrados
+        for (const ponto of pontosParaAtualizar) {
+          const updatedPonto = { ...ponto, status: 'Fechado' as const, validadoPor: aprovador };
+          console.log('[AutorizacaoPonto] Atualizando ponto:', updatedPonto.id, updatedPonto);
+          StorageService.updatePonto(updatedPonto);
+          await apiPost('sync', { action: 'sync_ponto', data: updatedPonto });
         }
 
+        console.log('[AutorizacaoPonto] ✅ Aprovação concluída com sucesso');
         alert('Justificativa aprovada com sucesso!');
         await loadData();
     } catch (error) {
@@ -284,58 +296,60 @@ export const AutorizacaoPonto: React.FC = () => {
         };
         await apiPost('sync', { action: 'sync_justificativa', data: updatedJustificativa });
 
-        // IMPORTANTE: Atualizar TODOS os pontos relacionados (entrada E saída)
+        // IMPORTANTE: Atualizar TODOS os pontos relacionados
+        let pontosParaAtualizar: any[] = [];
+        
         if (justificativa.pontoId) {
+          // Se tem pontoId, buscar por ID
           const pontos = StorageService.getPontos();
           const ponto = pontos.find(p => p.id === justificativa.pontoId);
           
-          console.log('[AutorizacaoPonto] Ponto encontrado:', ponto);
-            
+          console.log('[AutorizacaoPonto] Ponto encontrado por ID:', ponto);
+          
           if (ponto) {
-            // Atualizar o ponto principal
-            const updatedPonto = { 
-              ...ponto, 
-              status: 'Rejeitado' as const,
-              rejeitadoPor: rejeitador,
-              motivoRejeicao: reason
-            };
-            console.log('[AutorizacaoPonto] Atualizando ponto principal:', updatedPonto.id, updatedPonto);
-            StorageService.updatePonto(updatedPonto);
-            await apiPost('sync', { action: 'sync_ponto', data: updatedPonto });
+            pontosParaAtualizar.push(ponto);
             
-            // Se tem relatedId, atualizar o ponto relacionado também
+            // Buscar relacionados
             if (ponto.relatedId) {
               const pontoRelacionado = pontos.find(p => p.id === ponto.relatedId);
-              if (pontoRelacionado) {
-                const updatedRelacionado = { 
-                  ...pontoRelacionado, 
-                  status: 'Rejeitado' as const,
-                  rejeitadoPor: rejeitador,
-                  motivoRejeicao: reason
-                };
-                console.log('[AutorizacaoPonto] Atualizando ponto relacionado:', updatedRelacionado.id, updatedRelacionado);
-                StorageService.updatePonto(updatedRelacionado);
-                await apiPost('sync', { action: 'sync_ponto', data: updatedRelacionado });
-              }
+              if (pontoRelacionado) pontosParaAtualizar.push(pontoRelacionado);
             }
             
-            // Procurar se há algum ponto que aponta para este como relatedId
+            // Buscar pareados
             const pontosPareados = pontos.filter(p => p.relatedId === ponto.id);
-            for (const p of pontosPareados) {
-              const updatedPareado = { 
-                ...p, 
-                status: 'Rejeitado' as const,
-                rejeitadoPor: rejeitador,
-                motivoRejeicao: reason
-              };
-              console.log('[AutorizacaoPonto] Atualizando ponto pareado:', updatedPareado.id, updatedPareado);
-              StorageService.updatePonto(updatedPareado);
-              await apiPost('sync', { action: 'sync_ponto', data: updatedPareado });
-            }
+            pontosParaAtualizar.push(...pontosPareados);
           }
+        } else if (justificativa.dataPlantao) {
+          // Se não tem pontoId mas tem dataPlantao, buscar por cooperado + data
+          console.log('[AutorizacaoPonto] Buscando pontos por cooperado + data:', justificativa.cooperadoId, justificativa.dataPlantao);
+          const pontos = StorageService.getPontos();
+          const dataPlantao = new Date(justificativa.dataPlantao).toISOString().split('T')[0];
+          
+          const pontosNaData = pontos.filter(p => {
+            if (p.cooperadoId !== justificativa.cooperadoId) return false;
+            const pontoData = new Date(p.timestamp).toISOString().split('T')[0];
+            return pontoData === dataPlantao && (p.status === 'Pendente' || p.status === 'Aguardando autorização');
+          });
+          
+          console.log('[AutorizacaoPonto] Pontos encontrados na data:', pontosNaData.length);
+          pontosParaAtualizar.push(...pontosNaData);
         }
         
-        alert('Justificativa rejeitada.');
+        // Atualizar todos os pontos encontrados
+        for (const ponto of pontosParaAtualizar) {
+          const updatedPonto = { 
+            ...ponto, 
+            status: 'Rejeitado' as const,
+            rejeitadoPor: rejeitador,
+            motivoRejeicao: reason
+          };
+          console.log('[AutorizacaoPonto] Atualizando ponto (rejeição):', updatedPonto.id, updatedPonto);
+          StorageService.updatePonto(updatedPonto);
+          await apiPost('sync', { action: 'sync_ponto', data: updatedPonto });
+        }
+
+        console.log('[AutorizacaoPonto] ✅ Rejeição concluída com sucesso');
+        alert('Justificativa recusada com sucesso!');
         await loadData();
     } catch (error) {
         console.error("Erro ao rejeitar:", error);

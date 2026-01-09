@@ -291,6 +291,11 @@ export const EspelhoBiometria: React.FC = () => {
         descricao: justificationDesc,
         dataSolicitacao: new Date().toISOString(),
         status: 'Pendente',
+        // IMPORTANTE: Incluir data/horário do plantão para busca posterior
+        dataPlantao: entryDate,
+        entradaPlantao: justificationTarget.type === 'ENTRADA' ? justificationTime : entry.entrada,
+        saidaPlantao: justificationTarget.type === 'SAIDA' ? justificationTime : entry.saida,
+        setorId: entry.setorId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
     };

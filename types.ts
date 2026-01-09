@@ -94,8 +94,9 @@ export interface Justificativa {
   motivo: string;
   descricao?: string;
   dataSolicitacao: string;
-  status: 'Pendente' | 'Aprovada' | 'Rejeitada';
-  aprovadoPor?: string;
+  status: 'Pendente' | 'Fechado' | 'Rejeitado';
+  aprovadoPor?: string; // Deprecated - usar validadoPor
+  validadoPor?: string; // Nome do gestor que aprovou
   dataAprovacao?: string;
   rejeitadoPor?: string;
   motivoRejeicao?: string;
