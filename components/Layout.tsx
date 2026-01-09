@@ -84,7 +84,8 @@ export const Layout: React.FC<LayoutProps> = ({
   React.useEffect(() => {
     const countPendentes = async () => {
       try {
-        const remote = await (await import('../services/api')).apiGet<any[]>('sync?action=list_justificativas');
+        const remoteRaw = await (await import('../services/api')).apiGet<any[]>('sync?action=list_justificativas');
+        const remote = remoteRaw.map(j => j.status === 'Aguardando autorização' ? { ...j, status: 'Pendente' } : j);
         const pending = remote.filter(j => j.status === 'Pendente');
         setPendentesCount(pending.length);
       } catch (err) {

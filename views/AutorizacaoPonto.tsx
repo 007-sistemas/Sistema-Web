@@ -25,7 +25,9 @@ export const AutorizacaoPonto: React.FC = () => {
   const loadData = async () => {
     try {
       // Tenta buscar do Neon
-      const remote = await apiGet<Justificativa[]>('justificativas');
+      const remoteRaw = await apiGet<Justificativa[]>('sync?action=list_justificativas');
+      // Normalizar status legados do banco
+      const remote = remoteRaw.map(j => j.status === 'Aguardando autorização' ? { ...j, status: 'Pendente' as const } : j);
       const pendingRemote = remote.filter(j => j.status === 'Pendente');
 
       setPendingJustificativas(pendingRemote.sort((a, b) => 
