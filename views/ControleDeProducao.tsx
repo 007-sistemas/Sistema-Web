@@ -1311,6 +1311,7 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
                       } else if (isRecusado) {
                         badgeClass = 'bg-red-600';
                         label = 'Recusado';
+                      }
                       
                       return (
                         <div className="flex flex-col items-center gap-0.5">
