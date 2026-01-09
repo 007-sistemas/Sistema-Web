@@ -28,23 +28,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (actionParam === 'list_justificativas') {
         const rows = await sql`
           SELECT 
-            id,
-            cooperado_id      AS "cooperadoId",
-            cooperado_nome    AS "cooperadoNome",
-            ponto_id          AS "pontoId",
-            motivo,
-            descricao,
-            data_solicitacao  AS "dataSolicitacao",
-            status,
-            aprovado_por      AS "aprovadoPor",
-            rejeitado_por     AS "rejeitadoPor",
-            motivo_rejeicao   AS "motivoRejeicao",
-            setor_id          AS "setorId",
-            created_at        AS "createdAt",
-            updated_at        AS "updatedAt",
-            data_aprovacao    AS "dataAprovacao"
-          FROM justificativas
-          ORDER BY data_solicitacao DESC
+            j.id,
+            j.cooperado_id      AS "cooperadoId",
+            j.cooperado_nome    AS "cooperadoNome",
+            j.ponto_id          AS "pontoId",
+            j.motivo,
+            j.descricao,
+            j.data_solicitacao  AS "dataSolicitacao",
+            j.status,
+            j.aprovado_por      AS "aprovadoPor",
+            j.rejeitado_por     AS "rejeitadoPor",
+            j.motivo_rejeicao   AS "motivoRejeicao",
+            j.setor_id          AS "setorId",
+            j.created_at        AS "createdAt",
+            j.updated_at        AS "updatedAt",
+            j.data_aprovacao    AS "dataAprovacao",
+            p.timestamp         AS "pontoTimestamp",
+            p.entrada           AS "pontoEntrada",
+            p.saida             AS "pontoSaida",
+            p.tipo              AS "pontoTipo",
+            p.date              AS "pontoDate",
+            p.related_id        AS "pontoRelatedId"
+          FROM justificativas j
+          LEFT JOIN pontos p ON p.id = j.ponto_id
+          ORDER BY j.data_solicitacao DESC
         `;
 
         return res.status(200).json(rows);

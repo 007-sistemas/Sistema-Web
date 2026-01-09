@@ -102,6 +102,13 @@ export interface Justificativa {
   setorId?: string; // Setor selecionado pelo cooperado
   createdAt: string;
   updatedAt: string;
+  // Dados opcionais do ponto (preenchidos quando vindos do Neon para evitar buscar localStorage)
+  pontoTimestamp?: string;
+  pontoEntrada?: string;
+  pontoSaida?: string;
+  pontoTipo?: string;
+  pontoDate?: string;
+  pontoRelatedId?: string;
 }
 
 export interface RegistroPonto {

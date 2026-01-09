@@ -117,6 +117,22 @@ export const AutorizacaoPonto: React.FC = () => {
     
     const pontos = StorageService.getPontos();
     const ponto = pontos.find(p => p.id === justificativa.pontoId);
+
+    // Se não houver ponto no localStorage (navegador do gestor), tentar usar dados vindos do Neon
+    if (!ponto && (justificativa.pontoTimestamp || justificativa.pontoDate)) {
+      const dataBase = justificativa.pontoTimestamp || justificativa.pontoDate || justificativa.dataSolicitacao;
+      const data = new Date(dataBase);
+      const dataFormatada = data.toLocaleDateString();
+
+      const horarioEntrada = justificativa.pontoEntrada || null;
+      const horarioSaida = justificativa.pontoSaida || null;
+
+      return {
+        data: dataFormatada,
+        horarioEntrada,
+        horarioSaida
+      };
+    }
     
     if (!ponto) return null;
     
