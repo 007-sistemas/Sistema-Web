@@ -100,6 +100,9 @@ export interface Justificativa {
   rejeitadoPor?: string;
   motivoRejeicao?: string;
   setorId?: string; // Setor selecionado pelo cooperado
+  dataPlantao?: string; // Data informada pelo cooperado (dd/mm/aaaa ou ISO)
+  entradaPlantao?: string; // Horário de entrada informado (HH:mm)
+  saidaPlantao?: string; // Horário de saída informado (HH:mm)
   createdAt: string;
   updatedAt: string;
   // Dados opcionais do ponto (preenchidos quando vindos do Neon para evitar buscar localStorage)

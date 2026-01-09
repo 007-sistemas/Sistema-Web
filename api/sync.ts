@@ -40,6 +40,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             j.rejeitado_por     AS "rejeitadoPor",
             j.motivo_rejeicao   AS "motivoRejeicao",
             j.setor_id          AS "setorId",
+            j.data_plantao      AS "dataPlantao",
+            j.entrada_plantao   AS "entradaPlantao",
+            j.saida_plantao     AS "saidaPlantao",
             j.created_at        AS "createdAt",
             j.updated_at        AS "updatedAt",
             j.data_aprovacao    AS "dataAprovacao",
@@ -117,6 +120,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await sql`ALTER TABLE justificativas ADD COLUMN IF NOT EXISTS data_solicitacao TEXT`;
       await sql`ALTER TABLE justificativas ADD COLUMN IF NOT EXISTS rejeitado_por TEXT`;
       await sql`ALTER TABLE justificativas ADD COLUMN IF NOT EXISTS setor_id TEXT`;
+      await sql`ALTER TABLE justificativas ADD COLUMN IF NOT EXISTS data_aprovacao TIMESTAMP`;
+      await sql`ALTER TABLE justificativas ADD COLUMN IF NOT EXISTS data_plantao TEXT`;
+      await sql`ALTER TABLE justificativas ADD COLUMN IF NOT EXISTS entrada_plantao TEXT`;
+      await sql`ALTER TABLE justificativas ADD COLUMN IF NOT EXISTS saida_plantao TEXT`;
       await sql`ALTER TABLE justificativas ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`;
       // Antigas colunas (tipo, date, entrada, saida, observacao) não são mais usadas
     } catch (alterErr) {
@@ -211,11 +218,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const result = await sql`
         INSERT INTO justificativas (
           id, cooperado_id, cooperado_nome, ponto_id, motivo, descricao, data_solicitacao,
-          status, aprovado_por, rejeitado_por, motivo_rejeicao, setor_id, updated_at
+          status, aprovado_por, rejeitado_por, motivo_rejeicao, setor_id, 
+          data_plantao, entrada_plantao, saida_plantao, data_aprovacao, updated_at
         )
         VALUES (
           ${j.id}, ${j.cooperadoId}, ${j.cooperadoNome || null}, ${j.pontoId || null}, ${j.motivo || null}, ${j.descricao || null}, ${j.dataSolicitacao || null},
-          ${j.status || 'Pendente'}, ${j.aprovadoPor || null}, ${j.rejeitadoPor || null}, ${j.motivoRejeicao || null}, ${j.setorId || null}, NOW()
+          ${j.status || 'Pendente'}, ${j.aprovadoPor || null}, ${j.rejeitadoPor || null}, ${j.motivoRejeicao || null}, ${j.setorId || null},
+          ${j.dataPlantao || null}, ${j.entradaPlantao || null}, ${j.saidaPlantao || null}, ${j.dataAprovacao || null}, NOW()
         )
         ON CONFLICT (id) DO UPDATE SET
           ponto_id = ${j.pontoId || null},
@@ -227,6 +236,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           rejeitado_por = ${j.rejeitadoPor || null},
           motivo_rejeicao = ${j.motivoRejeicao || null},
           setor_id = ${j.setorId || null},
+          data_plantao = ${j.dataPlantao || null},
+          entrada_plantao = ${j.entradaPlantao || null},
+          saida_plantao = ${j.saidaPlantao || null},
+          data_aprovacao = ${j.dataAprovacao || null},
           updated_at = NOW()
         RETURNING id;
       `;

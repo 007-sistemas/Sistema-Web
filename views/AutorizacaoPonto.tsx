@@ -113,7 +113,17 @@ export const AutorizacaoPonto: React.FC = () => {
 
   // Helper para buscar ponto relacionado e extrair informações
   const getPontoInfo = (justificativa: Justificativa) => {
-    if (!justificativa.pontoId) return null;
+    if (!justificativa.pontoId && !justificativa.dataPlantao) return null;
+    
+    // Se tem dataPlantao (informada manualmente), usar ela
+    if (justificativa.dataPlantao) {
+      const dataFormatada = new Date(justificativa.dataPlantao).toLocaleDateString();
+      return {
+        data: dataFormatada,
+        horarioEntrada: justificativa.entradaPlantao || null,
+        horarioSaida: justificativa.saidaPlantao || null
+      };
+    }
     
     const pontos = StorageService.getPontos();
     const ponto = pontos.find(p => p.id === justificativa.pontoId);
@@ -201,6 +211,7 @@ export const AutorizacaoPonto: React.FC = () => {
             const updatedPonto = { ...ponto, status: 'Fechado' as const, validadoPor: aprovador };
             console.log('[AutorizacaoPonto] Atualizando ponto principal:', updatedPonto.id, updatedPonto);
             StorageService.updatePonto(updatedPonto);
+            await apiPost('sync', { action: 'sync_ponto', data: updatedPonto });
             
             // Se tem relatedId, atualizar o ponto relacionado também
             if (ponto.relatedId) {
@@ -209,16 +220,18 @@ export const AutorizacaoPonto: React.FC = () => {
                 const updatedRelacionado = { ...pontoRelacionado, status: 'Fechado' as const, validadoPor: aprovador };
                 console.log('[AutorizacaoPonto] Atualizando ponto relacionado:', updatedRelacionado.id, updatedRelacionado);
                 StorageService.updatePonto(updatedRelacionado);
+                await apiPost('sync', { action: 'sync_ponto', data: updatedRelacionado });
               }
             }
             
             // Procurar se há algum ponto que aponta para este como relatedId
             const pontosPareados = pontos.filter(p => p.relatedId === ponto.id);
-            pontosPareados.forEach(p => {
+            for (const p of pontosPareados) {
               const updatedPareado = { ...p, status: 'Fechado' as const, validadoPor: aprovador };
               console.log('[AutorizacaoPonto] Atualizando ponto pareado:', updatedPareado.id, updatedPareado);
               StorageService.updatePonto(updatedPareado);
-            });
+              await apiPost('sync', { action: 'sync_ponto', data: updatedPareado });
+            }
           }
         }
 
@@ -275,6 +288,7 @@ export const AutorizacaoPonto: React.FC = () => {
             };
             console.log('[AutorizacaoPonto] Atualizando ponto principal:', updatedPonto.id, updatedPonto);
             StorageService.updatePonto(updatedPonto);
+            await apiPost('sync', { action: 'sync_ponto', data: updatedPonto });
             
             // Se tem relatedId, atualizar o ponto relacionado também
             if (ponto.relatedId) {
@@ -288,12 +302,13 @@ export const AutorizacaoPonto: React.FC = () => {
                 };
                 console.log('[AutorizacaoPonto] Atualizando ponto relacionado:', updatedRelacionado.id, updatedRelacionado);
                 StorageService.updatePonto(updatedRelacionado);
+                await apiPost('sync', { action: 'sync_ponto', data: updatedRelacionado });
               }
             }
             
             // Procurar se há algum ponto que aponta para este como relatedId
             const pontosPareados = pontos.filter(p => p.relatedId === ponto.id);
-            pontosPareados.forEach(p => {
+            for (const p of pontosPareados) {
               const updatedPareado = { 
                 ...p, 
                 status: 'Rejeitado' as const,
@@ -302,7 +317,8 @@ export const AutorizacaoPonto: React.FC = () => {
               };
               console.log('[AutorizacaoPonto] Atualizando ponto pareado:', updatedPareado.id, updatedPareado);
               StorageService.updatePonto(updatedPareado);
-            });
+              await apiPost('sync', { action: 'sync_ponto', data: updatedPareado });
+            }
           }
         }
         

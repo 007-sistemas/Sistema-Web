@@ -894,7 +894,10 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
       descricao: missingDesc,
       dataSolicitacao: new Date().toISOString(),
       status: 'Pendente',
-      setorId: missingSetorId, // Adicionar setor selecionado
+      setorId: missingSetorId,
+      dataPlantao: missingDate,
+      entradaPlantao: missingEntrada,
+      saidaPlantao: missingSaida,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
