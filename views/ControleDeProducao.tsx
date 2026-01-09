@@ -1297,6 +1297,16 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
                         const validador = row.entry?.validadoPor || row.exit?.validadoPor;
                         if (validador) {
                           detailsText = validador;
+                        } else {
+                          // Se não tem validadoPor direto, buscar justificativa aprovada
+                          const justificativas = StorageService.getJustificativas();
+                          const pontoId = row.entry?.id || row.exit?.id;
+                          const justificativaAprovada = justificativas.find(
+                            j => j.pontoId === pontoId && j.status === 'Aprovada'
+                          );
+                          if (justificativaAprovada && justificativaAprovada.aprovadoPor) {
+                            detailsText = justificativaAprovada.aprovadoPor;
+                          }
                         }
                       } else if (isRejeitado) {
                         badgeClass = 'bg-red-600';
@@ -1305,6 +1315,16 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
                         const motivo = row.entry?.motivoRejeicao || row.exit?.motivoRejeicao;
                         if (rejeitador || motivo) {
                           detailsText = `${rejeitador || 'Gestor'}${motivo ? ' - ' + motivo : ''}`;
+                        } else {
+                          // Se não tem rejeitadoPor direto, buscar justificativa rejeitada
+                          const justificativas = StorageService.getJustificativas();
+                          const pontoId = row.entry?.id || row.exit?.id;
+                          const justificativaRejeitada = justificativas.find(
+                            j => j.pontoId === pontoId && j.status === 'Rejeitada'
+                          );
+                          if (justificativaRejeitada && justificativaRejeitada.rejeitadoPor) {
+                            detailsText = justificativaRejeitada.rejeitadoPor;
+                          }
                         }
                       }
                       

@@ -41,6 +41,7 @@ export const Layout: React.FC<LayoutProps> = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [isCadastrosOpen, setIsCadastrosOpen] = React.useState(true);
   const [preferences, setPreferences] = React.useState<any>(null);
+  const [pendentesCount, setPendentesCount] = React.useState(0);
 
   const applyPreferences = (prefs: any) => {
     if (!prefs) return;
@@ -77,6 +78,20 @@ export const Layout: React.FC<LayoutProps> = ({
     // Também escuta mudanças de sessão/localStorage
     window.addEventListener('storage', applyUserPrefs);
     return () => window.removeEventListener('storage', applyUserPrefs);
+  }, []);
+
+  // Contar justificativas pendentes
+  React.useEffect(() => {
+    const countPendentes = () => {
+      const all = StorageService.getJustificativas();
+      const pending = all.filter(j => j.status === 'Pendente');
+      setPendentesCount(pending.length);
+    };
+    
+    countPendentes();
+    // Recarregar a cada 5 segundos para atualizar badge em tempo real
+    const interval = setInterval(countPendentes, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   // Itens de Cadastros
@@ -219,7 +234,12 @@ export const Layout: React.FC<LayoutProps> = ({
                 }`}
               >
                 <item.icon className="h-5 w-5" />
-                <span>{item.label}</span>
+                <span className="flex-1 text-left">{item.label}</span>
+                {item.id === 'autorizacao' && pendentesCount > 0 && (
+                  <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                    {pendentesCount}
+                  </span>
+                )}
               </button>
             ) : (
               <div key="cadastros">
