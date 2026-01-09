@@ -601,13 +601,13 @@ export const AutorizacaoPonto: React.FC = () => {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          {just.status === 'Aprovada' ? (
+                          {just.status === 'Fechado' ? (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-200">
                               ✓ Aprovada
                             </span>
-                          ) : just.status === 'Rejeitada' ? (
+                          ) : just.status === 'Rejeitado' ? (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-200">
-                              ✕ Rejeitada
+                              ✕ Recusada
                             </span>
                           ) : (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
@@ -616,7 +616,7 @@ export const AutorizacaoPonto: React.FC = () => {
                           )}
                         </td>
                         <td className="px-4 py-3 text-xs">
-                          {just.status === 'Aprovada' ? just.aprovadoPor : just.rejeitadoPor ? just.rejeitadoPor : '-'}
+                          {just.validadoPor || just.rejeitadoPor || '-'}
                         </td>
                         <td className="px-4 py-3 text-xs">
                           {just.dataAprovacao ? new Date(just.dataAprovacao).toLocaleDateString() : '-'}
