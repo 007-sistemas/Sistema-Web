@@ -1,7 +1,14 @@
 import { neon } from '@neondatabase/serverless';
 
 export default async function handler(req, res) {
-  const { action } = req.query;
+  const { action, token } = req.query;
+
+  // Token simples para proteção mínima (pode ser alterado)
+  const ALLOWED_TOKEN = process.env.FIX_JUSTIFICATIVAS_TOKEN || 'fix-justificativas-2026';
+  
+  if (token !== ALLOWED_TOKEN) {
+    return res.status(401).json({ error: 'Token inválido ou ausente' });
+  }
 
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
