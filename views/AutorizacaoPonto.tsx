@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { StorageService } from '../services/storage';
 import { Justificativa, Setor } from '../types';
+import { apiGet } from '../services/api';
 import { CheckCircle, XCircle, AlertCircle, Calendar, Clock, MapPin, User, CheckSquare, Search, Filter, X } from 'lucide-react';
 
 export const AutorizacaoPonto: React.FC = () => {
@@ -21,19 +22,32 @@ export const AutorizacaoPonto: React.FC = () => {
     loadData();
   }, []);
 
-  const loadData = () => {
-    const all = StorageService.getJustificativas();
-    const pending = all.filter(j => j.status === 'Pendente');
+  const loadData = async () => {
+    try {
+      // Tenta buscar do Neon
+      const remote = await apiGet<Justificativa[]>('justificativas');
+      const pendingRemote = remote.filter(j => j.status === 'Pendente');
 
-    // Sort oldest first (FIFO) for pending
-    setPendingJustificativas(pending.sort((a, b) => 
-      new Date(a.dataSolicitacao).getTime() - new Date(b.dataSolicitacao).getTime()
-    ));
+      setPendingJustificativas(pendingRemote.sort((a, b) => 
+        new Date(a.dataSolicitacao).getTime() - new Date(b.dataSolicitacao).getTime()
+      ));
 
-    // Salvar todas as justificativas para o histórico
-    setAllJustificativas(all.sort((a, b) => 
-      new Date(b.dataSolicitacao).getTime() - new Date(a.dataSolicitacao).getTime()
-    ));
+      setAllJustificativas(remote.sort((a, b) => 
+        new Date(b.dataSolicitacao).getTime() - new Date(a.dataSolicitacao).getTime()
+      ));
+    } catch (err) {
+      console.warn('[AutorizacaoPonto] Falha ao buscar justificativas no Neon, usando localStorage:', err);
+      const all = StorageService.getJustificativas();
+      const pending = all.filter(j => j.status === 'Pendente');
+
+      setPendingJustificativas(pending.sort((a, b) => 
+        new Date(a.dataSolicitacao).getTime() - new Date(b.dataSolicitacao).getTime()
+      ));
+
+      setAllJustificativas(all.sort((a, b) => 
+        new Date(b.dataSolicitacao).getTime() - new Date(a.dataSolicitacao).getTime()
+      ));
+    }
 
     // Carregar hospitais
     const hospitaisList = StorageService.getHospitais();

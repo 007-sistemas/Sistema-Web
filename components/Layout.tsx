@@ -80,12 +80,18 @@ export const Layout: React.FC<LayoutProps> = ({
     return () => window.removeEventListener('storage', applyUserPrefs);
   }, []);
 
-  // Contar justificativas pendentes
+  // Contar justificativas pendentes (Neon com fallback local)
   React.useEffect(() => {
-    const countPendentes = () => {
-      const all = StorageService.getJustificativas();
-      const pending = all.filter(j => j.status === 'Pendente');
-      setPendentesCount(pending.length);
+    const countPendentes = async () => {
+      try {
+        const remote = await (await import('../services/api')).apiGet<any[]>('justificativas');
+        const pending = remote.filter(j => j.status === 'Pendente');
+        setPendentesCount(pending.length);
+      } catch (err) {
+        const all = StorageService.getJustificativas();
+        const pending = all.filter(j => j.status === 'Pendente');
+        setPendentesCount(pending.length);
+      }
     };
     
     countPendentes();
