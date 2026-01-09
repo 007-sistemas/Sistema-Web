@@ -36,7 +36,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             j.descricao,
             j.data_solicitacao  AS "dataSolicitacao",
             j.status,
-            j.aprovado_por      AS "aprovadoPor",
+            j.validado_por      AS "validadoPor",
             j.rejeitado_por     AS "rejeitadoPor",
             j.motivo_rejeicao   AS "motivoRejeicao",
             j.setor_id          AS "setorId",
@@ -58,6 +58,66 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         `;
 
         return res.status(200).json(rows);
+      }
+
+      if (actionParam === 'list_pontos') {
+        const cooperadoIdParam = (req.query.cooperadoId || '').toString();
+        let query;
+        
+        if (cooperadoIdParam) {
+          query = await sql`
+            SELECT 
+              id,
+              codigo,
+              cooperado_id      AS "cooperadoId",
+              cooperado_nome    AS "cooperadoNome",
+              timestamp,
+              tipo,
+              local,
+              hospital_id       AS "hospitalId",
+              setor_id          AS "setorId",
+              biometria_entrada_hash AS "biometriaEntradaHash",
+              biometria_saida_hash   AS "biometriaSaidaHash",
+              related_id        AS "relatedId",
+              status,
+              is_manual         AS "isManual",
+              validado_por      AS "validadoPor",
+              rejeitado_por     AS "rejeitadoPor",
+              motivo_rejeicao   AS "motivoRejeicao",
+              created_at        AS "createdAt",
+              updated_at        AS "updatedAt"
+            FROM pontos
+            WHERE cooperado_id = ${cooperadoIdParam}
+            ORDER BY timestamp DESC
+          `;
+        } else {
+          query = await sql`
+            SELECT 
+              id,
+              codigo,
+              cooperado_id      AS "cooperadoId",
+              cooperado_nome    AS "cooperadoNome",
+              timestamp,
+              tipo,
+              local,
+              hospital_id       AS "hospitalId",
+              setor_id          AS "setorId",
+              biometria_entrada_hash AS "biometriaEntradaHash",
+              biometria_saida_hash   AS "biometriaSaidaHash",
+              related_id        AS "relatedId",
+              status,
+              is_manual         AS "isManual",
+              validado_por      AS "validadoPor",
+              rejeitado_por     AS "rejeitadoPor",
+              motivo_rejeicao   AS "motivoRejeicao",
+              created_at        AS "createdAt",
+              updated_at        AS "updatedAt"
+            FROM pontos
+            ORDER BY timestamp DESC
+          `;
+        }
+
+        return res.status(200).json(query);
       }
 
       res.status(400).json({ error: 'Ação GET não suportada' });
@@ -104,6 +164,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         descricao TEXT,
         data_solicitacao TEXT,
         status TEXT DEFAULT 'Pendente',
+        validado_por TEXT,
         aprovado_por TEXT,
         rejeitado_por TEXT,
         motivo_rejeicao TEXT,
@@ -118,6 +179,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       await sql`ALTER TABLE justificativas ADD COLUMN IF NOT EXISTS ponto_id TEXT`;
       await sql`ALTER TABLE justificativas ADD COLUMN IF NOT EXISTS descricao TEXT`;
       await sql`ALTER TABLE justificativas ADD COLUMN IF NOT EXISTS data_solicitacao TEXT`;
+      await sql`ALTER TABLE justificativas ADD COLUMN IF NOT EXISTS validado_por TEXT`;
       await sql`ALTER TABLE justificativas ADD COLUMN IF NOT EXISTS rejeitado_por TEXT`;
       await sql`ALTER TABLE justificativas ADD COLUMN IF NOT EXISTS setor_id TEXT`;
       await sql`ALTER TABLE justificativas ADD COLUMN IF NOT EXISTS data_aprovacao TIMESTAMP`;
@@ -218,12 +280,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const result = await sql`
         INSERT INTO justificativas (
           id, cooperado_id, cooperado_nome, ponto_id, motivo, descricao, data_solicitacao,
-          status, aprovado_por, rejeitado_por, motivo_rejeicao, setor_id, 
+          status, validado_por, rejeitado_por, motivo_rejeicao, setor_id, 
           data_plantao, entrada_plantao, saida_plantao, data_aprovacao, updated_at
         )
         VALUES (
           ${j.id}, ${j.cooperadoId}, ${j.cooperadoNome || null}, ${j.pontoId || null}, ${j.motivo || null}, ${j.descricao || null}, ${j.dataSolicitacao || null},
-          ${j.status || 'Pendente'}, ${j.aprovadoPor || null}, ${j.rejeitadoPor || null}, ${j.motivoRejeicao || null}, ${j.setorId || null},
+          ${j.status || 'Pendente'}, ${j.validadoPor || null}, ${j.rejeitadoPor || null}, ${j.motivoRejeicao || null}, ${j.setorId || null},
           ${j.dataPlantao || null}, ${j.entradaPlantao || null}, ${j.saidaPlantao || null}, ${j.dataAprovacao || null}, NOW()
         )
         ON CONFLICT (id) DO UPDATE SET
@@ -232,7 +294,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           descricao = ${j.descricao || null},
           data_solicitacao = ${j.dataSolicitacao || null},
           status = ${j.status || 'Pendente'},
-          aprovado_por = ${j.aprovadoPor || null},
+          validado_por = ${j.validadoPor || null},
           rejeitado_por = ${j.rejeitadoPor || null},
           motivo_rejeicao = ${j.motivoRejeicao || null},
           setor_id = ${j.setorId || null},

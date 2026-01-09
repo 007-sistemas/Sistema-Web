@@ -805,8 +805,8 @@ export const StorageService = {
     if (index >= 0) {
       list[index] = {
         ...list[index],
-        status: 'Aprovada',
-        aprovadoPor,
+        status: 'Fechado',
+        validadoPor: aprovadoPor,
         dataAprovacao: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -826,7 +826,7 @@ export const StorageService = {
     if (index >= 0) {
       list[index] = {
         ...list[index],
-        status: 'Rejeitada',
+        status: 'Rejeitado',
         rejeitadoPor,
         motivoRejeicao,
         dataAprovacao: new Date().toISOString(),

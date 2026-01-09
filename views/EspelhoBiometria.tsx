@@ -14,6 +14,7 @@ interface ShiftRow {
   entry?: RegistroPonto;
   exit?: RegistroPonto;
   status: string;
+  statusDetails?: string;
 }
 
 export const EspelhoBiometria: React.FC = () => {
@@ -188,10 +189,26 @@ export const EspelhoBiometria: React.FC = () => {
       }
 
       let statusDisplay = 'Em Aberto';
+      let statusDetails = '';
+      
       if (saidaPareada) {
-        if (saidaPareada.status === 'Pendente') statusDisplay = 'Aguardando Autorização';
-        else if (saidaPareada.status === 'Fechado') statusDisplay = 'Fechado';
-        else statusDisplay = 'Fechado';
+        if (saidaPareada.status === 'Fechado' && saidaPareada.validadoPor) {
+          statusDisplay = 'Fechado';
+          statusDetails = saidaPareada.validadoPor;
+        } else if (saidaPareada.status === 'Rejeitado' && saidaPareada.rejeitadoPor) {
+          statusDisplay = 'Recusado';
+          statusDetails = `${saidaPareada.rejeitadoPor}${saidaPareada.motivoRejeicao ? ': ' + saidaPareada.motivoRejeicao : ''}`;
+        } else if (saidaPareada.status === 'Pendente') {
+          statusDisplay = 'Aguardando Autorização';
+        } else {
+          statusDisplay = saidaPareada.status || 'Fechado';
+        }
+      } else if (entrada.status === 'Fechado' && entrada.validadoPor) {
+        statusDisplay = 'Fechado';
+        statusDetails = entrada.validadoPor;
+      } else if (entrada.status === 'Rejeitado' && entrada.rejeitadoPor) {
+        statusDisplay = 'Recusado';
+        statusDetails = `${entrada.rejeitadoPor}${entrada.motivoRejeicao ? ': ' + entrada.motivoRejeicao : ''}`;
       }
 
       shifts.push({
@@ -201,7 +218,8 @@ export const EspelhoBiometria: React.FC = () => {
         data: new Date(entrada.timestamp).toLocaleDateString('pt-BR'),
         entry: entrada,
         exit: saidaPareada,
-        status: statusDisplay
+        status: statusDisplay,
+        statusDetails
       });
     });
 
@@ -209,7 +227,17 @@ export const EspelhoBiometria: React.FC = () => {
     saidas.forEach(saida => {
       if (!processedExits.has(saida.id)) {
         let statusDisplay = 'Fechado (S/E)';
-        if (saida.status === 'Pendente') statusDisplay = 'Aguardando Autorização';
+        let statusDetails = '';
+        
+        if (saida.status === 'Fechado' && saida.validadoPor) {
+          statusDisplay = 'Fechado';
+          statusDetails = saida.validadoPor;
+        } else if (saida.status === 'Rejeitado' && saida.rejeitadoPor) {
+          statusDisplay = 'Recusado';
+          statusDetails = `${saida.rejeitadoPor}${saida.motivoRejeicao ? ': ' + saida.motivoRejeicao : ''}`;
+        } else if (saida.status === 'Pendente') {
+          statusDisplay = 'Aguardando Autorização';
+        }
 
         shifts.push({
           id: saida.id,
@@ -218,7 +246,8 @@ export const EspelhoBiometria: React.FC = () => {
           data: new Date(saida.timestamp).toLocaleDateString('pt-BR'),
           entry: undefined,
           exit: saida,
-          status: statusDisplay
+          status: statusDisplay,
+          statusDetails
         });
       }
     });
@@ -450,12 +479,18 @@ export const EspelhoBiometria: React.FC = () => {
                   </td>
 
                   <td className="px-6 py-4 text-center">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold shadow-sm ${
-                        row.status.includes('Aguardando') ? 'bg-amber-100 text-amber-700 border border-amber-200' :
-                        row.status.includes('Aberto') ? 'bg-amber-500 text-white' : 'bg-green-600 text-white'
-                    }`}>
-                        {row.status}
-                    </span>
+                    <div className="flex flex-col items-center gap-1">
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold shadow-sm ${
+                          row.status.includes('Aguardando') ? 'bg-amber-100 text-amber-700 border border-amber-200' :
+                          row.status.includes('Recusado') ? 'bg-red-100 text-red-700 border border-red-200' :
+                          row.status.includes('Aberto') ? 'bg-amber-500 text-white' : 'bg-green-600 text-white'
+                      }`}>
+                          {row.status}
+                      </span>
+                      {row.statusDetails && (
+                        <span className="text-xs text-gray-600 italic max-w-[150px]">{row.statusDetails}</span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-right text-xs text-gray-400">
                     {(row.entry?.isManual || row.exit?.isManual) ? 'Manual / Ajuste' : 'Biometria'}

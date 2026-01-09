@@ -15,6 +15,7 @@ interface ShiftRow {
   entry?: RegistroPonto;
   exit?: RegistroPonto;
   status: string;
+  statusDetails?: string;
 }
 
 interface Props {
@@ -444,8 +445,18 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
         const hasApproval = (entrada.validadoPor && entrada.status === 'Fechado') || (saidaPareada && saidaPareada.validadoPor && saidaPareada.status === 'Fechado');
 
         let statusLabel = 'Em Aberto';
+        let statusDetails = '';
+        
         if (entrada.status === 'Rejeitado' || (saidaPareada?.status === 'Rejeitado')) {
-          statusLabel = 'Rejeitado';
+          statusLabel = 'Recusado';
+          const rejPonto = entrada.status === 'Rejeitado' ? entrada : saidaPareada;
+          statusDetails = `${rejPonto?.rejeitadoPor || 'Gestor'}${rejPonto?.motivoRejeicao ? ': ' + rejPonto.motivoRejeicao : ''}`;
+        } else if (saidaPareada && saidaPareada.status === 'Fechado' && saidaPareada.validadoPor) {
+          statusLabel = 'Fechado';
+          statusDetails = saidaPareada.validadoPor;
+        } else if (entrada.status === 'Fechado' && entrada.validadoPor) {
+          statusLabel = 'Fechado';
+          statusDetails = entrada.validadoPor;
         } else if (manualPair && !hasApproval) {
           statusLabel = 'Pendente';
         } else if (aguardandoEntrada || aguardandoSaida) {
@@ -462,7 +473,8 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
           data: new Date(entrada.timestamp).toLocaleDateString(),
           entry: entrada,
           exit: saidaPareada,
-          status: statusLabel
+          status: statusLabel,
+          statusDetails
         });
       });
 
@@ -482,8 +494,7 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
               setorNome = setor?.nome || '';
             }
             
-            // Se está filtrando por hospital, mostrar apenas setor
-            const isFiltered = filterHospital && filterHospital !== '';
+          const isFiltered = filterHospital && filterHospital !== '';
             if (isFiltered) {
               return setorNome || hospitalNome;
             }
@@ -496,6 +507,19 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
             return hospitalNome;
           };
 
+          let statusLabel = 'Em Aberto';
+          let statusDetails = '';
+          
+          if (saida.status === 'Fechado' && saida.validadoPor) {
+            statusLabel = 'Fechado';
+            statusDetails = saida.validadoPor;
+          } else if (saida.status === 'Rejeitado' && saida.rejeitadoPor) {
+            statusLabel = 'Recusado';
+            statusDetails = `${saida.rejeitadoPor}${saida.motivoRejeicao ? ': ' + saida.motivoRejeicao : ''}`;
+          } else if (saida.status === 'Pendente') {
+            statusLabel = 'Pendente';
+          }
+
           shifts.push({
             id: saida.id,
             cooperadoNome: saida.cooperadoNome,
@@ -504,7 +528,8 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
             data: new Date(saida.timestamp).toLocaleDateString(),
             entry: undefined,
             exit: saida,
-            status: 'Em Aberto'
+            status: statusLabel,
+            statusDetails
           });
           processedExits.add(saida.id);
         }
@@ -1266,25 +1291,11 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
                       const isPendente = row.status === 'Pendente';
                       const isAberto = row.status.includes('Aberto');
                       const isFechado = row.status === 'Fechado';
-                      const isRejeitado = row.status === 'Rejeitado';
-                      
-                      // Debug: check what data we have
-                      console.log('[Status Badge] row:', {
-                        id: row.id,
-                        status: row.status,
-                        entryStatus: row.entry?.status,
-                        exitStatus: row.exit?.status,
-                        entryValidadoPor: row.entry?.validadoPor,
-                        exitValidadoPor: row.exit?.validadoPor,
-                        entryRejeitadoPor: row.entry?.rejeitadoPor,
-                        exitRejeitadoPor: row.exit?.rejeitadoPor,
-                        entryMotivoRejeicao: row.entry?.motivoRejeicao,
-                        exitMotivoRejeicao: row.exit?.motivoRejeicao
-                      });
+                      const isRecusado = row.status === 'Recusado';
                       
                       let badgeClass = 'bg-gray-500';
                       let label = row.status;
-                      let detailsText = null;
+                      let detailsText = row.statusDetails || null;
                       
                       if (isAnomalia) {
                         badgeClass = 'bg-red-600';
@@ -1297,39 +1308,9 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
                       } else if (isFechado) {
                         badgeClass = 'bg-green-600';
                         label = 'Fechado';
-                        const validador = row.entry?.validadoPor || row.exit?.validadoPor;
-                        if (validador) {
-                          detailsText = validador;
-                        } else {
-                          // Se não tem validadoPor direto, buscar justificativa aprovada
-                          const justificativas = StorageService.getJustificativas();
-                          const pontoId = row.entry?.id || row.exit?.id;
-                          const justificativaAprovada = justificativas.find(
-                            j => j.pontoId === pontoId && j.status === 'Aprovada'
-                          );
-                          if (justificativaAprovada && justificativaAprovada.aprovadoPor) {
-                            detailsText = justificativaAprovada.aprovadoPor;
-                          }
-                        }
-                      } else if (isRejeitado) {
+                      } else if (isRecusado) {
                         badgeClass = 'bg-red-600';
                         label = 'Recusado';
-                        const rejeitador = row.entry?.rejeitadoPor || row.exit?.rejeitadoPor;
-                        const motivo = row.entry?.motivoRejeicao || row.exit?.motivoRejeicao;
-                        if (rejeitador || motivo) {
-                          detailsText = `${rejeitador || 'Gestor'}${motivo ? ' - ' + motivo : ''}`;
-                        } else {
-                          // Se não tem rejeitadoPor direto, buscar justificativa rejeitada
-                          const justificativas = StorageService.getJustificativas();
-                          const pontoId = row.entry?.id || row.exit?.id;
-                          const justificativaRejeitada = justificativas.find(
-                            j => j.pontoId === pontoId && j.status === 'Rejeitada'
-                          );
-                          if (justificativaRejeitada && justificativaRejeitada.rejeitadoPor) {
-                            detailsText = justificativaRejeitada.rejeitadoPor;
-                          }
-                        }
-                      }
                       
                       return (
                         <div className="flex flex-col items-center gap-0.5">

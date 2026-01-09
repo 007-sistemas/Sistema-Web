@@ -189,11 +189,11 @@ export const AutorizacaoPonto: React.FC = () => {
         // Atualizar justificativa localmente
         StorageService.aprovarJustificativa(justificativa.id, aprovador);
 
-        // Atualizar no Neon
+        // Atualizar no Neon - usar status 'Fechado' com validadoPor
         const updatedJustificativa = {
           ...justificativa,
-          status: 'Aprovada' as const,
-          aprovadoPor: aprovador,
+          status: 'Fechado' as const,
+          validadoPor: aprovador,
           dataAprovacao: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         };
@@ -260,10 +260,10 @@ export const AutorizacaoPonto: React.FC = () => {
         // Atualizar justificativa localmente
         StorageService.rejeitarJustificativa(justificativa.id, rejeitador, reason);
 
-        // Atualizar no Neon
+        // Atualizar no Neon - usar status 'Rejeitado' com rejeitadoPor
         const updatedJustificativa = {
           ...justificativa,
-          status: 'Rejeitada' as const,
+          status: 'Rejeitado' as const,
           rejeitadoPor: rejeitador,
           motivoRejeicao: reason,
           dataAprovacao: new Date().toISOString(),
