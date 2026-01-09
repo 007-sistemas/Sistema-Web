@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { StorageService } from '../services/storage';
 import { Justificativa, Setor } from '../types';
-import { apiGet } from '../services/api';
+import { apiGet, apiPost } from '../services/api';
 import { CheckCircle, XCircle, AlertCircle, Calendar, Clock, MapPin, User, CheckSquare, Search, Filter, X } from 'lucide-react';
 
 export const AutorizacaoPonto: React.FC = () => {
@@ -167,7 +167,7 @@ export const AutorizacaoPonto: React.FC = () => {
     };
   };
 
-  const handleApprove = (justificativa: Justificativa) => {
+  const handleApprove = async (justificativa: Justificativa) => {
     if (!confirm('Confirmar autorização desta justificativa?')) return;
 
     try {
@@ -176,7 +176,18 @@ export const AutorizacaoPonto: React.FC = () => {
         
         console.log('[AutorizacaoPonto] Aprovando justificativa:', justificativa.id, 'por', aprovador);
         
+        // Atualizar justificativa localmente
         StorageService.aprovarJustificativa(justificativa.id, aprovador);
+
+        // Atualizar no Neon
+        const updatedJustificativa = {
+          ...justificativa,
+          status: 'Aprovada' as const,
+          aprovadoPor: aprovador,
+          dataAprovacao: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        await apiPost('sync', { action: 'sync_justificativa', data: updatedJustificativa });
 
         // IMPORTANTE: Atualizar TODOS os pontos relacionados (entrada E saída)
         if (justificativa.pontoId) {
@@ -212,14 +223,14 @@ export const AutorizacaoPonto: React.FC = () => {
         }
 
         alert('Justificativa aprovada com sucesso!');
-        loadData();
+        await loadData();
     } catch (error) {
         console.error("Erro ao aprovar:", error);
         alert("Erro ao processar aprovação.");
     }
   };
 
-  const handleReject = (justificativa: Justificativa) => {
+  const handleReject = async (justificativa: Justificativa) => {
     const reason = prompt("Motivo da rejeição:");
     if (reason === null) return; // Cancelled by user
     if (!reason.trim()) {
@@ -233,7 +244,19 @@ export const AutorizacaoPonto: React.FC = () => {
         
         console.log('[AutorizacaoPonto] Rejeitando justificativa:', justificativa.id, 'por', rejeitador, 'motivo:', reason);
         
+        // Atualizar justificativa localmente
         StorageService.rejeitarJustificativa(justificativa.id, rejeitador, reason);
+
+        // Atualizar no Neon
+        const updatedJustificativa = {
+          ...justificativa,
+          status: 'Rejeitada' as const,
+          rejeitadoPor: rejeitador,
+          motivoRejeicao: reason,
+          dataAprovacao: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        await apiPost('sync', { action: 'sync_justificativa', data: updatedJustificativa });
 
         // IMPORTANTE: Atualizar TODOS os pontos relacionados (entrada E saída)
         if (justificativa.pontoId) {
@@ -284,7 +307,7 @@ export const AutorizacaoPonto: React.FC = () => {
         }
         
         alert('Justificativa rejeitada.');
-        loadData();
+        await loadData();
     } catch (error) {
         console.error("Erro ao rejeitar:", error);
         alert("Erro ao processar rejeição.");
