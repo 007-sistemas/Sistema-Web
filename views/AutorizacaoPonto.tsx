@@ -3,7 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { StorageService } from '../services/storage';
 import { Justificativa, Setor } from '../types';
 import { apiGet, apiPost, syncToNeon } from '../services/api';
-import { CheckCircle, XCircle, AlertCircle, Calendar, Clock, MapPin, User, CheckSquare, Search, Filter, X } from 'lucide-react';
+import { CheckCircle, XCircle, AlertCircle, Calendar, Clock, MapPin, User, CheckSquare, Search, Filter, X, FileText, FileSpreadsheet } from 'lucide-react';
+import { exportJustificativasToExcel, exportJustificativasToPDF, ExportFilters, JustificativaStats } from '../services/reportExport';
 
 export const AutorizacaoPonto: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'pendentes' | 'historico'>('pendentes');
@@ -112,6 +113,67 @@ export const AutorizacaoPonto: React.FC = () => {
     setFilterHospital('');
     setFilterDataIni('');
     setFilterDataFim('');
+  };
+
+  // Preparar linhas para exportação do histórico
+  const buildHistoricoRows = () => {
+    const setoresMap = new Map<string, string>();
+    setoresDisponiveis.forEach(s => setoresMap.set(String(s.id), s.nome));
+    const pontos = StorageService.getPontos();
+    const hospitaisMap = new Map<string, string>();
+    hospitais.forEach(h => hospitaisMap.set(String(h.id), h.nome));
+
+    return getFilteredHistorico().map(j => {
+      const ponto = j.pontoId ? pontos.find(p => p.id === j.pontoId) : null;
+      const hospitalNome = ponto ? (hospitaisMap.get(String(ponto.hospitalId)) || '-') : '-';
+      const pontoInfo = getPontoInfo(j);
+      const statusLabel = j.status === 'Fechado' ? 'Aprovada' : j.status === 'Rejeitado' ? 'Recusada' : 'Pendente';
+      return {
+        dataSolicitacao: new Date(j.dataSolicitacao).toLocaleDateString('pt-BR'),
+        cooperado: j.cooperadoNome,
+        hospital: hospitalNome,
+        setor: j.setorId ? (setoresMap.get(String(j.setorId)) || `ID: ${j.setorId}`) : '-',
+        dataPlantao: pontoInfo?.data || '-',
+        entrada: pontoInfo?.horarioEntrada || '--:--',
+        saida: pontoInfo?.horarioSaida || '--:--',
+        motivo: j.motivo,
+        status: statusLabel,
+        autorizadoPor: j.validadoPor || j.rejeitadoPor || '-',
+        dataDecisao: j.dataAprovacao ? new Date(j.dataAprovacao).toLocaleDateString('pt-BR') : '-'
+      };
+    });
+  };
+
+  const buildFiltersLabel = (): ExportFilters => {
+    const filters: ExportFilters = {};
+    if (filterCooperado) filters.cooperado = filterCooperado;
+    if (filterHospital) {
+      const h = hospitais.find(h => String(h.id) === String(filterHospital));
+      filters.hospital = h?.nome || filterHospital;
+    }
+    if (filterDataIni) filters.dataIni = filterDataIni;
+    if (filterDataFim) filters.dataFim = filterDataFim;
+    return filters;
+  };
+
+  const buildStats = (rows: ReturnType<typeof buildHistoricoRows>): JustificativaStats => {
+    const total = rows.length;
+    const aprovadas = rows.filter(r => r.status === 'Aprovada').length;
+    const recusadas = rows.filter(r => r.status === 'Recusada').length;
+    const pendentes = rows.filter(r => r.status === 'Pendente').length;
+    return { total, aprovadas, recusadas, pendentes };
+  };
+
+  const handleExportHistoricoExcel = async () => {
+    const rows = buildHistoricoRows();
+    if (rows.length === 0) { alert('Nenhum dado para exportar'); return; }
+    await exportJustificativasToExcel(rows, buildFiltersLabel(), buildStats(rows));
+  };
+
+  const handleExportHistoricoPDF = async () => {
+    const rows = buildHistoricoRows();
+    if (rows.length === 0) { alert('Nenhum dado para exportar'); return; }
+    await exportJustificativasToPDF(rows, buildFiltersLabel(), buildStats(rows));
   };
 
   // Helper para buscar ponto relacionado e extrair informações
@@ -507,9 +569,29 @@ export const AutorizacaoPonto: React.FC = () => {
           <>
             {/* FILTROS */}
             <div className="p-4 bg-gray-50 border-b border-gray-200">
-              <div className="flex items-center gap-2 mb-3 font-semibold text-gray-700">
-                <Filter className="h-4 w-4" />
-                Filtros
+              <div className="flex items-center justify-between mb-3 font-semibold text-gray-700">
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4" />
+                  Filtros
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleExportHistoricoPDF}
+                    className="flex items-center gap-2 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-xs"
+                    title="Exportar histórico em PDF"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Exportar PDF
+                  </button>
+                  <button
+                    onClick={handleExportHistoricoExcel}
+                    className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-xs"
+                    title="Exportar histórico em Excel"
+                  >
+                    <FileSpreadsheet className="h-4 w-4" />
+                    Exportar Excel
+                  </button>
+                </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div className="space-y-1">

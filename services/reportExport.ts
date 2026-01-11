@@ -30,6 +30,14 @@ export interface ExportStats {
   totalHoras: string;
 }
 
+// Estatísticas para justificativas
+export interface JustificativaStats {
+  total: number;
+  aprovadas: number;
+  recusadas: number;
+  pendentes: number;
+}
+
 /**
  * Exportar dados de relatório para Excel (.xlsx)
  */
@@ -588,6 +596,202 @@ export const exportToPDFByCooperado = async (
     console.log('[reportExport] PDF por Cooperado exportado com sucesso');
   } catch (error) {
     console.error('[reportExport] Erro ao exportar PDF por Cooperado:', error);
+    alert('Erro ao exportar PDF. Verifique o console.');
+  }
+};
+
+/**
+ * Exportar histórico de justificativas para Excel
+ */
+export const exportJustificativasToExcel = async (
+  data: Array<{
+    dataSolicitacao: string;
+    cooperado: string;
+    hospital: string;
+    setor: string;
+    dataPlantao: string;
+    entrada: string;
+    saida: string;
+    motivo: string;
+    status: string;
+    autorizadoPor: string;
+    dataDecisao: string;
+  }>,
+  filters: ExportFilters,
+  stats: JustificativaStats
+) => {
+  try {
+    const workbook = new Workbook.Workbook();
+    const worksheet = workbook.addWorksheet('Histórico de Justificativas');
+
+    worksheet.columns = [
+      { header: 'Data Solicitação', key: 'dataSolicitacao', width: 16 },
+      { header: 'Cooperado', key: 'cooperado', width: 24 },
+      { header: 'Hospital', key: 'hospital', width: 18 },
+      { header: 'Setor', key: 'setor', width: 18 },
+      { header: 'Data do Plantão', key: 'dataPlantao', width: 16 },
+      { header: 'Entrada', key: 'entrada', width: 10 },
+      { header: 'Saída', key: 'saida', width: 10 },
+      { header: 'Motivo', key: 'motivo', width: 18 },
+      { header: 'Status', key: 'status', width: 14 },
+      { header: 'Autorizado Por', key: 'autorizadoPor', width: 16 },
+      { header: 'Data Decisão', key: 'dataDecisao', width: 14 }
+    ];
+
+    const headerRow = worksheet.getRow(1);
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF6A1B9A' } };
+    headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
+    headerRow.height = 20;
+
+    data.forEach((row) => {
+      const newRow = worksheet.addRow(row);
+      if (worksheet.lastRow && worksheet.lastRow.number % 2 === 0) {
+        newRow.eachCell({ includeEmpty: true }, (cell) => {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F5F5' } };
+        });
+      }
+      newRow.eachCell((cell) => {
+        cell.alignment = { horizontal: 'left', vertical: 'middle' };
+      });
+      const statusCell = newRow.getCell('status');
+      const val = String(statusCell.value || '').toLowerCase();
+      if (val.includes('apro')) statusCell.font = { color: { argb: 'FF2E7D32' } };
+      if (val.includes('recus')) statusCell.font = { color: { argb: 'FFC62828' } };
+      if (val.includes('pend')) statusCell.font = { color: { argb: 'FFF57C00' } };
+    });
+
+    worksheet.addRow({});
+    const resumoRow = worksheet.addRow({
+      cooperado: 'RESUMO',
+      hospital: `Total: ${stats.total} | Aprovadas: ${stats.aprovadas} | Recusadas: ${stats.recusadas} | Pendentes: ${stats.pendentes}`
+    });
+    resumoRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    resumoRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF6A1B9A' } };
+
+    const filterText = buildFilterText(filters);
+    const filterRow = worksheet.insertRow(1, [filterText]);
+    filterRow.font = { italic: true, color: { argb: 'FF666666' } };
+    filterRow.alignment = { horizontal: 'left' };
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `historico_justificativas_${new Date().toISOString().split('T')[0]}.xlsx`;
+    link.click();
+    URL.revokeObjectURL(url);
+
+    console.log('[reportExport] Excel histórico de justificativas exportado');
+  } catch (error) {
+    console.error('[reportExport] Erro ao exportar Excel (justificativas):', error);
+    alert('Erro ao exportar Excel. Verifique o console.');
+  }
+};
+
+/**
+ * Exportar histórico de justificativas para PDF
+ */
+export const exportJustificativasToPDF = async (
+  data: Array<{
+    dataSolicitacao: string;
+    cooperado: string;
+    hospital: string;
+    setor: string;
+    dataPlantao: string;
+    entrada: string;
+    saida: string;
+    motivo: string;
+    status: string;
+    autorizadoPor: string;
+    dataDecisao: string;
+  }>,
+  filters: ExportFilters,
+  stats: JustificativaStats
+) => {
+  try {
+    const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    let yPosition = 15;
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(18);
+    pdf.setTextColor(106, 27, 154);
+    pdf.text('HISTÓRICO DE JUSTIFICATIVAS DE PLANTÃO', pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 10;
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    pdf.setTextColor(100, 100, 100);
+    const filterText = buildFilterText(filters);
+    const splitFilterText = pdf.splitTextToSize(filterText, pageWidth - 20);
+    pdf.text(splitFilterText, 10, yPosition);
+    yPosition += splitFilterText.length * 5 + 5;
+
+    const cardWidth = (pageWidth - 20) / 4 - 3;
+    const cardHeight = 25;
+    const cardYPos = yPosition;
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(9);
+    drawCard(pdf, 10, cardYPos, cardWidth, cardHeight, 'Total', String(stats.total), '#6A1B9A');
+    drawCard(pdf, 10 + cardWidth + 3, cardYPos, cardWidth, cardHeight, 'Aprovadas', String(stats.aprovadas), '#4CAF50');
+    drawCard(pdf, 10 + (cardWidth + 3) * 2, cardYPos, cardWidth, cardHeight, 'Recusadas', String(stats.recusadas), '#F44336');
+    drawCard(pdf, 10 + (cardWidth + 3) * 3, cardYPos, cardWidth, cardHeight, 'Pendentes', String(stats.pendentes), '#FF9800');
+
+    yPosition = cardYPos + cardHeight + 10;
+
+    const tableColumns = [
+      { header: 'Data Solicitação', dataKey: 'dataSolicitacao' },
+      { header: 'Cooperado', dataKey: 'cooperado' },
+      { header: 'Hospital', dataKey: 'hospital' },
+      { header: 'Setor', dataKey: 'setor' },
+      { header: 'Data do Plantão', dataKey: 'dataPlantao' },
+      { header: 'Entrada', dataKey: 'entrada' },
+      { header: 'Saída', dataKey: 'saida' },
+      { header: 'Motivo', dataKey: 'motivo' },
+      { header: 'Status', dataKey: 'status' },
+      { header: 'Autorizado Por', dataKey: 'autorizadoPor' },
+      { header: 'Data Decisão', dataKey: 'dataDecisao' }
+    ];
+
+    autoTable(pdf, {
+      columns: tableColumns,
+      body: data,
+      startY: yPosition,
+      didDrawPage: (dataCtx) => {
+        const pageSize = pdf.internal.pageSize;
+        const pageHeight = pageSize.getHeight();
+        const pageWidthLocal = pageSize.getWidth();
+        pdf.setFontSize(8);
+        pdf.setTextColor(150, 150, 150);
+        pdf.text(
+          `Gerado em ${new Date().toLocaleString('pt-BR')} | Página ${dataCtx.pageNumber}`,
+          pageWidthLocal / 2,
+          pageHeight - 10,
+          { align: 'center' }
+        );
+      },
+      theme: 'grid',
+      headStyles: { fillColor: [106, 27, 154], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center', fontSize: 10 },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+      bodyStyles: { fontSize: 9, textColor: [0, 0, 0], halign: 'left' },
+      margin: 10,
+      didDrawCell: (dataCell) => {
+        if (dataCell.column.dataKey === 'status') {
+          const cellValue = dataCell.cell.text.toString().toLowerCase();
+          if (cellValue.includes('aprov')) { dataCell.cell.styles.textColor = [46, 125, 50]; dataCell.cell.styles.fontStyle = 'bold'; }
+          else if (cellValue.includes('recus')) { dataCell.cell.styles.textColor = [198, 40, 40]; dataCell.cell.styles.fontStyle = 'bold'; }
+          else if (cellValue.includes('pend')) { dataCell.cell.styles.textColor = [255, 152, 0]; dataCell.cell.styles.fontStyle = 'bold'; }
+        }
+      }
+    });
+
+    pdf.save(`historico_justificativas_${new Date().toISOString().split('T')[0]}.pdf`);
+    console.log('[reportExport] PDF histórico de justificativas exportado');
+  } catch (error) {
+    console.error('[reportExport] Erro ao exportar PDF (justificativas):', error);
     alert('Erro ao exportar PDF. Verifique o console.');
   }
 };
