@@ -826,12 +826,19 @@ export const StorageService = {
       // Atualizar RegistroPonto associados (ENTRADA e SAÍDA)
       if (justificativa.pontoId) {
         const pontos = StorageService.getPontos();
-        const pontoIndices = pontos
-          .map((p, idx) => ({ p, idx }))
-          .filter(({ p }) => p.id === justificativa.pontoId)
-          .map(({ idx }) => idx);
         
-        pontoIndices.forEach(idx => {
+        // Encontrar o ponto de saída (pontoId armazena a saída)
+        const saidaIndex = pontos.findIndex(p => p.id === justificativa.pontoId);
+        
+        // Encontrar o ponto de entrada (tem relatedId apontando para a saída)
+        const entradaIndex = pontos.findIndex(p => p.relatedId === justificativa.pontoId);
+        
+        // Atualizar ambos os pontos
+        const indicesToUpdate = new Set<number>();
+        if (saidaIndex >= 0) indicesToUpdate.add(saidaIndex);
+        if (entradaIndex >= 0) indicesToUpdate.add(entradaIndex);
+        
+        indicesToUpdate.forEach(idx => {
           pontos[idx] = {
             ...pontos[idx],
             status: 'Fechado',
@@ -842,7 +849,7 @@ export const StorageService = {
         });
         
         localStorage.setItem(PONTOS_KEY, JSON.stringify(pontos));
-        pontoIndices.forEach(idx => syncToNeon('sync_ponto', pontos[idx]));
+        indicesToUpdate.forEach(idx => syncToNeon('sync_ponto', pontos[idx]));
       }
       
       // Sincronizar com Neon
@@ -871,12 +878,19 @@ export const StorageService = {
       // Atualizar RegistroPonto associados (ENTRADA e SAÍDA) para Rejeitado
       if (justificativa.pontoId) {
         const pontos = StorageService.getPontos();
-        const pontoIndices = pontos
-          .map((p, idx) => ({ p, idx }))
-          .filter(({ p }) => p.id === justificativa.pontoId)
-          .map(({ idx }) => idx);
         
-        pontoIndices.forEach(idx => {
+        // Encontrar o ponto de saída (pontoId armazena a saída)
+        const saidaIndex = pontos.findIndex(p => p.id === justificativa.pontoId);
+        
+        // Encontrar o ponto de entrada (tem relatedId apontando para a saída)
+        const entradaIndex = pontos.findIndex(p => p.relatedId === justificativa.pontoId);
+        
+        // Atualizar ambos os pontos
+        const indicesToUpdate = new Set<number>();
+        if (saidaIndex >= 0) indicesToUpdate.add(saidaIndex);
+        if (entradaIndex >= 0) indicesToUpdate.add(entradaIndex);
+        
+        indicesToUpdate.forEach(idx => {
           pontos[idx] = {
             ...pontos[idx],
             status: 'Rejeitado',
@@ -888,7 +902,7 @@ export const StorageService = {
         });
         
         localStorage.setItem(PONTOS_KEY, JSON.stringify(pontos));
-        pontoIndices.forEach(idx => syncToNeon('sync_ponto', pontos[idx]));
+        indicesToUpdate.forEach(idx => syncToNeon('sync_ponto', pontos[idx]));
       }
       
       // Sincronizar com Neon
