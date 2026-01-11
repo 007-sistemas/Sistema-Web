@@ -206,8 +206,11 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
     let allPontos = StorageService.getPontos();
     const existingIds = new Set(allPontos.map(p => p.id));
 
+    console.log('[ControleDeProducao] 🎯 Verificando modo e cooperado:', 'mode=', mode, 'cooperadoLogadoId=', cooperadoLogadoId, 'cooperadoLogadoData=', cooperadoLogadoData?.nome);
+
     // Complementar com justificativas pendentes/rejeitadas do cooperado (não geram ponto até aprovação)
     if (mode === 'cooperado' && (cooperadoLogadoId || cooperadoLogadoData?.nome)) {
+      console.log('[ControleDeProducao] ✅ Entrando no bloco de busca de justificativas para cooperado');
       try {
         const remoteJust = await apiGet<Justificativa[]>('sync?action=list_justificativas');
         console.log('[ControleDeProducao] 📥 Recebidas', remoteJust.length, 'justificativas remotas');
