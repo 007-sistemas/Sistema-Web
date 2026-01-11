@@ -120,7 +120,9 @@ export const AutorizacaoPonto: React.FC = () => {
     
     // Se tem dataPlantao (informada manualmente), usar ela
     if (justificativa.dataPlantao) {
-      const dataFormatada = new Date(justificativa.dataPlantao).toLocaleDateString();
+      // Não usar new Date() para evitar problema de timezone - formatar direto da string YYYY-MM-DD
+      const [year, month, day] = justificativa.dataPlantao.split('-');
+      const dataFormatada = `${day}/${month}/${year}`;
       return {
         data: dataFormatada,
         horarioEntrada: justificativa.entradaPlantao || null,
