@@ -855,6 +855,41 @@ export const StorageService = {
     }
   },
 
+  refreshJustificativasFromRemote: async () => {
+    try {
+      const rows = await apiGet<any[]>('sync?action=list_justificativas');
+      if (!Array.isArray(rows)) return;
+
+      const mapped: Justificativa[] = rows.map((row: any) => ({
+        id: row.id,
+        cooperadoId: row.cooperadoId,
+        cooperadoNome: row.cooperadoNome,
+        pontoId: row.pontoId,
+        hospitalId: row.hospitalId,
+        motivo: row.motivo,
+        descricao: row.descricao,
+        dataSolicitacao: row.dataSolicitacao,
+        status: row.status === 'Aguardando autorização' ? 'Pendente' : row.status,
+        validadoPor: row.validadoPor,
+        rejeitadoPor: row.rejeitadoPor,
+        motivoRejeicao: row.motivoRejeicao,
+        setorId: row.setorId,
+        dataPlantao: row.dataPlantao,
+        entradaPlantao: row.entradaPlantao,
+        saidaPlantao: row.saidaPlantao,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt || new Date().toISOString(),
+        dataAprovacao: row.dataAprovacao
+      }));
+
+      // Atualizar localStorage com justificativas do Neon
+      localStorage.setItem(JUSTIFICATIVAS_KEY, JSON.stringify(mapped));
+      console.log(`[StorageService] ✅ ${mapped.length} justificativas sincronizadas do Neon`);
+    } catch (err) {
+      console.error('[StorageService] Erro ao sincronizar justificativas do Neon:', err);
+    }
+  },
+
   // USER PREFERENCES
   getUserPreferences: (): UserPreferences | null => {
     const session = StorageService.getSession();

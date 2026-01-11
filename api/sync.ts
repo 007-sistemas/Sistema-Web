@@ -22,6 +22,86 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const sql = neon(connectionString);
 
+    // Garantir schema mínimo antes de consultas GET (evita erro 500 por colunas ausentes)
+    const ensureSchemaForGet = async () => {
+      // justificativas
+      await sql`
+        CREATE TABLE IF NOT EXISTS justificativas (
+          id TEXT PRIMARY KEY,
+          cooperado_id TEXT NOT NULL,
+          cooperado_nome TEXT,
+          ponto_id TEXT,
+          motivo TEXT,
+          descricao TEXT,
+          data_solicitacao TEXT,
+          status TEXT DEFAULT 'Pendente',
+          validado_por TEXT,
+          aprovado_por TEXT,
+          rejeitado_por TEXT,
+          motivo_rejeicao TEXT,
+          setor_id TEXT,
+          hospital_id TEXT,
+          data_plantao TEXT,
+          entrada_plantao TEXT,
+          saida_plantao TEXT,
+          data_aprovacao TIMESTAMP,
+          created_at TIMESTAMP DEFAULT NOW(),
+          updated_at TIMESTAMP DEFAULT NOW()
+        );
+      `;
+
+      try {
+        await sql`ALTER TABLE justificativas ADD COLUMN IF NOT EXISTS ponto_id TEXT`;
+        await sql`ALTER TABLE justificativas ADD COLUMN IF NOT EXISTS descricao TEXT`;
+        await sql`ALTER TABLE justificativas ADD COLUMN IF NOT EXISTS data_solicitacao TEXT`;
+        await sql`ALTER TABLE justificativas ADD COLUMN IF NOT EXISTS validado_por TEXT`;
+        await sql`ALTER TABLE justificativas ADD COLUMN IF NOT EXISTS rejeitado_por TEXT`;
+        await sql`ALTER TABLE justificativas ADD COLUMN IF NOT EXISTS setor_id TEXT`;
+        await sql`ALTER TABLE justificativas ADD COLUMN IF NOT EXISTS hospital_id TEXT`;
+        await sql`ALTER TABLE justificativas ADD COLUMN IF NOT EXISTS data_aprovacao TIMESTAMP`;
+        await sql`ALTER TABLE justificativas ADD COLUMN IF NOT EXISTS data_plantao TEXT`;
+        await sql`ALTER TABLE justificativas ADD COLUMN IF NOT EXISTS entrada_plantao TEXT`;
+        await sql`ALTER TABLE justificativas ADD COLUMN IF NOT EXISTS saida_plantao TEXT`;
+        await sql`ALTER TABLE justificativas ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`;
+      } catch (alterErr) {
+        console.log('[sync][GET] Aviso ao ajustar schema de justificativas:', alterErr);
+      }
+
+      // pontos
+      await sql`
+        CREATE TABLE IF NOT EXISTS pontos (
+          id TEXT PRIMARY KEY,
+          cooperado_id TEXT NOT NULL,
+          created_at TIMESTAMP DEFAULT NOW()
+        );
+      `;
+
+      try {
+        await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS codigo TEXT`;
+        await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS cooperado_nome TEXT`;
+        await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS date TEXT`;
+        await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS tipo TEXT`;
+        await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS entrada TEXT`;
+        await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS saida TEXT`;
+        await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS hospital_id TEXT`;
+        await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS setor_id TEXT`;
+        await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS biometria_entrada_hash TEXT`;
+        await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS biometria_saida_hash TEXT`;
+        await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS related_id TEXT`;
+        await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS status TEXT`;
+        await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS is_manual BOOLEAN`;
+        await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS local TEXT`;
+        await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS validado_por TEXT`;
+        await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS rejeitado_por TEXT`;
+        await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS motivo_rejeicao TEXT`;
+        await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS timestamp TEXT`;
+      } catch (alterErr) {
+        console.log('[sync][GET] Aviso ao ajustar schema de pontos:', alterErr);
+      }
+    };
+
+    await ensureSchemaForGet();
+
     // GET helpers (evita criar novo endpoint para listar justificativas)
     if (req.method === 'GET') {
       const actionParam = (req.query.action || req.query.resource || '').toString();
@@ -45,7 +125,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             j.entrada_plantao   AS "entradaPlantao",
             j.saida_plantao     AS "saidaPlantao",
             j.created_at        AS "createdAt",
-            j.updated_at        AS "updatedAt",
             j.data_aprovacao    AS "dataAprovacao",
             p.timestamp         AS "pontoTimestamp",
             p.entrada           AS "pontoEntrada",

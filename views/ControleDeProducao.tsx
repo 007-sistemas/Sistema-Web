@@ -75,6 +75,7 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
   const cooperadoLogadoId = mode === 'cooperado' && session?.type === 'COOPERADO' ? session?.user?.id : null;
   const cooperadoLogadoData = mode === 'cooperado' && session?.type === 'COOPERADO' ? session?.user : null;
 
+
   useEffect(() => {
     // Carregar sessão se mode=cooperado
     if (mode === 'cooperado') {
@@ -181,6 +182,7 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
       await StorageService.refreshHospitaisFromRemote();
       await StorageService.refreshCooperadosFromRemote();
       await StorageService.refreshPontosFromRemote();
+      await StorageService.refreshJustificativasFromRemote();
     } catch (error) {
       console.error('Erro ao sincronizar dados do Neon:', error);
     }
@@ -189,7 +191,25 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
     setHospitais(StorageService.getHospitais());
     
     // IMPORTANTE: Ler diretamente do localStorage sem cache
-    const allPontos = StorageService.getPontos();
+    let allPontos = StorageService.getPontos();
+    const existingIds = new Set(allPontos.map(p => p.id));
+
+    // Complementar com justificativas pendentes/rejeitadas do cooperado (não geram ponto até aprovação)
+    if (mode === 'cooperado' && cooperadoLogadoId) {
+      try {
+        const remoteJust = await apiGet<Justificativa[]>('sync?action=list_justificativas');
+        const filteredJust = remoteJust.filter(j => j.cooperadoId === cooperadoLogadoId);
+        const missingJust = filteredJust.filter(j => !j.pontoId || !existingIds.has(j.pontoId));
+        const synth = buildPontosFromJustificativas(missingJust, StorageService.getHospitais(), existingIds);
+        allPontos = [...allPontos, ...synth];
+      } catch (err) {
+        console.warn('[ControleDeProducao] Falha ao buscar justificativas remotas, usando local:', err);
+        const localJust = StorageService.getJustificativas().filter(j => j.cooperadoId === cooperadoLogadoId);
+        const missingJust = localJust.filter(j => !j.pontoId || !existingIds.has(j.pontoId));
+        const synth = buildPontosFromJustificativas(missingJust, StorageService.getHospitais(), existingIds);
+        allPontos = [...allPontos, ...synth];
+      }
+    }
     
     console.log('[ControleDeProducao] Total de pontos carregados:', allPontos.length);
     console.log('[ControleDeProducao] Pontos com status Rejeitado:', allPontos.filter(p => p.status === 'Rejeitado').length);
@@ -197,9 +217,10 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
     console.log('[ControleDeProducao] Pontos com validadoPor:', allPontos.filter(p => p.validadoPor).length);
     console.log('[ControleDeProducao] Pontos com rejeitadoPor:', allPontos.filter(p => p.rejeitadoPor).length);
     
-    // FILTRAR pontos rejeitados - não devem aparecer no controle de produção
-    // Plantões aprovados (Fechado) DEVEM aparecer
-    const pontosValidos = allPontos.filter(p => p.status !== 'Rejeitado');
+    // Gestor não vê rejeitados; cooperado vê tudo (inclusive recusados)
+    const pontosValidos = mode === 'manager'
+      ? allPontos.filter(p => p.status !== 'Rejeitado')
+      : allPontos;
     console.log('[ControleDeProducao] Pontos após filtrar rejeitados:', pontosValidos.length);
     
     // Carregar setores de todos os hospitais para exibição (Hospital - Setor quando filtro vazio)
@@ -302,12 +323,98 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
     }
   };
 
+  // Constrói pontos sintéticos a partir de justificativas sem ponto gerado (pendentes/recusadas)
+  const buildPontosFromJustificativas = (justs: Justificativa[], hospitaisList: Hospital[], existingIds?: Set<string>): RegistroPonto[] => {
+    const hospMap = new Map(hospitaisList.map(h => [String(h.id), h.nome]));
+    const resultados: RegistroPonto[] = [];
+
+    justs.forEach(j => {
+      if (!j.dataPlantao) return;
+
+      // Se já existe ponto vinculado e está na lista atual, não sintetizar duplicado
+      if (j.pontoId && existingIds && existingIds.has(j.pontoId)) return;
+
+      const hospNome = j.hospitalId ? hospMap.get(String(j.hospitalId)) || 'Hospital não informado' : 'Hospital não informado';
+      const baseDate = j.dataPlantao;
+      const entradaHora = j.entradaPlantao || '00:00';
+      const saidaHora = j.saidaPlantao || entradaHora;
+
+      const entradaTs = new Date(`${baseDate}T${entradaHora}:00`).toISOString();
+      let saidaDate = baseDate;
+      if (saidaHora < entradaHora) {
+        const d = new Date(baseDate);
+        d.setDate(d.getDate() + 1);
+        saidaDate = d.toISOString().split('T')[0];
+      }
+      const saidaTs = new Date(`${saidaDate}T${saidaHora}:00`).toISOString();
+
+      const entryId = `just-${j.id}-ent`;
+      const exitId = `just-${j.id}-sai`;
+
+      const status = j.status === 'Fechado' ? 'Fechado' : j.status === 'Rejeitado' ? 'Rejeitado' : 'Pendente';
+
+      const pontoEntrada: RegistroPonto = {
+        id: entryId,
+        codigo: `JUST-${j.id}`,
+        cooperadoId: j.cooperadoId,
+        cooperadoNome: j.cooperadoNome,
+        timestamp: entradaTs,
+        tipo: TipoPonto.ENTRADA,
+        data: baseDate,
+        entrada: j.entradaPlantao,
+        saida: undefined,
+        local: hospNome,
+        hospitalId: j.hospitalId,
+        setorId: j.setorId,
+        observacao: j.descricao,
+        relatedId: exitId,
+        status,
+        isManual: true,
+        validadoPor: status === 'Fechado' ? j.validadoPor : undefined,
+        rejeitadoPor: status === 'Rejeitado' ? j.rejeitadoPor : undefined,
+        motivoRejeicao: j.motivoRejeicao,
+        biometriaEntradaHash: undefined,
+        biometriaSaidaHash: undefined
+      };
+
+      const pontoSaida: RegistroPonto = {
+        id: exitId,
+        codigo: `JUST-${j.id}`,
+        cooperadoId: j.cooperadoId,
+        cooperadoNome: j.cooperadoNome,
+        timestamp: saidaTs,
+        tipo: TipoPonto.SAIDA,
+        data: saidaDate,
+        entrada: undefined,
+        saida: j.saidaPlantao,
+        local: hospNome,
+        hospitalId: j.hospitalId,
+        setorId: j.setorId,
+        observacao: j.descricao,
+        relatedId: entryId,
+        status,
+        isManual: true,
+        validadoPor: status === 'Fechado' ? j.validadoPor : undefined,
+        rejeitadoPor: status === 'Rejeitado' ? j.rejeitadoPor : undefined,
+        motivoRejeicao: j.motivoRejeicao,
+        biometriaEntradaHash: undefined,
+        biometriaSaidaHash: undefined
+      };
+
+      resultados.push(pontoEntrada, pontoSaida);
+    });
+
+    return resultados;
+  };
+
   // --- FILTER LOGIC ---
   const getFilteredLogs = () => {
     return logs.filter(log => {
       // 0. Modo Cooperado: filtrar apenas registros do cooperado logado
-      if (mode === 'cooperado' && cooperadoLogadoId && log.cooperadoId !== cooperadoLogadoId) {
-        return false;
+      if (mode === 'cooperado' && cooperadoLogadoId) {
+        const sameId = log.cooperadoId === cooperadoLogadoId;
+        const sameName = log.cooperadoNome && cooperadoLogadoData?.nome && log.cooperadoNome.trim().toLowerCase() === cooperadoLogadoData.nome.trim().toLowerCase();
+        if (!sameId && !sameName) return false;
       }
 
       // 1. Hospital Filter
@@ -815,7 +922,7 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
     setMissingDesc('');
   };
 
-  const submitMissingShift = () => {
+  const submitMissingShift = async () => {
     if (mode !== 'cooperado') return;
     if (!cooperadoLogadoData) return;
 
@@ -865,7 +972,8 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
 
     alert('Plantão incluído e enviado para aprovação do gestor.');
     resetMissingShiftForm();
-    loadData();
+    // Recarregar imediatamente para mostrar como Pendente
+    await loadData();
   };
 
   return (

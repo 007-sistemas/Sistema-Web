@@ -24,6 +24,9 @@ export const AutorizacaoPonto: React.FC = () => {
 
   const loadData = async () => {
     try {
+      // Sincronizar justificativas do Neon antes de ler localStorage
+      await StorageService.refreshJustificativasFromRemote();
+      
       // Tenta buscar do Neon
       const remoteRaw = await apiGet<Justificativa[]>('sync?action=list_justificativas');
       // Normalizar status legados do banco
@@ -270,6 +273,7 @@ export const AutorizacaoPonto: React.FC = () => {
 
         console.log('[AutorizacaoPonto] ✅ Aprovação concluída com sucesso');
         alert('Justificativa aprovada com sucesso!');
+        // Recarregar dados frescos do banco
         await loadData();
     } catch (error) {
         console.error("Erro ao aprovar:", error);
@@ -316,6 +320,7 @@ export const AutorizacaoPonto: React.FC = () => {
 
         console.log('[AutorizacaoPonto] ✅ Rejeição concluída com sucesso');
         alert('Justificativa recusada com sucesso!');
+        // Recarregar dados frescos do banco
         await loadData();
     } catch (error) {
         console.error("Erro ao rejeitar:", error);

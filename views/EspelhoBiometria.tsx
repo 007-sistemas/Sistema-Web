@@ -35,6 +35,16 @@ export const EspelhoBiometria: React.FC = () => {
   const cooperadoId = session?.type === 'COOPERADO' ? session?.user?.id : null;
   const cooperadoData = session?.type === 'COOPERADO' ? session?.user : null;
 
+  const matchesCooperado = (log: any, coopId?: string | null, sess?: any) => {
+    const effectiveId = coopId || cooperadoId;
+    const effectiveName = sess?.user?.nome || cooperadoData?.nome;
+    if (!effectiveId && !effectiveName) return true;
+    const sameId = effectiveId ? log.cooperadoId === effectiveId : false;
+    const sameName = effectiveName && log.cooperadoNome && log.cooperadoNome.trim().toLowerCase() === effectiveName.trim().toLowerCase();
+    return sameId || sameName;
+  };
+
+
   useEffect(() => {
     // Recarregar session ao montar o componente
     const currentSession = StorageService.getSession();
@@ -60,7 +70,7 @@ export const EspelhoBiometria: React.FC = () => {
     const interval = setInterval(() => {
       console.log('[EspelhoBiometria] Auto-refresh dos pontos');
       loadData();
-    }, 5000); // 5 segundos
+    }, 3000); // 3 segundos para atualização rápida
     
     return () => clearInterval(interval);
   }, [cooperadoId, session]);
@@ -77,42 +87,48 @@ export const EspelhoBiometria: React.FC = () => {
 
     try {
       setLoading(true);
-      
-      // Buscar pontos do NEON via endpoint sync correto
-      const pontos = await apiGet<any[]>(`sync?action=list_pontos&cooperadoId=${effectiveCoopId}`);
-      
-      if (!Array.isArray(pontos)) {
-        throw new Error('Resposta inválida da API');
+
+      // Mesma lógica do Controle de Produção: sincronizar storage e usar storage como fonte principal
+      try {
+        await StorageService.refreshHospitaisFromRemote();
+        await StorageService.refreshCooperadosFromRemote();
+        await StorageService.refreshPontosFromRemote();
+      } catch (syncErr) {
+        console.warn('[EspelhoBiometria] Falha ao sincronizar remoto, seguindo com dados locais:', syncErr);
       }
-      
-      // NÃO filtrar pontos rejeitados - cooperado precisa ver o que foi recusado
-      const sorted = pontos.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+      const allPontos = StorageService.getPontos().filter(p => matchesCooperado(p, effectiveCoopId, effectiveSession));
+      const existingIds = new Set(allPontos.map(p => p.id));
+
+      // Unir justificativas sem ponto (ou com ponto ausente no storage) para exibir pendentes/recusadas
+      let synthetic: RegistroPonto[] = [];
+      try {
+        const justs = await apiGet<Justificativa[]>('sync?action=list_justificativas');
+        const filteredJust = justs.filter(j => matchesCooperado({ cooperadoId: j.cooperadoId, cooperadoNome: j.cooperadoNome }, effectiveCoopId, effectiveSession));
+        const missingJust = filteredJust.filter(j => !j.pontoId || !existingIds.has(j.pontoId));
+        synthetic = buildPontosFromJustificativas(missingJust, StorageService.getHospitais(), existingIds);
+      } catch (e) {
+        console.warn('[EspelhoBiometria] Falha ao buscar justificativas remotas, usando local:', e);
+        const localJust = StorageService.getJustificativas().filter(j => matchesCooperado({ cooperadoId: j.cooperadoId, cooperadoNome: j.cooperadoNome }, effectiveCoopId, effectiveSession));
+        const missingJust = localJust.filter(j => !j.pontoId || !existingIds.has(j.pontoId));
+        synthetic = buildPontosFromJustificativas(missingJust, StorageService.getHospitais(), existingIds);
+      }
+
+      const merged = [...allPontos, ...synthetic];
+      const sorted = merged.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       setLogs(sorted);
 
       // Identificar hospitais onde o usuário tem registros
       const uniqueHospitalIds = [...new Set(sorted.map(p => p.hospitalId).filter(Boolean))];
       const allHospitais = StorageService.getHospitais();
       const myHospitais = allHospitais.filter(h => uniqueHospitalIds.includes(h.id));
-      
+
       setHospitais(myHospitais);
-      
+
       // Carregar setores de todos os hospitais
       await loadAllSetores(myHospitais);
     } catch (err) {
-      console.error('[EspelhoBiometria] Erro ao carregar pontos do NEON:', err);
-      // Fallback para localStorage se a API falhar
-      console.warn('[EspelhoBiometria] Usando fallback para localStorage');
-      const allPontos = StorageService.getPontos().filter(p => p.cooperadoId === effectiveCoopId);
-      const sorted = allPontos.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-      setLogs(sorted);
-
-      const uniqueHospitalIds = [...new Set(sorted.map(p => p.hospitalId).filter(Boolean))];
-      const allHospitais = StorageService.getHospitais();
-      const myHospitais = allHospitais.filter(h => uniqueHospitalIds.includes(h.id));
-      setHospitais(myHospitais);
-      
-      // Carregar setores
-      await loadAllSetores(myHospitais);
+      console.error('[EspelhoBiometria] Erro ao carregar dados:', err);
     } finally {
       setLoading(false);
     }
@@ -141,6 +157,9 @@ export const EspelhoBiometria: React.FC = () => {
 
   const getFilteredLogs = () => {
     return logs.filter(log => {
+      // Modo cooperado: garantir que o registro pertence ao usuário logado (fallback por nome se faltar ID)
+      if (cooperadoId && !matchesCooperado(log, cooperadoId, session)) return false;
+
       // Filter by Hospital
       if (filterHospital && log.hospitalId !== filterHospital) return false;
 
@@ -267,6 +286,88 @@ export const EspelhoBiometria: React.FC = () => {
   };
 
   const shiftRows = getShiftRows();
+
+  const buildPontosFromJustificativas = (justs: Justificativa[], hospitaisList: Hospital[], existingIds?: Set<string>): RegistroPonto[] => {
+    const hospMap = new Map(hospitaisList.map(h => [String(h.id), h.nome]));
+    const resultados: RegistroPonto[] = [];
+
+    justs.forEach(j => {
+      if (!j.dataPlantao) return;
+
+      if (j.pontoId && existingIds && existingIds.has(j.pontoId)) return;
+
+      const hospNome = j.hospitalId ? hospMap.get(String(j.hospitalId)) || 'Hospital não informado' : 'Hospital não informado';
+      const baseDate = j.dataPlantao;
+      const entradaHora = j.entradaPlantao || '00:00';
+      const saidaHora = j.saidaPlantao || entradaHora;
+
+      const entradaTs = new Date(`${baseDate}T${entradaHora}:00`).toISOString();
+      let saidaDate = baseDate;
+      if (saidaHora < entradaHora) {
+        const d = new Date(baseDate);
+        d.setDate(d.getDate() + 1);
+        saidaDate = d.toISOString().split('T')[0];
+      }
+      const saidaTs = new Date(`${saidaDate}T${saidaHora}:00`).toISOString();
+
+      const entryId = `just-${j.id}-ent`;
+      const exitId = `just-${j.id}-sai`;
+
+      const status = j.status === 'Fechado' ? 'Fechado' : j.status === 'Rejeitado' ? 'Rejeitado' : 'Pendente';
+
+      const pontoEntrada: RegistroPonto = {
+        id: entryId,
+        codigo: `JUST-${j.id}`,
+        cooperadoId: j.cooperadoId,
+        cooperadoNome: j.cooperadoNome,
+        timestamp: entradaTs,
+        tipo: TipoPonto.ENTRADA,
+        data: baseDate,
+        entrada: j.entradaPlantao,
+        saida: undefined,
+        local: hospNome,
+        hospitalId: j.hospitalId,
+        setorId: j.setorId,
+        observacao: j.descricao,
+        relatedId: exitId,
+        status,
+        isManual: true,
+        validadoPor: status === 'Fechado' ? j.validadoPor : undefined,
+        rejeitadoPor: status === 'Rejeitado' ? j.rejeitadoPor : undefined,
+        motivoRejeicao: j.motivoRejeicao,
+        biometriaEntradaHash: undefined,
+        biometriaSaidaHash: undefined
+      };
+
+      const pontoSaida: RegistroPonto = {
+        id: exitId,
+        codigo: `JUST-${j.id}`,
+        cooperadoId: j.cooperadoId,
+        cooperadoNome: j.cooperadoNome,
+        timestamp: saidaTs,
+        tipo: TipoPonto.SAIDA,
+        data: saidaDate,
+        entrada: undefined,
+        saida: j.saidaPlantao,
+        local: hospNome,
+        hospitalId: j.hospitalId,
+        setorId: j.setorId,
+        observacao: j.descricao,
+        relatedId: entryId,
+        status,
+        isManual: true,
+        validadoPor: status === 'Fechado' ? j.validadoPor : undefined,
+        rejeitadoPor: status === 'Rejeitado' ? j.rejeitadoPor : undefined,
+        motivoRejeicao: j.motivoRejeicao,
+        biometriaEntradaHash: undefined,
+        biometriaSaidaHash: undefined
+      };
+
+      resultados.push(pontoEntrada, pontoSaida);
+    });
+
+    return resultados;
+  };
 
   // Removido: handlers de justificativa parcial
 
