@@ -302,9 +302,8 @@ export const EspelhoBiometria: React.FC = () => {
       const [year, month, day] = dateStr.split('-').map(Number);
       const [hour, minute] = timeStr.split(':').map(Number);
       const d = new Date(year, month - 1, day, hour, minute, 0);
-      // Ajustar para UTC subtraindo o offset do fuso horário local
-      const offset = d.getTimezoneOffset() * 60000;
-      return new Date(d.getTime() - offset).toISOString();
+      // Não fazer conversão - new Date() já cria no timezone local, toISOString() converte para UTC corretamente
+      return d.toISOString();
     };
 
     justs.forEach(j => {

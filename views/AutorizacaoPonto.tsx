@@ -221,8 +221,8 @@ export const AutorizacaoPonto: React.FC = () => {
             const [year, month, day] = dateStr.split('-').map(Number);
             const [hour, minute] = timeStr.split(':').map(Number);
             const d = new Date(year, month - 1, day, hour, minute, 0);
-            const offset = d.getTimezoneOffset() * 60000;
-            return new Date(d.getTime() - offset).toISOString();
+            // Não fazer conversão - new Date() já cria no timezone local, toISOString() converte para UTC corretamente
+            return d.toISOString();
           };
 
           // Calcular timestamps com lógica de noite
