@@ -216,15 +216,24 @@ export const AutorizacaoPonto: React.FC = () => {
           const hospital = hospId ? hospitais.find(h => String(h.id) === String(hospId)) : null;
           const localNome = hospital?.nome || 'Hospital não informado';
 
+          // Helper para criar ISO timestamp preservando a data/hora local (não UTC)
+          const createLocalISOTimestamp = (dateStr: string, timeStr: string): string => {
+            const [year, month, day] = dateStr.split('-').map(Number);
+            const [hour, minute] = timeStr.split(':').map(Number);
+            const d = new Date(year, month - 1, day, hour, minute, 0);
+            const offset = d.getTimezoneOffset() * 60000;
+            return new Date(d.getTime() - offset).toISOString();
+          };
+
           // Calcular timestamps com lógica de noite
-          const entradaTimestamp = new Date(`${justificativa.dataPlantao}T${justificativa.entradaPlantao}:00`).toISOString();
+          const entradaTimestamp = createLocalISOTimestamp(justificativa.dataPlantao, justificativa.entradaPlantao);
           let saidaDate = justificativa.dataPlantao;
           if (justificativa.saidaPlantao < justificativa.entradaPlantao) {
             const d = new Date(justificativa.dataPlantao);
             d.setDate(d.getDate() + 1);
             saidaDate = d.toISOString().split('T')[0];
           }
-          const saidaTimestamp = new Date(`${saidaDate}T${justificativa.saidaPlantao}:00`).toISOString();
+          const saidaTimestamp = createLocalISOTimestamp(saidaDate, justificativa.saidaPlantao);
 
           const entryId = crypto.randomUUID();
           const exitId = crypto.randomUUID();

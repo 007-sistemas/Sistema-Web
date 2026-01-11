@@ -296,6 +296,17 @@ export const EspelhoBiometria: React.FC = () => {
     const hospMap = new Map(hospitaisList.map(h => [String(h.id), h.nome]));
     const resultados: RegistroPonto[] = [];
 
+    // Helper para criar ISO timestamp preservando a data/hora local (não UTC)
+    const createLocalISOTimestamp = (dateStr: string, timeStr: string): string => {
+      // dateStr: "2026-01-17", timeStr: "08:00"
+      const [year, month, day] = dateStr.split('-').map(Number);
+      const [hour, minute] = timeStr.split(':').map(Number);
+      const d = new Date(year, month - 1, day, hour, minute, 0);
+      // Ajustar para UTC subtraindo o offset do fuso horário local
+      const offset = d.getTimezoneOffset() * 60000;
+      return new Date(d.getTime() - offset).toISOString();
+    };
+
     justs.forEach(j => {
       if (!j.dataPlantao) return;
 
@@ -306,14 +317,14 @@ export const EspelhoBiometria: React.FC = () => {
       const entradaHora = j.entradaPlantao || '00:00';
       const saidaHora = j.saidaPlantao || entradaHora;
 
-      const entradaTs = new Date(`${baseDate}T${entradaHora}:00`).toISOString();
+      const entradaTs = createLocalISOTimestamp(baseDate, entradaHora);
       let saidaDate = baseDate;
       if (saidaHora < entradaHora) {
         const d = new Date(baseDate);
         d.setDate(d.getDate() + 1);
         saidaDate = d.toISOString().split('T')[0];
       }
-      const saidaTs = new Date(`${saidaDate}T${saidaHora}:00`).toISOString();
+      const saidaTs = createLocalISOTimestamp(saidaDate, saidaHora);
 
       const entryId = `just-${j.id}-ent`;
       const exitId = `just-${j.id}-sai`;
