@@ -322,9 +322,6 @@ export const EspelhoBiometria: React.FC = () => {
         cooperadoNome: j.cooperadoNome,
         timestamp: entradaTs,
         tipo: TipoPonto.ENTRADA,
-        data: baseDate,
-        entrada: j.entradaPlantao,
-        saida: undefined,
         local: hospNome,
         hospitalId: j.hospitalId,
         setorId: j.setorId,
@@ -334,9 +331,7 @@ export const EspelhoBiometria: React.FC = () => {
         isManual: true,
         validadoPor: status === 'Fechado' ? j.validadoPor : undefined,
         rejeitadoPor: status === 'Rejeitado' ? j.rejeitadoPor : undefined,
-        motivoRejeicao: j.motivoRejeicao,
-        biometriaEntradaHash: undefined,
-        biometriaSaidaHash: undefined
+        motivoRejeicao: j.motivoRejeicao
       };
 
       const pontoSaida: RegistroPonto = {
@@ -346,9 +341,6 @@ export const EspelhoBiometria: React.FC = () => {
         cooperadoNome: j.cooperadoNome,
         timestamp: saidaTs,
         tipo: TipoPonto.SAIDA,
-        data: saidaDate,
-        entrada: undefined,
-        saida: j.saidaPlantao,
         local: hospNome,
         hospitalId: j.hospitalId,
         setorId: j.setorId,
@@ -358,9 +350,7 @@ export const EspelhoBiometria: React.FC = () => {
         isManual: true,
         validadoPor: status === 'Fechado' ? j.validadoPor : undefined,
         rejeitadoPor: status === 'Rejeitado' ? j.rejeitadoPor : undefined,
-        motivoRejeicao: j.motivoRejeicao,
-        biometriaEntradaHash: undefined,
-        biometriaSaidaHash: undefined
+        motivoRejeicao: j.motivoRejeicao
       };
 
       resultados.push(pontoEntrada, pontoSaida);

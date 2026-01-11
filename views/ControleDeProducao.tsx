@@ -75,6 +75,14 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
   const cooperadoLogadoId = mode === 'cooperado' && session?.type === 'COOPERADO' ? session?.user?.id : null;
   const cooperadoLogadoData = mode === 'cooperado' && session?.type === 'COOPERADO' ? session?.user : null;
 
+  // Helper para matching de cooperado por ID ou nome
+  const matchesCooperadoLogado = (justificativa: Justificativa): boolean => {
+    if (!cooperadoLogadoId && !cooperadoLogadoData?.nome) return false;
+    const sameId = cooperadoLogadoId ? justificativa.cooperadoId === cooperadoLogadoId : false;
+    const sameName = cooperadoLogadoData?.nome ? justificativa.cooperadoNome?.trim().toLowerCase() === cooperadoLogadoData.nome.trim().toLowerCase() : false;
+    return sameId || sameName;
+  };
+
 
   useEffect(() => {
     // Carregar sessão se mode=cooperado
@@ -195,18 +203,20 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
     const existingIds = new Set(allPontos.map(p => p.id));
 
     // Complementar com justificativas pendentes/rejeitadas do cooperado (não geram ponto até aprovação)
-    if (mode === 'cooperado' && cooperadoLogadoId) {
+    if (mode === 'cooperado' && (cooperadoLogadoId || cooperadoLogadoData?.nome)) {
       try {
         const remoteJust = await apiGet<Justificativa[]>('sync?action=list_justificativas');
-        const filteredJust = remoteJust.filter(j => j.cooperadoId === cooperadoLogadoId);
+        const filteredJust = remoteJust.filter(j => matchesCooperadoLogado(j));
         const missingJust = filteredJust.filter(j => !j.pontoId || !existingIds.has(j.pontoId));
         const synth = buildPontosFromJustificativas(missingJust, StorageService.getHospitais(), existingIds);
+        console.log('[ControleDeProducao] Justificativas remotas para cooperado:', filteredJust.length, 'Sintéticas:', synth.length);
         allPontos = [...allPontos, ...synth];
       } catch (err) {
         console.warn('[ControleDeProducao] Falha ao buscar justificativas remotas, usando local:', err);
-        const localJust = StorageService.getJustificativas().filter(j => j.cooperadoId === cooperadoLogadoId);
+        const localJust = StorageService.getJustificativas().filter(j => matchesCooperadoLogado(j));
         const missingJust = localJust.filter(j => !j.pontoId || !existingIds.has(j.pontoId));
         const synth = buildPontosFromJustificativas(missingJust, StorageService.getHospitais(), existingIds);
+        console.log('[ControleDeProducao] Justificativas locais para cooperado:', localJust.length, 'Sintéticas:', synth.length);
         allPontos = [...allPontos, ...synth];
       }
     }
@@ -360,9 +370,6 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
         cooperadoNome: j.cooperadoNome,
         timestamp: entradaTs,
         tipo: TipoPonto.ENTRADA,
-        data: baseDate,
-        entrada: j.entradaPlantao,
-        saida: undefined,
         local: hospNome,
         hospitalId: j.hospitalId,
         setorId: j.setorId,
@@ -372,9 +379,7 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
         isManual: true,
         validadoPor: status === 'Fechado' ? j.validadoPor : undefined,
         rejeitadoPor: status === 'Rejeitado' ? j.rejeitadoPor : undefined,
-        motivoRejeicao: j.motivoRejeicao,
-        biometriaEntradaHash: undefined,
-        biometriaSaidaHash: undefined
+        motivoRejeicao: j.motivoRejeicao
       };
 
       const pontoSaida: RegistroPonto = {
@@ -384,9 +389,6 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
         cooperadoNome: j.cooperadoNome,
         timestamp: saidaTs,
         tipo: TipoPonto.SAIDA,
-        data: saidaDate,
-        entrada: undefined,
-        saida: j.saidaPlantao,
         local: hospNome,
         hospitalId: j.hospitalId,
         setorId: j.setorId,
@@ -396,9 +398,7 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
         isManual: true,
         validadoPor: status === 'Fechado' ? j.validadoPor : undefined,
         rejeitadoPor: status === 'Rejeitado' ? j.rejeitadoPor : undefined,
-        motivoRejeicao: j.motivoRejeicao,
-        biometriaEntradaHash: undefined,
-        biometriaSaidaHash: undefined
+        motivoRejeicao: j.motivoRejeicao
       };
 
       resultados.push(pontoEntrada, pontoSaida);
