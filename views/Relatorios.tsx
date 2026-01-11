@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { StorageService } from '../services/storage';
 import { RegistroPonto, Cooperado, Hospital, Setor } from '../types';
 import { apiGet } from '../services/api';
+import { exportToExcel, exportToPDF } from '../services/reportExport';
 import { FileText, Download, Filter, X, FileSpreadsheet, Calendar } from 'lucide-react';
 
 interface RelatorioRow {
   cooperadoNome: string;
-  categoriaProfissional: string;
+  especialidade: string;
   hospital: string;
   setor: string;
   data: string;
@@ -21,6 +22,7 @@ export const Relatorios: React.FC = () => {
   const [cooperados, setCooperados] = useState<Cooperado[]>([]);
   const [hospitais, setHospitais] = useState<Hospital[]>([]);
   const [setoresDisponiveis, setSetoresDisponiveis] = useState<Setor[]>([]);
+  const [todosSetores, setTodosSetores] = useState<Setor[]>([]); // Todos os setores de todos os hospitais
   
   // Filtros
   const [filterHospital, setFilterHospital] = useState('');
@@ -39,6 +41,13 @@ export const Relatorios: React.FC = () => {
     loadData();
   }, []);
 
+  // Carregar todos os setores quando hospitais mudarem
+  useEffect(() => {
+    if (hospitais.length > 0) {
+      loadAllSetores();
+    }
+  }, [hospitais]);
+
   // Carregar setores quando hospital for selecionado
   useEffect(() => {
     if (filterHospital) {
@@ -51,7 +60,7 @@ export const Relatorios: React.FC = () => {
   // Reprocessar dados quando filtros mudarem
   useEffect(() => {
     processarRelatorio();
-  }, [logs, cooperados, hospitais, setoresDisponiveis, filterHospital, filterSetor, filterCooperado, filterCategoria, filterDataIni, filterDataFim]);
+  }, [logs, cooperados, hospitais, setoresDisponiveis, todosSetores, filterHospital, filterSetor, filterCooperado, filterCategoria, filterDataIni, filterDataFim]);
 
   const loadData = async () => {
     try {
@@ -103,6 +112,31 @@ export const Relatorios: React.FC = () => {
     }
   };
 
+  const loadAllSetores = async () => {
+    try {
+      const setoresByHospital = await Promise.all(
+        hospitais.map(async (hospital) => {
+          try {
+            const setores = await apiGet<Setor[]>(`hospital-setores?hospitalId=${hospital.id}`);
+            return setores || [];
+          } catch {
+            return [];
+          }
+        })
+      );
+
+      const flattened = setoresByHospital.flat();
+      const unique = flattened.filter((setor, index, self) => 
+        index === self.findIndex(s => s.id === setor.id)
+      );
+      setTodosSetores(unique);
+      console.log('[Relatorios] Setores carregados:', unique);
+    } catch (error) {
+      console.error('[Relatorios] Erro ao carregar todos os setores:', error);
+      setTodosSetores([]);
+    }
+  };
+
   const processarRelatorio = () => {
     // Agrupar registros de entrada e saída
     const entradas = logs.filter(l => l.tipo === 'ENTRADA');
@@ -116,7 +150,8 @@ export const Relatorios: React.FC = () => {
       
       const cooperado = cooperados.find(c => c.id === entrada.cooperadoId);
       const hospital = hospitais.find(h => h.id === entrada.hospitalId);
-      const setor = setoresDisponiveis.find(s => s.id.toString() === entrada.setorId);
+      // Buscar setor em todosSetores (não apenas setoresDisponiveis do filtro)
+      const setor = todosSetores.find(s => s.id.toString() === entrada.setorId);
 
       if (!cooperado || !hospital) return;
 
@@ -124,7 +159,7 @@ export const Relatorios: React.FC = () => {
       if (filterHospital && entrada.hospitalId !== filterHospital) return;
       if (filterSetor && entrada.setorId !== filterSetor) return;
       if (filterCooperado && entrada.cooperadoId !== filterCooperado) return;
-      if (filterCategoria && cooperado.categoriaProfissional !== filterCategoria) return;
+      if (filterCategoria && cooperado.especialidade !== filterCategoria) return;
 
       const dataEntrada = new Date(entrada.timestamp);
       if (filterDataIni && dataEntrada < new Date(filterDataIni)) return;
@@ -145,7 +180,7 @@ export const Relatorios: React.FC = () => {
 
       rows.push({
         cooperadoNome: cooperado.nome,
-        categoriaProfissional: cooperado.categoriaProfissional,
+        especialidade: cooperado.especialidade || 'N/A',
         hospital: hospital.nome,
         setor: setor?.nome || 'N/A',
         data: dataEntrada.toLocaleDateString('pt-BR'),
@@ -176,51 +211,95 @@ export const Relatorios: React.FC = () => {
     setFilterDataFim('');
   };
 
-  const handleExportarPDF = () => {
-    // TODO: Implementar exportação PDF
-    alert('Exportação PDF será implementada em breve');
-  };
-
-  const handleExportarExcel = () => {
+  const handleExportarPDF = async () => {
     if (relatorioData.length === 0) {
       alert('Não há dados para exportar');
       return;
     }
 
-    // Criar CSV
-    const headers = ['Cooperado', 'Categoria', 'Hospital', 'Setor', 'Data', 'Entrada', 'Saída', 'Total Horas', 'Status'];
-    const csvContent = [
-      headers.join(','),
-      ...relatorioData.map(row => [
-        `"${row.cooperadoNome}"`,
-        `"${row.categoriaProfissional}"`,
-        `"${row.hospital}"`,
-        `"${row.setor}"`,
-        row.data,
-        row.entrada,
-        row.saida,
-        row.totalHoras,
-        row.status
-      ].join(','))
-    ].join('\n');
+    // Preparar dados dos filtros com nomes legíveis
+    const filterLabels: any = {};
+    if (filterHospital) {
+      const hospital = hospitais.find(h => h.id === filterHospital);
+      filterLabels.hospital = hospital?.nome || filterHospital;
+    }
+    if (filterSetor) {
+      const setor = todosSetores.find(s => s.id.toString() === filterSetor);
+      filterLabels.setor = setor?.nome || filterSetor;
+    }
+    if (filterCooperado) {
+      const cooperado = cooperados.find(c => c.id === filterCooperado);
+      filterLabels.cooperado = cooperado?.nome || filterCooperado;
+    }
 
-    // Download
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `relatorio_producao_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const stats = {
+      totalRegistros: relatorioData.length,
+      plantoesFechados: relatorioData.filter(r => r.status === 'Fechado').length,
+      plantoesAbertos: relatorioData.filter(r => r.status === 'Em Aberto').length,
+      totalHoras: relatorioData.reduce((acc, r) => {
+        if (r.totalHoras === '--') return acc;
+        const [hours, minutes] = r.totalHoras.replace('h', '').replace('m', '').split(' ').map(Number);
+        return acc + hours + (minutes / 60);
+      }, 0).toFixed(1) + 'h'
+    };
+
+    await exportToPDF(relatorioData, {
+      hospital: filterLabels.hospital || undefined,
+      setor: filterLabels.setor || undefined,
+      cooperado: filterLabels.cooperado || undefined,
+      categoria: filterCategoria || undefined,
+      dataIni: filterDataIni || undefined,
+      dataFim: filterDataFim || undefined
+    }, stats);
+  };
+
+  const handleExportarExcel = async () => {
+    if (relatorioData.length === 0) {
+      alert('Não há dados para exportar');
+      return;
+    }
+
+    // Preparar dados dos filtros com nomes legíveis
+    const filterLabels: any = {};
+    if (filterHospital) {
+      const hospital = hospitais.find(h => h.id === filterHospital);
+      filterLabels.hospital = hospital?.nome || filterHospital;
+    }
+    if (filterSetor) {
+      const setor = todosSetores.find(s => s.id.toString() === filterSetor);
+      filterLabels.setor = setor?.nome || filterSetor;
+    }
+    if (filterCooperado) {
+      const cooperado = cooperados.find(c => c.id === filterCooperado);
+      filterLabels.cooperado = cooperado?.nome || filterCooperado;
+    }
+
+    const stats = {
+      totalRegistros: relatorioData.length,
+      plantoesFechados: relatorioData.filter(r => r.status === 'Fechado').length,
+      plantoesAbertos: relatorioData.filter(r => r.status === 'Em Aberto').length,
+      totalHoras: relatorioData.reduce((acc, r) => {
+        if (r.totalHoras === '--') return acc;
+        const [hours, minutes] = r.totalHoras.replace('h', '').replace('m', '').split(' ').map(Number);
+        return acc + hours + (minutes / 60);
+      }, 0).toFixed(1) + 'h'
+    };
+
+    await exportToExcel(relatorioData, {
+      hospital: filterLabels.hospital || undefined,
+      setor: filterLabels.setor || undefined,
+      cooperado: filterLabels.cooperado || undefined,
+      categoria: filterCategoria || undefined,
+      dataIni: filterDataIni || undefined,
+      dataFim: filterDataFim || undefined
+    }, stats);
   };
 
   const filteredCooperados = cooperados.filter(c => 
     c.nome.toLowerCase().includes(filterCooperadoInput.toLowerCase())
   );
 
-  const categoriasProfissionais = Array.from(new Set(cooperados.map(c => c.categoriaProfissional)));
+  const categoriasProfissionais = Array.from(new Set(cooperados.map(c => c.especialidade).filter(Boolean)));
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-20">
@@ -433,7 +512,7 @@ export const Relatorios: React.FC = () => {
                 relatorioData.map((row, idx) => (
                   <tr key={idx} className="border-b hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm">{row.cooperadoNome}</td>
-                    <td className="px-4 py-3 text-sm">{row.categoriaProfissional}</td>
+                    <td className="px-4 py-3 text-sm">{row.especialidade}</td>
                     <td className="px-4 py-3 text-sm">{row.hospital}</td>
                     <td className="px-4 py-3 text-sm">{row.setor}</td>
                     <td className="px-4 py-3 text-sm">{row.data}</td>

@@ -95,6 +95,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS rejeitado_por TEXT`;
         await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS motivo_rejeicao TEXT`;
         await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS timestamp TEXT`;
+        await sql`ALTER TABLE pontos ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`;
       } catch (alterErr) {
         console.log('[sync][GET] Aviso ao ajustar schema de pontos:', alterErr);
       }
@@ -369,6 +370,58 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.log('[sync] Erro ao garantir coluna preferences:', alterErr);
     }
 
+    // Garantir que a tabela cooperados existe
+    await sql`
+      CREATE TABLE IF NOT EXISTS cooperados (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        cpf TEXT UNIQUE,
+        email TEXT,
+        phone TEXT,
+        specialty TEXT,
+        matricula TEXT,
+        status TEXT DEFAULT 'ATIVO',
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `;
+
+    try {
+      await sql`ALTER TABLE cooperados ADD COLUMN IF NOT EXISTS specialty TEXT`;
+      await sql`ALTER TABLE cooperados ADD COLUMN IF NOT EXISTS matricula TEXT`;
+      await sql`ALTER TABLE cooperados ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'ATIVO'`;
+      await sql`ALTER TABLE cooperados ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`;
+    } catch (alterErr) {
+      console.log('[sync] Aviso ao ajustar schema de cooperados:', alterErr);
+    }
+
+    // Garantir que a tabela hospitals existe
+    await sql`
+      CREATE TABLE IF NOT EXISTS hospitals (
+        id TEXT PRIMARY KEY,
+        nome TEXT NOT NULL,
+        slug TEXT,
+        usuario_acesso TEXT,
+        senha TEXT,
+        endereco JSONB,
+        permissoes JSONB,
+        setores JSONB,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `;
+
+    try {
+      await sql`ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS usuario_acesso TEXT`;
+      await sql`ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS senha TEXT`;
+      await sql`ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS endereco JSONB`;
+      await sql`ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS permissoes JSONB`;
+      await sql`ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS setores JSONB`;
+      await sql`ALTER TABLE hospitals ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`;
+    } catch (alterErr) {
+      console.log('[sync] Aviso ao ajustar schema de hospitals:', alterErr);
+    }
+
     // Garantir que a tabela justificativas existe com o schema alinhado ao frontend
     await sql`
       CREATE TABLE IF NOT EXISTS justificativas (
@@ -489,6 +542,91 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ success: true, deleted: id });
     }
 
+    if (action === 'sync_cooperado') {
+      const c = data;
+      if (!c.id || !c.nome) {
+        return res.status(400).json({ error: 'Cooperado ID e nome são obrigatórios' });
+      }
+
+      const result = await sql`
+        INSERT INTO cooperados (
+          id, name, cpf, email, phone, specialty, matricula, status, updated_at
+        )
+        VALUES (
+          ${c.id}, ${c.nome}, ${c.cpf || null}, ${c.email || null}, ${c.telefone || null},
+          ${c.especialidade || null}, ${c.matricula || null}, ${c.status || 'ATIVO'}, NOW()
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          name = ${c.nome},
+          cpf = ${c.cpf || null},
+          email = ${c.email || null},
+          phone = ${c.telefone || null},
+          specialty = ${c.especialidade || null},
+          matricula = ${c.matricula || null},
+          status = ${c.status || 'ATIVO'},
+          updated_at = NOW()
+        RETURNING id;
+      `;
+      console.log('[sync] Cooperado salvo:', result);
+      return res.status(200).json({ success: true, id: result[0]?.id });
+    }
+
+    if (action === 'delete_cooperado') {
+      const { id } = data;
+      if (!id) {
+        return res.status(400).json({ error: 'Cooperado ID é obrigatório para exclusão' });
+      }
+
+      await sql`DELETE FROM cooperados WHERE id = ${id}`;
+      console.log('[sync] Cooperado deletado:', id);
+      return res.status(200).json({ success: true, deleted: id });
+    }
+
+    if (action === 'sync_hospital') {
+      const h = data;
+      if (!h.id || !h.nome) {
+        return res.status(400).json({ error: 'Hospital ID e nome são obrigatórios' });
+      }
+
+      const slug = (h.slug || h.nome || '').toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 30) || h.id;
+
+      const result = await sql`
+        INSERT INTO hospitals (
+          id, nome, slug, usuario_acesso, senha, endereco, permissoes, setores, updated_at
+        )
+        VALUES (
+          ${h.id}, ${h.nome}, ${slug}, ${h.usuarioAcesso || h.usuario_acesso || null}, ${h.senha || null},
+          ${h.endereco ? JSON.stringify(h.endereco) : null},
+          ${JSON.stringify(h.permissoes || {})},
+          ${JSON.stringify(h.setores || [])},
+          NOW()
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          nome = ${h.nome},
+          slug = ${slug},
+          usuario_acesso = ${h.usuarioAcesso || h.usuario_acesso || null},
+          senha = ${h.senha || null},
+          endereco = ${h.endereco ? JSON.stringify(h.endereco) : null},
+          permissoes = ${JSON.stringify(h.permissoes || {})},
+          setores = ${JSON.stringify(h.setores || [])},
+          updated_at = NOW()
+        RETURNING id;
+      `;
+      console.log('[sync] Hospital salvo:', result);
+      return res.status(200).json({ success: true, id: result[0]?.id });
+    }
+
+    if (action === 'delete_hospital') {
+      const { id } = data;
+      if (!id) {
+        return res.status(400).json({ error: 'Hospital ID é obrigatório para exclusão' });
+      }
+
+      await sql`DELETE FROM hospitals WHERE id = ${id}`;
+      console.log('[sync] Hospital deletado:', id);
+      return res.status(200).json({ success: true, deleted: id });
+    }
+
     if (action === 'sync_justificativa') {
       const j = data;
       if (!j.id || !j.cooperadoId) {
@@ -582,11 +720,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Suporte a outras ações (hospital, cooperado, etc.)
-    if (action === 'sync_cooperado' || action === 'sync_hospital' || action === 'delete_cooperado' || action === 'delete_hospital') {
-      console.log(`[sync] ⚠️ Ação ${action} não implementada ainda, ignorando...`);
-      return res.status(200).json({ success: true, message: 'Ação registrada (não implementada)' });
-    }
-
     // Se chegar aqui, ação não reconhecida
     res.status(400).json({ error: `Ação desconhecida: ${action}` });
   } catch (err: any) {
