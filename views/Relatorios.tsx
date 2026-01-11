@@ -379,6 +379,99 @@ export const Relatorios: React.FC = () => {
     }, stats);
   };
 
+  const handleGerarPontosTeste = async () => {
+    try {
+      if (cooperados.length === 0 || hospitais.length === 0) {
+        alert('Antes, carregue cooperados e hospitais do Neon.');
+        return;
+      }
+
+      const setoresFonte: Setor[] = todosSetores.length > 0 ? todosSetores : [
+        { id: 1, nome: 'UTI' },
+        { id: 2, nome: 'Pronto Atendimento' },
+        { id: 3, nome: 'Centro Cirúrgico' },
+        { id: 4, nome: 'Ambulatório' },
+        { id: 5, nome: 'Maternidade' }
+      ];
+
+      const rand = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
+      const randChoice = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+
+      const cooperadosAmostra = [...cooperados].sort(() => Math.random() - 0.5).slice(0, Math.min(6, cooperados.length));
+
+      let criados = 0;
+
+      for (const coop of cooperadosAmostra) {
+        const quantidadePlantoes = rand(3, 6);
+        for (let i = 0; i < quantidadePlantoes; i++) {
+          const hospital = randChoice(hospitais);
+          const setor = randChoice(setoresFonte);
+
+          const diasAtras = rand(1, 25);
+          const dataBase = new Date();
+          dataBase.setDate(dataBase.getDate() - diasAtras);
+          dataBase.setHours(rand(6, 20));
+          dataBase.setMinutes(randChoice([0, 15, 30, 45]));
+          dataBase.setSeconds(0);
+
+          const entradaTimestamp = new Date(dataBase);
+          const duracaoHoras = rand(4, 12);
+          const duracaoMin = randChoice([0, 15, 30, 45]);
+          const saidaTimestamp = new Date(entradaTimestamp.getTime() + (duracaoHoras * 60 + duracaoMin) * 60 * 1000);
+
+          const codigo = `MAN-${rand(100000, 999999)}`;
+
+          const entradaId = crypto.randomUUID();
+          const entrada: RegistroPonto = {
+            id: entradaId,
+            codigo,
+            cooperadoId: coop.id,
+            cooperadoNome: coop.nome,
+            timestamp: entradaTimestamp.toISOString(),
+            tipo: 'ENTRADA',
+            local: hospital.nome,
+            hospitalId: hospital.id,
+            setorId: String(setor.id),
+            observacao: '',
+            status: 'Aberto',
+            isManual: true
+          } as any;
+
+          StorageService.savePonto(entrada);
+          criados++;
+
+          // 20% dos plantões ficam em aberto
+          const deixaAberto = Math.random() < 0.2;
+          if (!deixaAberto) {
+            const saida: RegistroPonto = {
+              id: crypto.randomUUID(),
+              codigo,
+              cooperadoId: coop.id,
+              cooperadoNome: coop.nome,
+              timestamp: saidaTimestamp.toISOString(),
+              tipo: 'SAIDA',
+              local: hospital.nome,
+              hospitalId: hospital.id,
+              setorId: String(setor.id),
+              observacao: '',
+              status: 'Fechado',
+              isManual: true,
+              relatedId: entradaId
+            } as any;
+            StorageService.savePonto(saida);
+            criados++;
+          }
+        }
+      }
+
+      await loadData();
+      alert(`Pontos de teste gerados: ${criados}`);
+    } catch (e) {
+      console.error('Erro ao gerar pontos de teste:', e);
+      alert('Falha ao gerar pontos de teste. Veja o console.');
+    }
+  };
+
   const filteredCooperados = cooperados.filter(c => 
     c.nome.toLowerCase().includes(filterCooperadoInput.toLowerCase())
   );
@@ -427,6 +520,18 @@ export const Relatorios: React.FC = () => {
             >
               <FileSpreadsheet className="w-4 h-4" />
               Excel por Cooperado
+            </button>
+          </div>
+
+          {/* Dados de Teste (Dev) */}
+          <div className="flex gap-2 border-l border-gray-300 pl-6">
+            <button
+              onClick={handleGerarPontosTeste}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+              title="Gera pontos aleatórios locais para testes"
+            >
+              <Download className="w-4 h-4" />
+              Gerar Pontos de Teste
             </button>
           </div>
         </div>
