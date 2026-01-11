@@ -91,6 +91,7 @@ export interface Justificativa {
   cooperadoId: string;
   cooperadoNome: string;
   pontoId?: string; // Pode referenciar um ponto específico ou null
+  hospitalId?: string; // Hospital selecionado na justificativa (para criar pontos na aprovação)
   motivo: string;
   descricao?: string;
   dataSolicitacao: string;

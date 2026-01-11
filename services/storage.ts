@@ -823,42 +823,7 @@ export const StorageService = {
       localStorage.setItem(JUSTIFICATIVAS_KEY, JSON.stringify(list));
       StorageService.logAudit('JUSTIFICATIVA_APROVADA', `Justificativa ${id} aprovada por ${aprovadoPor}`);
       
-      // Atualizar RegistroPonto associados (ENTRADA e SAÍDA)
-      if (justificativa.pontoId) {
-        const pontos = StorageService.getPontos();
-        
-        // pontoId armazena o ID da SAÍDA
-        const saidaIndex = pontos.findIndex(p => p.id === justificativa.pontoId);
-        
-        // Encontrar a ENTRADA: através do relatedId DA SAÍDA
-        let entradaIndex = -1;
-        if (saidaIndex >= 0 && pontos[saidaIndex].relatedId) {
-          entradaIndex = pontos.findIndex(p => p.id === pontos[saidaIndex].relatedId);
-        }
-        
-        // Atualizar ambos os pontos
-        const indicesToUpdate = new Set<number>();
-        if (saidaIndex >= 0) indicesToUpdate.add(saidaIndex);
-        if (entradaIndex >= 0) indicesToUpdate.add(entradaIndex);
-        
-        console.log('[aprovarJustificativa] Atualizando pontos:', {
-          saidaId: saidaIndex >= 0 ? pontos[saidaIndex].id : null,
-          entradaId: entradaIndex >= 0 ? pontos[entradaIndex].id : null
-        });
-        
-        indicesToUpdate.forEach(idx => {
-          pontos[idx] = {
-            ...pontos[idx],
-            status: 'Fechado',
-            validadoPor: aprovadoPor,
-            dataAprovacao: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          };
-        });
-        
-        localStorage.setItem(PONTOS_KEY, JSON.stringify(pontos));
-        indicesToUpdate.forEach(idx => syncToNeon('sync_ponto', pontos[idx]));
-      }
+      // Novo fluxo: pontos são criados na aprovação pelo AutorizacaoPonto (não atualizar aqui)
       
       // Sincronizar com Neon
       syncToNeon('sync_justificativa', list[index]);
@@ -883,43 +848,7 @@ export const StorageService = {
       localStorage.setItem(JUSTIFICATIVAS_KEY, JSON.stringify(list));
       StorageService.logAudit('JUSTIFICATIVA_REJEITADA', `Justificativa ${id} rejeitada por ${rejeitadoPor}: ${motivoRejeicao}`);
       
-      // Atualizar RegistroPonto associados (ENTRADA e SAÍDA) para Rejeitado
-      if (justificativa.pontoId) {
-        const pontos = StorageService.getPontos();
-        
-        // pontoId armazena o ID da SAÍDA
-        const saidaIndex = pontos.findIndex(p => p.id === justificativa.pontoId);
-        
-        // Encontrar a ENTRADA: através do relatedId DA SAÍDA
-        let entradaIndex = -1;
-        if (saidaIndex >= 0 && pontos[saidaIndex].relatedId) {
-          entradaIndex = pontos.findIndex(p => p.id === pontos[saidaIndex].relatedId);
-        }
-        
-        // Atualizar ambos os pontos
-        const indicesToUpdate = new Set<number>();
-        if (saidaIndex >= 0) indicesToUpdate.add(saidaIndex);
-        if (entradaIndex >= 0) indicesToUpdate.add(entradaIndex);
-        
-        console.log('[rejeitarJustificativa] Atualizando pontos:', {
-          saidaId: saidaIndex >= 0 ? pontos[saidaIndex].id : null,
-          entradaId: entradaIndex >= 0 ? pontos[entradaIndex].id : null
-        });
-        
-        indicesToUpdate.forEach(idx => {
-          pontos[idx] = {
-            ...pontos[idx],
-            status: 'Rejeitado',
-            rejeitadoPor,
-            motivoRejeicao,
-            dataAprovacao: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          };
-        });
-        
-        localStorage.setItem(PONTOS_KEY, JSON.stringify(pontos));
-        indicesToUpdate.forEach(idx => syncToNeon('sync_ponto', pontos[idx]));
-      }
+      // Novo fluxo: rejeição não mexe em pontos (não existem até aprovação)
       
       // Sincronizar com Neon
       syncToNeon('sync_justificativa', list[index]);

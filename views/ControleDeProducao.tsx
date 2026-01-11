@@ -844,15 +844,12 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
     }
     const saidaTimestamp = new Date(`${dataSaida}T${missingSaida}:00`).toISOString();
 
-    const entryId = crypto.randomUUID();
-    const exitId = crypto.randomUUID();
-    const codigoBase = `MAN-${Date.now()}`;
-
     const justificativa: Justificativa = {
       id: crypto.randomUUID(),
       cooperadoId: cooperadoLogadoData.id,
       cooperadoNome: cooperadoLogadoData.nome,
       pontoId: undefined,
+      hospitalId: String(missingHospitalId || ''),
       motivo: missingReason,
       descricao: missingDesc,
       dataSolicitacao: new Date().toISOString(),
@@ -864,41 +861,6 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
-
-    const pontoEntrada: RegistroPonto = {
-      id: entryId,
-      codigo: codigoBase,
-      cooperadoId: cooperadoLogadoData.id,
-      cooperadoNome: cooperadoLogadoData.nome,
-      timestamp: entradaTimestamp,
-      tipo: TipoPonto.ENTRADA,
-      local: localNome,
-      hospitalId: hospital?.id || missingHospitalId,
-      setorId: missingSetorId,
-      isManual: true,
-      status: 'Pendente'
-    };
-
-    const pontoSaida: RegistroPonto = {
-      id: exitId,
-      codigo: codigoBase,
-      cooperadoId: cooperadoLogadoData.id,
-      cooperadoNome: cooperadoLogadoData.nome,
-      timestamp: saidaTimestamp,
-      tipo: TipoPonto.SAIDA,
-      local: localNome,
-      hospitalId: hospital?.id || missingHospitalId,
-      setorId: missingSetorId,
-      isManual: true,
-      status: 'Pendente',
-      relatedId: entryId
-    };
-
-    StorageService.saveJustificativa(justificativa);
-    StorageService.savePonto(pontoEntrada);
-    StorageService.savePonto(pontoSaida);
-
-    justificativa.pontoId = pontoSaida.id;
     StorageService.saveJustificativa(justificativa);
 
     alert('Plantão incluído e enviado para aprovação do gestor.');

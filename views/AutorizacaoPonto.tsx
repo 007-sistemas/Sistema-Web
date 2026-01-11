@@ -207,51 +207,65 @@ export const AutorizacaoPonto: React.FC = () => {
         // Sync Neon de forma tolerante (não bloquear em dev sem DATABASE_URL)
         await syncToNeon('sync_justificativa', updatedJustificativa);
 
-        // IMPORTANTE: Atualizar TODOS os pontos relacionados
-        let pontosParaAtualizar: any[] = [];
-        
-        if (justificativa.pontoId) {
-          // Se tem pontoId, buscar por ID
-          const pontos = StorageService.getPontos();
-          const ponto = pontos.find(p => p.id === justificativa.pontoId);
-          
-          console.log('[AutorizacaoPonto] Ponto encontrado por ID:', ponto);
-          
-          if (ponto) {
-            pontosParaAtualizar.push(ponto);
-            
-            // Buscar relacionados
-            if (ponto.relatedId) {
-              const pontoRelacionado = pontos.find(p => p.id === ponto.relatedId);
-              if (pontoRelacionado) pontosParaAtualizar.push(pontoRelacionado);
-            }
-            
-            // Buscar pareados
-            const pontosPareados = pontos.filter(p => p.relatedId === ponto.id);
-            pontosParaAtualizar.push(...pontosPareados);
+        // NOVO FLUXO: Criar pontos (entrada e saída) somente na aprovação
+        if (!justificativa.pontoId && justificativa.dataPlantao && justificativa.entradaPlantao && justificativa.saidaPlantao) {
+          const hospId = justificativa.hospitalId || undefined;
+          const hospital = hospId ? hospitais.find(h => String(h.id) === String(hospId)) : null;
+          const localNome = hospital?.nome || 'Hospital não informado';
+
+          // Calcular timestamps com lógica de noite
+          const entradaTimestamp = new Date(`${justificativa.dataPlantao}T${justificativa.entradaPlantao}:00`).toISOString();
+          let saidaDate = justificativa.dataPlantao;
+          if (justificativa.saidaPlantao < justificativa.entradaPlantao) {
+            const d = new Date(justificativa.dataPlantao);
+            d.setDate(d.getDate() + 1);
+            saidaDate = d.toISOString().split('T')[0];
           }
-        } else if (justificativa.dataPlantao) {
-          // Se não tem pontoId mas tem dataPlantao, buscar por cooperado + data
-          console.log('[AutorizacaoPonto] Buscando pontos por cooperado + data:', justificativa.cooperadoId, justificativa.dataPlantao);
-          const pontos = StorageService.getPontos();
-          const dataPlantao = new Date(justificativa.dataPlantao).toISOString().split('T')[0];
-          
-          const pontosNaData = pontos.filter(p => {
-            if (p.cooperadoId !== justificativa.cooperadoId) return false;
-            const pontoData = new Date(p.timestamp).toISOString().split('T')[0];
-            return pontoData === dataPlantao && (p.status === 'Pendente' || p.status === 'Aguardando autorização');
-          });
-          
-          console.log('[AutorizacaoPonto] Pontos encontrados na data:', pontosNaData.length);
-          pontosParaAtualizar.push(...pontosNaData);
-        }
-        
-        // Atualizar todos os pontos encontrados
-        for (const ponto of pontosParaAtualizar) {
-          const updatedPonto = { ...ponto, status: 'Fechado' as const, validadoPor: aprovador };
-          console.log('[AutorizacaoPonto] Atualizando ponto:', updatedPonto.id, updatedPonto);
-          StorageService.updatePonto(updatedPonto);
-          await syncToNeon('sync_ponto', updatedPonto);
+          const saidaTimestamp = new Date(`${saidaDate}T${justificativa.saidaPlantao}:00`).toISOString();
+
+          const entryId = crypto.randomUUID();
+          const exitId = crypto.randomUUID();
+          const codigoBase = `MAN-${Date.now()}`;
+
+          const pontoEntrada = {
+            id: entryId,
+            codigo: codigoBase,
+            cooperadoId: justificativa.cooperadoId,
+            cooperadoNome: justificativa.cooperadoNome,
+            timestamp: entradaTimestamp,
+            tipo: 'ENTRADA',
+            local: localNome,
+            hospitalId: hospId,
+            setorId: justificativa.setorId,
+            isManual: true,
+            status: 'Fechado',
+            validadoPor: aprovador
+          };
+
+          const pontoSaida = {
+            id: exitId,
+            codigo: codigoBase,
+            cooperadoId: justificativa.cooperadoId,
+            cooperadoNome: justificativa.cooperadoNome,
+            timestamp: saidaTimestamp,
+            tipo: 'SAIDA',
+            local: localNome,
+            hospitalId: hospId,
+            setorId: justificativa.setorId,
+            isManual: true,
+            status: 'Fechado',
+            validadoPor: aprovador,
+            relatedId: entryId
+          };
+
+          StorageService.savePonto(pontoEntrada as any);
+          StorageService.savePonto(pontoSaida as any);
+          await syncToNeon('sync_ponto', pontoEntrada);
+          await syncToNeon('sync_ponto', pontoSaida);
+
+          // Vincular justificativa ao ponto de saída criado
+          const justAtualizada = { ...updatedJustificativa, pontoId: exitId };
+          await syncToNeon('sync_justificativa', justAtualizada);
         }
 
         console.log('[AutorizacaoPonto] ✅ Aprovação concluída com sucesso');
@@ -298,57 +312,7 @@ export const AutorizacaoPonto: React.FC = () => {
         // Sync Neon de forma tolerante (não bloquear em dev sem DATABASE_URL)
         await syncToNeon('sync_justificativa', updatedJustificativa);
 
-        // IMPORTANTE: Atualizar TODOS os pontos relacionados
-        let pontosParaAtualizar: any[] = [];
-        
-        if (justificativa.pontoId) {
-          // Se tem pontoId, buscar por ID
-          const pontos = StorageService.getPontos();
-          const ponto = pontos.find(p => p.id === justificativa.pontoId);
-          
-          console.log('[AutorizacaoPonto] Ponto encontrado por ID:', ponto);
-          
-          if (ponto) {
-            pontosParaAtualizar.push(ponto);
-            
-            // Buscar relacionados
-            if (ponto.relatedId) {
-              const pontoRelacionado = pontos.find(p => p.id === ponto.relatedId);
-              if (pontoRelacionado) pontosParaAtualizar.push(pontoRelacionado);
-            }
-            
-            // Buscar pareados
-            const pontosPareados = pontos.filter(p => p.relatedId === ponto.id);
-            pontosParaAtualizar.push(...pontosPareados);
-          }
-        } else if (justificativa.dataPlantao) {
-          // Se não tem pontoId mas tem dataPlantao, buscar por cooperado + data
-          console.log('[AutorizacaoPonto] Buscando pontos por cooperado + data:', justificativa.cooperadoId, justificativa.dataPlantao);
-          const pontos = StorageService.getPontos();
-          const dataPlantao = new Date(justificativa.dataPlantao).toISOString().split('T')[0];
-          
-          const pontosNaData = pontos.filter(p => {
-            if (p.cooperadoId !== justificativa.cooperadoId) return false;
-            const pontoData = new Date(p.timestamp).toISOString().split('T')[0];
-            return pontoData === dataPlantao && (p.status === 'Pendente' || p.status === 'Aguardando autorização');
-          });
-          
-          console.log('[AutorizacaoPonto] Pontos encontrados na data:', pontosNaData.length);
-          pontosParaAtualizar.push(...pontosNaData);
-        }
-        
-        // Atualizar todos os pontos encontrados
-        for (const ponto of pontosParaAtualizar) {
-          const updatedPonto = { 
-            ...ponto, 
-            status: 'Rejeitado' as const,
-            rejeitadoPor: rejeitador,
-            motivoRejeicao: reason
-          };
-          console.log('[AutorizacaoPonto] Atualizando ponto (rejeição):', updatedPonto.id, updatedPonto);
-          StorageService.updatePonto(updatedPonto);
-          await syncToNeon('sync_ponto', updatedPonto);
-        }
+        // Novo fluxo: rejeição não cria/atualiza pontos; apenas a justificativa é marcada como Rejeitada
 
         console.log('[AutorizacaoPonto] ✅ Rejeição concluída com sucesso');
         alert('Justificativa recusada com sucesso!');
