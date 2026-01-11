@@ -860,7 +860,7 @@ export const StorageService = {
       const rows = await apiGet<any[]>('sync?action=list_justificativas');
       if (!Array.isArray(rows)) return;
 
-      const mapped: Justificativa[] = rows.map((row: any) => ({
+      const remoteJust: Justificativa[] = rows.map((row: any) => ({
         id: row.id,
         cooperadoId: row.cooperadoId,
         cooperadoNome: row.cooperadoNome,
@@ -882,9 +882,22 @@ export const StorageService = {
         dataAprovacao: row.dataAprovacao
       }));
 
-      // Atualizar localStorage com justificativas do Neon
-      localStorage.setItem(JUSTIFICATIVAS_KEY, JSON.stringify(mapped));
-      console.log(`[StorageService] ✅ ${mapped.length} justificativas sincronizadas do Neon`);
+      // MERGE inteligente: manter justificativas locais recentes que ainda não foram sincronizadas
+      const localJust = StorageService.getJustificativas();
+      const remoteIds = new Set(remoteJust.map(j => j.id));
+      
+      // Manter justificativas locais criadas nos últimos 30 segundos que ainda não estão remotas
+      const now = Date.now();
+      const recentLocal = localJust.filter(j => {
+        if (remoteIds.has(j.id)) return false; // Já está remota
+        const age = now - new Date(j.createdAt || j.dataSolicitacao).getTime();
+        return age < 30000; // Criada há menos de 30s
+      });
+
+      const merged = [...remoteJust, ...recentLocal];
+      
+      localStorage.setItem(JUSTIFICATIVAS_KEY, JSON.stringify(merged));
+      console.log(`[StorageService] ✅ ${remoteJust.length} justificativas remotas + ${recentLocal.length} locais recentes = ${merged.length} total`);
     } catch (err) {
       console.error('[StorageService] Erro ao sincronizar justificativas do Neon:', err);
     }

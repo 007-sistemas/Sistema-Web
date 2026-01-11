@@ -968,11 +968,22 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
+    
+    console.log('[ControleDeProducao] 📝 Criando justificativa:', {
+      id: justificativa.id,
+      cooperadoId: justificativa.cooperadoId,
+      cooperadoNome: justificativa.cooperadoNome,
+      status: justificativa.status,
+      dataPlantao: justificativa.dataPlantao
+    });
+    
     StorageService.saveJustificativa(justificativa);
 
     alert('Plantão incluído e enviado para aprovação do gestor.');
     resetMissingShiftForm();
-    // Recarregar imediatamente para mostrar como Pendente
+    
+    // Aguardar 500ms para garantir que syncToNeon complete antes de recarregar
+    await new Promise(resolve => setTimeout(resolve, 500));
     await loadData();
   };
 
