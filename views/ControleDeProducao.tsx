@@ -197,12 +197,10 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
     console.log('[ControleDeProducao] Pontos com validadoPor:', allPontos.filter(p => p.validadoPor).length);
     console.log('[ControleDeProducao] Pontos com rejeitadoPor:', allPontos.filter(p => p.rejeitadoPor).length);
     
-    // FILTRAR pontos - modo cooperado: não mostra aprovados (Fechado) nem rejeitados
-    // modo manager: mostra todos
-    const pontosValidos = mode === 'cooperado' 
-      ? allPontos.filter(p => p.status !== 'Rejeitado' && p.status !== 'Fechado')
-      : allPontos.filter(p => p.status !== 'Rejeitado');
-    console.log('[ControleDeProducao] Pontos após filtro (' + mode + '):', pontosValidos.length);
+    // FILTRAR pontos rejeitados - não devem aparecer no controle de produção
+    // Plantões aprovados (Fechado) DEVEM aparecer
+    const pontosValidos = allPontos.filter(p => p.status !== 'Rejeitado');
+    console.log('[ControleDeProducao] Pontos após filtrar rejeitados:', pontosValidos.length);
     
     // Carregar setores de todos os hospitais para exibição (Hospital - Setor quando filtro vazio)
     await loadAllSetores(StorageService.getHospitais());

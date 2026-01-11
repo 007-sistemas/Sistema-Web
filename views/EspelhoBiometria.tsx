@@ -102,7 +102,7 @@ export const EspelhoBiometria: React.FC = () => {
       console.error('[EspelhoBiometria] Erro ao carregar pontos do NEON:', err);
       // Fallback para localStorage se a API falhar
       console.warn('[EspelhoBiometria] Usando fallback para localStorage');
-      const allPontos = StorageService.getPontos().filter(p => p.cooperadoId === effectiveCoopId && p.status !== 'Rejeitado');
+      const allPontos = StorageService.getPontos().filter(p => p.cooperadoId === effectiveCoopId);
       const sorted = allPontos.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       setLogs(sorted);
 
