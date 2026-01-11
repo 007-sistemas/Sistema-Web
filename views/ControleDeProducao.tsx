@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { StorageService } from '../services/storage';
 import { RegistroPonto, Cooperado, Hospital, TipoPonto, Setor, Justificativa } from '../types';
 import { apiGet } from '../services/api';
-import { Search, Save, Trash2, Clock, Filter, X, ArrowRight, AlertTriangle, AlertCircle, CheckCircle, PlusCircle } from 'lucide-react';
+import { Search, Save, Trash2, Clock, Filter, X, ArrowRight, PlusCircle } from 'lucide-react';
 
 // Interface auxiliar para exibição
 interface ShiftRow {
@@ -59,11 +59,7 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
   const [formInputCodigo, setFormInputCodigo] = useState(''); // For Exit to reference Entry
 
   // Justificativa State (modo cooperado)
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [justificationTarget, setJustificationTarget] = useState<{ entryId: string; type: 'SAIDA' | 'ENTRADA' } | null>(null);
-  const [justificationTime, setJustificationTime] = useState('');
-  const [justificationReason, setJustificationReason] = useState('Esquecimento');
-  const [justificationDesc, setJustificationDesc] = useState('');
+  // Removido: justificativa parcial de horário (entrada/saída)
 
   // Registro completo de plantão não registrado (modo cooperado)
   const [missingHospitalId, setMissingHospitalId] = useState('');
@@ -806,70 +802,7 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
     setFilterDataFim('');
   }
 
-  // Handlers de Justificativa (modo cooperado)
-  const handleOpenJustification = (entryId: string, type: 'SAIDA' | 'ENTRADA') => {
-    setJustificationTarget({ entryId, type });
-    setJustificationTime('');
-    setJustificationReason('Esquecimento');
-    setJustificationDesc('');
-    setIsModalOpen(true);
-  };
-
-  const submitJustification = () => {
-    if (!justificationTarget || !justificationTime) return;
-    if (!cooperadoLogadoData) return;
-
-    // Find the original Entry
-    const entry = logs.find(l => l.id === justificationTarget.entryId);
-    if (!entry) return;
-
-    // Construct timestamp based on Entry Date + Justification Time
-    const entryDate = new Date(entry.timestamp).toISOString().split('T')[0];
-    const newTimestamp = new Date(`${entryDate}T${justificationTime}:00`).toISOString();
-
-    // Criar justificativa na tabela separada
-    const novaJustificativa: Justificativa = {
-      id: crypto.randomUUID(),
-      cooperadoId: cooperadoLogadoData.id,
-      cooperadoNome: cooperadoLogadoData.nome,
-      pontoId: undefined, // Será criado após aprovação
-      motivo: justificationReason,
-      descricao: justificationDesc,
-      dataSolicitacao: new Date().toISOString(),
-      status: 'Pendente',
-      setorId: entry.setorId, // Adicionar setor da entrada original
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    StorageService.saveJustificativa(novaJustificativa);
-
-    // Criar ponto vinculado à justificativa
-    const novoPonto: RegistroPonto = {
-        id: crypto.randomUUID(),
-        codigo: entry.codigo,
-        cooperadoId: cooperadoLogadoData.id,
-        cooperadoNome: cooperadoLogadoData.nome,
-        timestamp: newTimestamp,
-        tipo: justificationTarget.type === 'SAIDA' ? TipoPonto.SAIDA : TipoPonto.ENTRADA,
-        local: entry.local,
-        hospitalId: entry.hospitalId,
-        setorId: entry.setorId,
-        isManual: true,
-        status: 'Pendente',
-        relatedId: entry.id
-    };
-
-    StorageService.savePonto(novoPonto);
-    
-    // Vincular ponto à justificativa
-    novaJustificativa.pontoId = novoPonto.id;
-    StorageService.saveJustificativa(novaJustificativa);
-
-    setIsModalOpen(false);
-    loadData();
-    alert('Justificativa enviada com sucesso! Aguarde a aprovação do gestor.');
-  };
+  // Removido: handlers de justificativa parcial
 
   const resetMissingShiftForm = () => {
     setMissingHospitalId('');
@@ -1277,15 +1210,7 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
                     {row.exit ? (
                       new Date(row.exit.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
                     ) : (
-                      mode === 'cooperado' && row.entry && row.entry.status !== 'Pendente' ? (
-                        <button 
-                          onClick={() => handleOpenJustification(row.id, 'SAIDA')}
-                          className="text-primary-600 hover:text-primary-800 underline text-xs flex items-center justify-center w-full gap-1"
-                          title="Justificar horário em aberto"
-                        >
-                          <AlertTriangle className="h-3 w-3" /> --:--
-                        </button>
-                      ) : '--:--'
+                      '--:--'
                     )}
                   </td>
 
@@ -1544,82 +1469,7 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
       </div>
       )}
 
-      {/* Modal de Justificativa */}
-      {mode === 'cooperado' && isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md animate-fade-in mx-4">
-                <div className="flex justify-between items-center mb-4 border-b pb-2">
-                    <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                        <AlertCircle className="h-5 w-5 text-amber-500" />
-                        Justificativa de Horário
-                    </h3>
-                    <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600">
-                        <X className="h-5 w-5" />
-                    </button>
-                </div>
-
-                <div className="space-y-4">
-                    <div className="bg-amber-50 text-amber-800 p-3 rounded-lg text-sm mb-4">
-                        Preencha os dados abaixo. Sua solicitação será enviada para aprovação do gestor.
-                    </div>
-
-                    <div className="space-y-1">
-                        <label className="text-sm font-bold text-gray-700">Horário Realizado</label>
-                        <input 
-                            type="time" 
-                            className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-primary-500"
-                            value={justificationTime}
-                            onChange={e => setJustificationTime(e.target.value)}
-                        />
-                    </div>
-
-                    <div className="space-y-1">
-                        <label className="text-sm font-bold text-gray-700">Motivo da Falha</label>
-                        <select 
-                            className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-primary-500 bg-white"
-                            value={justificationReason}
-                            onChange={e => setJustificationReason(e.target.value)}
-                        >
-                            <option value="Esquecimento">Esquecimento</option>
-                            <option value="Computador Inoperante">Computador Inoperante</option>
-                            <option value="Falta de Energia">Falta de Energia</option>
-                            <option value="Outro Motivo">Outro Motivo</option>
-                        </select>
-                    </div>
-
-                    {justificationReason === 'Outro Motivo' && (
-                        <div className="space-y-1">
-                            <label className="text-sm font-bold text-gray-700">Descrição Detalhada</label>
-                            <textarea 
-                                className="w-full border border-gray-300 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-                                rows={3}
-                                placeholder="Descreva o motivo..."
-                                value={justificationDesc}
-                                onChange={e => setJustificationDesc(e.target.value)}
-                            />
-                        </div>
-                    )}
-
-                    <div className="flex justify-end space-x-2 pt-2">
-                        <button 
-                            onClick={() => setIsModalOpen(false)}
-                            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-                        >
-                            Cancelar
-                        </button>
-                        <button 
-                            onClick={submitJustification}
-                            disabled={!justificationTime || (justificationReason === 'Outro Motivo' && !justificationDesc)}
-                            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-                        >
-                            <CheckCircle className="h-4 w-4" />
-                            Concluir
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-      )}
+        {/* Removido: modal de justificativa de horário */}
     </div>
   );
 };

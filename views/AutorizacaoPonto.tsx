@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { StorageService } from '../services/storage';
 import { Justificativa, Setor } from '../types';
-import { apiGet, apiPost } from '../services/api';
+import { apiGet, apiPost, syncToNeon } from '../services/api';
 import { CheckCircle, XCircle, AlertCircle, Calendar, Clock, MapPin, User, CheckSquare, Search, Filter, X } from 'lucide-react';
 
 export const AutorizacaoPonto: React.FC = () => {
@@ -204,7 +204,8 @@ export const AutorizacaoPonto: React.FC = () => {
           dataAprovacao: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         };
-        await apiPost('sync', { action: 'sync_justificativa', data: updatedJustificativa });
+        // Sync Neon de forma tolerante (não bloquear em dev sem DATABASE_URL)
+        await syncToNeon('sync_justificativa', updatedJustificativa);
 
         // IMPORTANTE: Atualizar TODOS os pontos relacionados
         let pontosParaAtualizar: any[] = [];
@@ -250,7 +251,7 @@ export const AutorizacaoPonto: React.FC = () => {
           const updatedPonto = { ...ponto, status: 'Fechado' as const, validadoPor: aprovador };
           console.log('[AutorizacaoPonto] Atualizando ponto:', updatedPonto.id, updatedPonto);
           StorageService.updatePonto(updatedPonto);
-          await apiPost('sync', { action: 'sync_ponto', data: updatedPonto });
+          await syncToNeon('sync_ponto', updatedPonto);
         }
 
         console.log('[AutorizacaoPonto] ✅ Aprovação concluída com sucesso');
@@ -294,7 +295,8 @@ export const AutorizacaoPonto: React.FC = () => {
           dataAprovacao: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         };
-        await apiPost('sync', { action: 'sync_justificativa', data: updatedJustificativa });
+        // Sync Neon de forma tolerante (não bloquear em dev sem DATABASE_URL)
+        await syncToNeon('sync_justificativa', updatedJustificativa);
 
         // IMPORTANTE: Atualizar TODOS os pontos relacionados
         let pontosParaAtualizar: any[] = [];
@@ -345,7 +347,7 @@ export const AutorizacaoPonto: React.FC = () => {
           };
           console.log('[AutorizacaoPonto] Atualizando ponto (rejeição):', updatedPonto.id, updatedPonto);
           StorageService.updatePonto(updatedPonto);
-          await apiPost('sync', { action: 'sync_ponto', data: updatedPonto });
+          await syncToNeon('sync_ponto', updatedPonto);
         }
 
         console.log('[AutorizacaoPonto] ✅ Rejeição concluída com sucesso');
@@ -591,6 +593,9 @@ export const AutorizacaoPonto: React.FC = () => {
                     <th className="px-4 py-3">Data Solicitação</th>
                     <th className="px-4 py-3">Cooperado</th>
                     <th className="px-4 py-3">Hospital</th>
+                    <th className="px-4 py-3">Setor</th>
+                    <th className="px-4 py-3">Data do Plantão</th>
+                    <th className="px-4 py-3">Entrada / Saída</th>
                     <th className="px-4 py-3">Motivo</th>
                     <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3">Autorizado Por</th>
@@ -601,6 +606,7 @@ export const AutorizacaoPonto: React.FC = () => {
                   {getFilteredHistorico().map((just) => {
                     const ponto = just.pontoId ? StorageService.getPontos().find(p => p.id === just.pontoId) : null;
                     const hospital = ponto ? hospitais.find(h => h.id === ponto.hospitalId) : null;
+                    const pontoInfo = getPontoInfo(just);
                     return (
                       <tr key={just.id} className="hover:bg-gray-50/50 transition-colors">
                         <td className="px-4 py-3">
@@ -615,6 +621,40 @@ export const AutorizacaoPonto: React.FC = () => {
                         </td>
                         <td className="px-4 py-3 font-medium">{just.cooperadoNome}</td>
                         <td className="px-4 py-3 text-xs">{hospital?.nome || '-'}</td>
+                        <td className="px-4 py-3">
+                          {just.setorId ? (
+                            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
+                              <MapPin className="h-3 w-3 mr-1" />
+                              {setoresDisponiveis.find(s => String(s.id) === String(just.setorId))?.nome || `ID: ${just.setorId}`}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {pontoInfo ? (
+                            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                              <Calendar className="h-3 w-3 mr-1" />
+                              {pontoInfo.data}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {pontoInfo ? (
+                            <div className="flex flex-col text-xs">
+                              <span className="text-green-700 font-medium flex items-center gap-1">
+                                <span>📥</span> {pontoInfo.horarioEntrada || '--:--'}
+                              </span>
+                              <span className="text-red-700 font-medium flex items-center gap-1">
+                                <span>📤</span> {pontoInfo.horarioSaida || '--:--'}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-400">-</span>
+                          )}
+                        </td>
                         <td className="px-4 py-3">
                           <div className="flex flex-col gap-1">
                             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200 w-fit">

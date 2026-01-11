@@ -811,8 +811,9 @@ export const StorageService = {
     const index = list.findIndex(j => j.id === id);
     
     if (index >= 0) {
+      const justificativa = list[index];
       list[index] = {
-        ...list[index],
+        ...justificativa,
         status: 'Fechado',
         validadoPor: aprovadoPor,
         dataAprovacao: new Date().toISOString(),
@@ -821,6 +822,28 @@ export const StorageService = {
       
       localStorage.setItem(JUSTIFICATIVAS_KEY, JSON.stringify(list));
       StorageService.logAudit('JUSTIFICATIVA_APROVADA', `Justificativa ${id} aprovada por ${aprovadoPor}`);
+      
+      // Atualizar RegistroPonto associados (ENTRADA e SAÍDA)
+      if (justificativa.pontoId) {
+        const pontos = StorageService.getPontos();
+        const pontoIndices = pontos
+          .map((p, idx) => ({ p, idx }))
+          .filter(({ p }) => p.id === justificativa.pontoId)
+          .map(({ idx }) => idx);
+        
+        pontoIndices.forEach(idx => {
+          pontos[idx] = {
+            ...pontos[idx],
+            status: 'Fechado',
+            validadoPor: aprovadoPor,
+            dataAprovacao: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+        });
+        
+        localStorage.setItem(PONTOS_KEY, JSON.stringify(pontos));
+        pontoIndices.forEach(idx => syncToNeon('sync_ponto', pontos[idx]));
+      }
       
       // Sincronizar com Neon
       syncToNeon('sync_justificativa', list[index]);
@@ -832,8 +855,9 @@ export const StorageService = {
     const index = list.findIndex(j => j.id === id);
     
     if (index >= 0) {
+      const justificativa = list[index];
       list[index] = {
-        ...list[index],
+        ...justificativa,
         status: 'Rejeitado',
         rejeitadoPor,
         motivoRejeicao,
@@ -843,6 +867,29 @@ export const StorageService = {
       
       localStorage.setItem(JUSTIFICATIVAS_KEY, JSON.stringify(list));
       StorageService.logAudit('JUSTIFICATIVA_REJEITADA', `Justificativa ${id} rejeitada por ${rejeitadoPor}: ${motivoRejeicao}`);
+      
+      // Atualizar RegistroPonto associados (ENTRADA e SAÍDA) para Rejeitado
+      if (justificativa.pontoId) {
+        const pontos = StorageService.getPontos();
+        const pontoIndices = pontos
+          .map((p, idx) => ({ p, idx }))
+          .filter(({ p }) => p.id === justificativa.pontoId)
+          .map(({ idx }) => idx);
+        
+        pontoIndices.forEach(idx => {
+          pontos[idx] = {
+            ...pontos[idx],
+            status: 'Rejeitado',
+            rejeitadoPor,
+            motivoRejeicao,
+            dataAprovacao: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+        });
+        
+        localStorage.setItem(PONTOS_KEY, JSON.stringify(pontos));
+        pontoIndices.forEach(idx => syncToNeon('sync_ponto', pontos[idx]));
+      }
       
       // Sincronizar com Neon
       syncToNeon('sync_justificativa', list[index]);
