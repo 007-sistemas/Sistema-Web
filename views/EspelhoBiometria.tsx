@@ -53,14 +53,14 @@ export const EspelhoBiometria: React.FC = () => {
     }
   }, []);
 
-  // Auto-refresh a cada 30 segundos para pegar aprovações do gestor
+  // Auto-refresh a cada 5 segundos para pegar aprovações do gestor
   useEffect(() => {
     if (!cooperadoId || !session) return;
     
     const interval = setInterval(() => {
       console.log('[EspelhoBiometria] Auto-refresh dos pontos');
       loadData();
-    }, 30000); // 30 segundos
+    }, 5000); // 5 segundos
     
     return () => clearInterval(interval);
   }, [cooperadoId, session]);
