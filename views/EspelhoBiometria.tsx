@@ -88,6 +88,11 @@ export const EspelhoBiometria: React.FC = () => {
     try {
       setLoading(true);
 
+      // IMPORTANTE: Atualizar sessão a cada loadData
+      const currentSession = StorageService.getSession();
+      setSession(currentSession);
+      console.log('[EspelhoBiometria] 🔐 Sessão atualizada:', currentSession?.user?.nome);
+
       // Mesma lógica do Controle de Produção: sincronizar storage e usar storage como fonte principal
       try {
         await StorageService.refreshHospitaisFromRemote();

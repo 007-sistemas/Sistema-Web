@@ -198,6 +198,13 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
     } catch (error) {
       console.error('Erro ao sincronizar dados do Neon:', error);
     }
+
+    // IMPORTANTE: Atualizar sessão a cada loadData (especialmente para cooperado)
+    if (mode === 'cooperado') {
+      const currentSession = StorageService.getSession();
+      setSession(currentSession);
+      console.log('[loadData] 🔐 Sessão atualizada para cooperado:', currentSession?.user?.nome);
+    }
     
     setCooperados(StorageService.getCooperados());
     setHospitais(StorageService.getHospitais());
