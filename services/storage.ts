@@ -800,9 +800,11 @@ export const StorageService = {
     }
     
     localStorage.setItem(JUSTIFICATIVAS_KEY, JSON.stringify(list));
+    console.log('[StorageService] 💾 Justificativa salva localmente:', justificativa.id, 'Total no localStorage:', list.length);
     StorageService.logAudit('JUSTIFICATIVA_SALVA', `Justificativa ${justificativa.id} - ${justificativa.status}`);
 
     // Sincronizar com Neon
+    console.log('[StorageService] 🌐 Iniciando sync para Neon:', justificativa.id);
     syncToNeon('sync_justificativa', justificativa);
   },
 
@@ -886,18 +888,29 @@ export const StorageService = {
       const localJust = StorageService.getJustificativas();
       const remoteIds = new Set(remoteJust.map(j => j.id));
       
+      console.log('[StorageService] 🔄 Merge - Justificativas locais:', localJust.length, 'Remotas:', remoteJust.length);
+      console.log('[StorageService] 🔄 IDs remotos:', Array.from(remoteIds));
+      
       // Manter justificativas locais criadas nos últimos 30 segundos que ainda não estão remotas
       const now = Date.now();
       const recentLocal = localJust.filter(j => {
-        if (remoteIds.has(j.id)) return false; // Já está remota
+        if (remoteIds.has(j.id)) {
+          console.log('[StorageService] ⏭️  Justificativa', j.id, 'já está remota, pulando');
+          return false;
+        }
         const age = now - new Date(j.createdAt || j.dataSolicitacao).getTime();
-        return age < 30000; // Criada há menos de 30s
+        const isRecent = age < 30000;
+        console.log('[StorageService] 🕐 Justificativa', j.id, 'idade:', Math.round(age/1000) + 's', isRecent ? '✅ MANTIDA' : '❌ DESCARTADA');
+        return isRecent;
       });
 
       const merged = [...remoteJust, ...recentLocal];
       
       localStorage.setItem(JUSTIFICATIVAS_KEY, JSON.stringify(merged));
       console.log(`[StorageService] ✅ ${remoteJust.length} justificativas remotas + ${recentLocal.length} locais recentes = ${merged.length} total`);
+      if (recentLocal.length > 0) {
+        console.log('[StorageService] 📌 Justificativas locais preservadas:', recentLocal.map(j => j.id));
+      }
     } catch (err) {
       console.error('[StorageService] Erro ao sincronizar justificativas do Neon:', err);
     }

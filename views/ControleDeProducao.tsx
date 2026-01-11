@@ -80,7 +80,11 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
     if (!cooperadoLogadoId && !cooperadoLogadoData?.nome) return false;
     const sameId = cooperadoLogadoId ? justificativa.cooperadoId === cooperadoLogadoId : false;
     const sameName = cooperadoLogadoData?.nome ? justificativa.cooperadoNome?.trim().toLowerCase() === cooperadoLogadoData.nome.trim().toLowerCase() : false;
-    return sameId || sameName;
+    const matches = sameId || sameName;
+    console.log('[matchCooperado] Justificativa', justificativa.id, '→', matches ? '✅ MATCH' : '❌ NO MATCH',
+      '| cooperadoId:', justificativa.cooperadoId, '===', cooperadoLogadoId, '?', sameId,
+      '| nome:', justificativa.cooperadoNome, '===', cooperadoLogadoData?.nome, '?', sameName);
+    return matches;
   };
 
 
@@ -206,17 +210,23 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
     if (mode === 'cooperado' && (cooperadoLogadoId || cooperadoLogadoData?.nome)) {
       try {
         const remoteJust = await apiGet<Justificativa[]>('sync?action=list_justificativas');
+        console.log('[ControleDeProducao] 📥 Recebidas', remoteJust.length, 'justificativas remotas');
+        console.log('[ControleDeProducao] 🔍 Filtrando por cooperado:', cooperadoLogadoId, '/', cooperadoLogadoData?.nome);
         const filteredJust = remoteJust.filter(j => matchesCooperadoLogado(j));
+        console.log('[ControleDeProducao] ✅ Após filtro:', filteredJust.length, 'justificativas');
         const missingJust = filteredJust.filter(j => !j.pontoId || !existingIds.has(j.pontoId));
         const synth = buildPontosFromJustificativas(missingJust, StorageService.getHospitais(), existingIds);
-        console.log('[ControleDeProducao] Justificativas remotas para cooperado:', filteredJust.length, 'Sintéticas:', synth.length);
+        console.log('[ControleDeProducao] 📊 Justificativas remotas para cooperado:', filteredJust.length, 'Sintéticas:', synth.length);
         allPontos = [...allPontos, ...synth];
       } catch (err) {
         console.warn('[ControleDeProducao] Falha ao buscar justificativas remotas, usando local:', err);
-        const localJust = StorageService.getJustificativas().filter(j => matchesCooperadoLogado(j));
-        const missingJust = localJust.filter(j => !j.pontoId || !existingIds.has(j.pontoId));
+        const localJust = StorageService.getJustificativas();
+        console.log('[ControleDeProducao] 📥 Justificativas do localStorage:', localJust.length);
+        const filtered = localJust.filter(j => matchesCooperadoLogado(j));
+        console.log('[ControleDeProducao] ✅ Após filtro:', filtered.length);
+        const missingJust = filtered.filter(j => !j.pontoId || !existingIds.has(j.pontoId));
         const synth = buildPontosFromJustificativas(missingJust, StorageService.getHospitais(), existingIds);
-        console.log('[ControleDeProducao] Justificativas locais para cooperado:', localJust.length, 'Sintéticas:', synth.length);
+        console.log('[ControleDeProducao] 📊 Justificativas locais para cooperado:', filtered.length, 'Sintéticas:', synth.length);
         allPontos = [...allPontos, ...synth];
       }
     }
