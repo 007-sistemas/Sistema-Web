@@ -827,16 +827,24 @@ export const StorageService = {
       if (justificativa.pontoId) {
         const pontos = StorageService.getPontos();
         
-        // Encontrar o ponto de saída (pontoId armazena a saída)
+        // pontoId armazena o ID da SAÍDA
         const saidaIndex = pontos.findIndex(p => p.id === justificativa.pontoId);
         
-        // Encontrar o ponto de entrada (tem relatedId apontando para a saída)
-        const entradaIndex = pontos.findIndex(p => p.relatedId === justificativa.pontoId);
+        // Encontrar a ENTRADA: através do relatedId DA SAÍDA
+        let entradaIndex = -1;
+        if (saidaIndex >= 0 && pontos[saidaIndex].relatedId) {
+          entradaIndex = pontos.findIndex(p => p.id === pontos[saidaIndex].relatedId);
+        }
         
         // Atualizar ambos os pontos
         const indicesToUpdate = new Set<number>();
         if (saidaIndex >= 0) indicesToUpdate.add(saidaIndex);
         if (entradaIndex >= 0) indicesToUpdate.add(entradaIndex);
+        
+        console.log('[aprovarJustificativa] Atualizando pontos:', {
+          saidaId: saidaIndex >= 0 ? pontos[saidaIndex].id : null,
+          entradaId: entradaIndex >= 0 ? pontos[entradaIndex].id : null
+        });
         
         indicesToUpdate.forEach(idx => {
           pontos[idx] = {
@@ -879,16 +887,24 @@ export const StorageService = {
       if (justificativa.pontoId) {
         const pontos = StorageService.getPontos();
         
-        // Encontrar o ponto de saída (pontoId armazena a saída)
+        // pontoId armazena o ID da SAÍDA
         const saidaIndex = pontos.findIndex(p => p.id === justificativa.pontoId);
         
-        // Encontrar o ponto de entrada (tem relatedId apontando para a saída)
-        const entradaIndex = pontos.findIndex(p => p.relatedId === justificativa.pontoId);
+        // Encontrar a ENTRADA: através do relatedId DA SAÍDA
+        let entradaIndex = -1;
+        if (saidaIndex >= 0 && pontos[saidaIndex].relatedId) {
+          entradaIndex = pontos.findIndex(p => p.id === pontos[saidaIndex].relatedId);
+        }
         
         // Atualizar ambos os pontos
         const indicesToUpdate = new Set<number>();
         if (saidaIndex >= 0) indicesToUpdate.add(saidaIndex);
         if (entradaIndex >= 0) indicesToUpdate.add(entradaIndex);
+        
+        console.log('[rejeitarJustificativa] Atualizando pontos:', {
+          saidaId: saidaIndex >= 0 ? pontos[saidaIndex].id : null,
+          entradaId: entradaIndex >= 0 ? pontos[entradaIndex].id : null
+        });
         
         indicesToUpdate.forEach(idx => {
           pontos[idx] = {
