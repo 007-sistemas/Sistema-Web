@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StorageService } from '../services/storage';
 import { RegistroPonto, Cooperado, Hospital, Setor } from '../types';
 import { apiGet } from '../services/api';
-import { exportToExcel, exportToPDF } from '../services/reportExport';
+import { exportToExcel, exportToPDF, exportToExcelByCooperado, exportToPDFByCooperado } from '../services/reportExport';
 import { FileText, Download, Filter, X, FileSpreadsheet, Calendar } from 'lucide-react';
 
 interface RelatorioRow {
@@ -295,6 +295,90 @@ export const Relatorios: React.FC = () => {
     }, stats);
   };
 
+  const handleExportarExcelByCooperado = async () => {
+    if (relatorioData.length === 0) {
+      alert('Não há dados para exportar');
+      return;
+    }
+
+    // Preparar dados dos filtros com nomes legíveis
+    const filterLabels: any = {};
+    if (filterHospital) {
+      const hospital = hospitais.find(h => h.id === filterHospital);
+      filterLabels.hospital = hospital?.nome || filterHospital;
+    }
+    if (filterSetor) {
+      const setor = todosSetores.find(s => s.id.toString() === filterSetor);
+      filterLabels.setor = setor?.nome || filterSetor;
+    }
+    if (filterCooperado) {
+      const cooperado = cooperados.find(c => c.id === filterCooperado);
+      filterLabels.cooperado = cooperado?.nome || filterCooperado;
+    }
+
+    const stats = {
+      totalRegistros: relatorioData.length,
+      plantoesFechados: relatorioData.filter(r => r.status === 'Fechado').length,
+      plantoesAbertos: relatorioData.filter(r => r.status === 'Em Aberto').length,
+      totalHoras: relatorioData.reduce((acc, r) => {
+        if (r.totalHoras === '--') return acc;
+        const [hours, minutes] = r.totalHoras.replace('h', '').replace('m', '').split(' ').map(Number);
+        return acc + hours + (minutes / 60);
+      }, 0).toFixed(1) + 'h'
+    };
+
+    await exportToExcelByCooperado(relatorioData, {
+      hospital: filterLabels.hospital || undefined,
+      setor: filterLabels.setor || undefined,
+      cooperado: filterLabels.cooperado || undefined,
+      categoria: filterCategoria || undefined,
+      dataIni: filterDataIni || undefined,
+      dataFim: filterDataFim || undefined
+    }, stats);
+  };
+
+  const handleExportarPDFByCooperado = async () => {
+    if (relatorioData.length === 0) {
+      alert('Não há dados para exportar');
+      return;
+    }
+
+    // Preparar dados dos filtros com nomes legíveis
+    const filterLabels: any = {};
+    if (filterHospital) {
+      const hospital = hospitais.find(h => h.id === filterHospital);
+      filterLabels.hospital = hospital?.nome || filterHospital;
+    }
+    if (filterSetor) {
+      const setor = todosSetores.find(s => s.id.toString() === filterSetor);
+      filterLabels.setor = setor?.nome || filterSetor;
+    }
+    if (filterCooperado) {
+      const cooperado = cooperados.find(c => c.id === filterCooperado);
+      filterLabels.cooperado = cooperado?.nome || filterCooperado;
+    }
+
+    const stats = {
+      totalRegistros: relatorioData.length,
+      plantoesFechados: relatorioData.filter(r => r.status === 'Fechado').length,
+      plantoesAbertos: relatorioData.filter(r => r.status === 'Em Aberto').length,
+      totalHoras: relatorioData.reduce((acc, r) => {
+        if (r.totalHoras === '--') return acc;
+        const [hours, minutes] = r.totalHoras.replace('h', '').replace('m', '').split(' ').map(Number);
+        return acc + hours + (minutes / 60);
+      }, 0).toFixed(1) + 'h'
+    };
+
+    await exportToPDFByCooperado(relatorioData, {
+      hospital: filterLabels.hospital || undefined,
+      setor: filterLabels.setor || undefined,
+      cooperado: filterLabels.cooperado || undefined,
+      categoria: filterCategoria || undefined,
+      dataIni: filterDataIni || undefined,
+      dataFim: filterDataFim || undefined
+    }, stats);
+  };
+
   const filteredCooperados = cooperados.filter(c => 
     c.nome.toLowerCase().includes(filterCooperadoInput.toLowerCase())
   );
@@ -305,21 +389,46 @@ export const Relatorios: React.FC = () => {
     <div className="space-y-6 max-w-7xl mx-auto pb-20">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-800">Relatórios de Produção</h2>
-        <div className="flex gap-3">
-          <button
-            onClick={handleExportarPDF}
-            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-          >
-            <FileText className="w-4 h-4" />
-            Exportar PDF
-          </button>
-          <button
-            onClick={handleExportarExcel}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            <FileSpreadsheet className="w-4 h-4" />
-            Exportar Excel
-          </button>
+        <div className="flex gap-6">
+          {/* Relatório Geral */}
+          <div className="flex gap-2">
+            <button
+              onClick={handleExportarPDF}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+              title="Exportar todos os dados em um único arquivo"
+            >
+              <FileText className="w-4 h-4" />
+              PDF
+            </button>
+            <button
+              onClick={handleExportarExcel}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+              title="Exportar todos os dados em um único arquivo"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              Excel
+            </button>
+          </div>
+
+          {/* Relatório por Cooperado */}
+          <div className="flex gap-2 border-l border-gray-300 pl-6">
+            <button
+              onClick={handleExportarPDFByCooperado}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+              title="Exportar com uma página para cada cooperado"
+            >
+              <FileText className="w-4 h-4" />
+              PDF por Cooperado
+            </button>
+            <button
+              onClick={handleExportarExcelByCooperado}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+              title="Exportar com uma aba para cada cooperado"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              Excel por Cooperado
+            </button>
+          </div>
         </div>
       </div>
 
