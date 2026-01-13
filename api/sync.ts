@@ -714,12 +714,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'Ponto ID é obrigatório para exclusão' });
       }
 
-      // Remover justificativas que referenciam este ponto (ou seu par via related_id)
-      await sql`
-        DELETE FROM justificativas 
-        WHERE ponto_id = ${id} 
-           OR ponto_id IN (SELECT id FROM pontos WHERE related_id = ${id})
+      // Buscar pontos relacionados (entrada/saída) para obter cooperado e data
+      const pontosRelacionados = await sql`
+        SELECT id, cooperado_id AS "cooperadoId", date, timestamp 
+        FROM pontos 
+        WHERE id = ${id} OR related_id = ${id}
       `;
+
+      // Remover justificativas vinculadas por ponto_id e por (cooperado_id + data_plantao)
+      for (const p of pontosRelacionados) {
+        const dataPlantao = p.date || (p.timestamp ? p.timestamp.split('T')[0] : null);
+        await sql`DELETE FROM justificativas WHERE ponto_id = ${p.id}`;
+        if (dataPlantao) {
+          await sql`DELETE FROM justificativas WHERE cooperado_id = ${p.cooperadoId} AND data_plantao = ${dataPlantao}`;
+          console.log('[sync] Justificativas removidas por cooperado/data:', p.cooperadoId, dataPlantao);
+        }
+      }
       console.log('[sync] Justificativas vinculadas ao ponto removidas:', id);
 
       // Remover o ponto (e qualquer par via related_id)
