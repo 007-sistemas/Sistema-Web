@@ -316,10 +316,8 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
     
     // Carregar setores de todos os hospitais para exibição (Hospital - Setor quando filtro vazio)
     await loadAllSetores(StorageService.getHospitais());
-    // Order: Ascending (Oldest top, Newest bottom)
-    const sorted = pontosValidos.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
-    const normalized = sorted.map((p) => {
+    const normalized = pontosValidos.map((p) => {
       const manualFlag = p.isManual === true 
         || (p as any).isManual === 'true' 
         || (p as any).isManual === 1 
