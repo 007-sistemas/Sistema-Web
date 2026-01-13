@@ -46,6 +46,7 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
   const [selectedPontoId, setSelectedPontoId] = useState<string | null>(null);
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null); // Para rastrear qual é a entrada
   const [selectedExitId, setSelectedExitId] = useState<string | null>(null); // Para rastrear qual é a saída
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set()); // IDs das linhas selecionadas para exclusão
 
   // Form State
   const [formCooperadoId, setFormCooperadoId] = useState('');
@@ -926,23 +927,50 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
   };
 
   const handleExcluir = () => {
-    if (!selectedPontoId) {
-        alert("Selecione um registro na tabela para excluir.");
+    const idsToDelete = selectedRows.size > 0 ? Array.from(selectedRows) : (selectedPontoId ? [selectedPontoId] : []);
+    
+    if (idsToDelete.length === 0) {
+        alert("Selecione ao menos um registro para excluir.");
         return;
     }
     
-    if (confirm("Tem certeza? Se for uma Entrada, a Saída vinculada também será excluída.")) {
-        StorageService.deletePonto(selectedPontoId);
+    const confirmMsg = idsToDelete.length === 1 
+      ? "Tem certeza? Se for uma Entrada, a Saída vinculada também será excluída."
+      : `Tem certeza que deseja excluir ${idsToDelete.length} registros? Entradas vinculadas também serão excluídas.`;
+    
+    if (confirm(confirmMsg)) {
+        idsToDelete.forEach(id => StorageService.deletePonto(id));
         
         // Atualizar estado imediatamente (sem aguardar Neon)
         const updated = StorageService.getPontos();
         const sorted = updated.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
         setLogs(sorted);
         
+        setSelectedRows(new Set());
         handleNovoPlantao();
         
         // Sincronizar com Neon em background (assíncrono)
         loadData();
+    }
+  };
+
+  const toggleRowSelection = (rowId: string) => {
+    setSelectedRows(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(rowId)) {
+        newSet.delete(rowId);
+      } else {
+        newSet.add(rowId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedRows.size === shiftRows.length) {
+      setSelectedRows(new Set());
+    } else {
+      setSelectedRows(new Set(shiftRows.map(r => r.id)));
     }
   };
 
@@ -1294,7 +1322,16 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
           <table className="w-full text-left text-sm text-gray-600">
             <thead className="bg-primary-600 text-white font-bold sticky top-0 z-10">
               <tr>
-                {mode === 'manager' && <th className="px-4 py-3">Selecionar</th>}
+                {mode === 'manager' && (
+                  <th className="px-4 py-3 w-12">
+                    <input 
+                      type="checkbox" 
+                      checked={selectedRows.size === shiftRows.length && shiftRows.length > 0}
+                      onChange={toggleSelectAll}
+                      className="w-4 h-4 cursor-pointer"
+                    />
+                  </th>
+                )}
                 <th className="px-4 py-3">Local / Setor</th>
                 {mode === 'manager' && <th className="px-4 py-3">Cooperado</th>}
                 <th className="px-4 py-3">Data</th>
@@ -1302,7 +1339,6 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
                 <th className="px-4 py-3 text-center">Saída</th>
                 <th className="px-4 py-3 text-center">Status</th>
                 {mode === 'cooperado' && <th className="px-4 py-3 text-center">Origem</th>}
-                {mode === 'manager' && <th className="px-4 py-3">Código</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 bg-white dark:bg-gray-900">
@@ -1317,8 +1353,13 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
                     }` : 'bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100'}
                 >
                   {mode === 'manager' && (
-                    <td className="px-4 py-3">
-                      <button className="text-xs text-primary-600 dark:text-primary-400 underline font-medium">Selecionar</button>
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <input 
+                        type="checkbox" 
+                        checked={selectedRows.has(row.id)}
+                        onChange={() => toggleRowSelection(row.id)}
+                        className="w-4 h-4 cursor-pointer"
+                      />
                     </td>
                   )}
                   <td className="px-4 py-3 truncate max-w-[200px] text-gray-700 dark:text-gray-300" title={row.local}>
@@ -1394,12 +1435,6 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
                         if (hasManual) return 'Manual';
                         return 'Biometria';
                       })()}
-                    </td>
-                  )}
-                  
-                  {mode === 'manager' && (
-                    <td className="px-4 py-3 font-mono text-xs text-gray-600 dark:text-gray-400">
-                      {row.entry?.codigo || row.exit?.codigo}
                     </td>
                   )}
                 </tr>
@@ -1548,19 +1583,6 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
                 </div>
             </div>
 
-            <div className="space-y-1">
-                <label className={`text-sm font-bold ${formTipo === TipoPonto.SAIDA ? 'text-gray-700' : 'text-gray-300'}`}>
-                    Cód. Registro Entrada
-                </label>
-                <input 
-                    type="text" 
-                    placeholder="Obrigatório para Saída"
-                    className="w-full bg-white text-gray-900 border border-gray-300 rounded p-2 outline-none disabled:bg-gray-100"
-                    disabled={formTipo !== TipoPonto.SAIDA}
-                    value={formInputCodigo}
-                    onChange={e => setFormInputCodigo(e.target.value)}
-                />
-            </div>
         </div>
 
         <div className="flex flex-wrap gap-4 mt-8 pt-4 border-t border-gray-100">
@@ -1582,15 +1604,15 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
 
             <button 
                 onClick={handleExcluir}
-                disabled={!selectedPontoId}
+                disabled={selectedRows.size === 0 && !selectedPontoId}
                 className={`font-bold py-2 px-6 rounded shadow transition-colors flex items-center ${
-                    !selectedPontoId 
+                    (selectedRows.size === 0 && !selectedPontoId)
                         ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
                         : 'bg-red-500 hover:bg-red-600 text-white'
                 }`}
             >
                 <Trash2 className="w-4 h-4 mr-2" />
-                Excluir Registro
+                {selectedRows.size > 0 ? `Excluir (${selectedRows.size})` : 'Excluir Registro'}
             </button>
         </div>
       </div>
