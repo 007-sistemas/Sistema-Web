@@ -452,13 +452,18 @@ export const StorageService = {
       const rows = await apiGet<any[]>('sync?action=list_pontos');
       if (!Array.isArray(rows)) return;
 
+      console.log('[refreshPontosFromRemote] 📥 Pontos do Neon:', rows.length);
+
       // Buscar justificativas excluídas para filtrar pontos relacionados
       const justificativas = await apiGet<any[]>('sync?action=list_justificativas').catch(() => []);
       const justExcluidas = justificativas.filter(j => j.status === 'Excluído');
+      console.log('[refreshPontosFromRemote] 🚫 Justificativas excluídas:', justExcluidas.length, justExcluidas.map(j => ({ id: j.id, pontoId: j.pontoId })));
+      
       const pontosExcluidosIds = new Set<string>();
       justExcluidas.forEach(j => {
         if (j.pontoId) pontosExcluidosIds.add(j.pontoId);
       });
+      console.log('[refreshPontosFromRemote] 🚫 IDs de pontos a serem filtrados:', Array.from(pontosExcluidosIds));
 
       // Buscar hospitais e setores para montar o campo local corretamente
       const hospitais = StorageService.getHospitais();
@@ -467,7 +472,7 @@ export const StorageService = {
         .filter(row => {
           // Filtrar pontos que fazem parte de justificativas excluídas
           if (pontosExcluidosIds.has(row.id) || (row.relatedId && pontosExcluidosIds.has(row.relatedId))) {
-            console.log('[refreshPontosFromRemote] 🚫 Filtrando ponto de justificativa excluída:', row.id);
+            console.log('[refreshPontosFromRemote] 🚫 Filtrando ponto de justificativa excluída:', row.id, row.codigo);
             return false;
           }
           return true;

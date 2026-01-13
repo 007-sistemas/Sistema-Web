@@ -106,25 +106,31 @@ export const EspelhoBiometria: React.FC = () => {
       let todasJustificativas: Justificativa[] = [];
       try {
         todasJustificativas = await apiGet<Justificativa[]>('sync?action=list_justificativas');
+        console.log('[EspelhoBiometria] 📋 Justificativas do Neon:', todasJustificativas.length);
+        console.log('[EspelhoBiometria] 🚫 Justificativas Excluídas:', todasJustificativas.filter(j => j.status === 'Excluído').map(j => ({ id: j.id, pontoId: j.pontoId, status: j.status })));
       } catch (e) {
         console.warn('[EspelhoBiometria] Falha ao buscar justificativas remotas, usando local:', e);
         todasJustificativas = StorageService.getJustificativas();
+        console.log('[EspelhoBiometria] 📋 Justificativas locais:', todasJustificativas.length);
       }
 
       // Filtrar pontos que não fazem parte de justificativas excluídas
-      const allPontos = StorageService.getPontos()
-        .filter(p => matchesCooperado(p, effectiveCoopId, effectiveSession))
+      const pontosAntesDoFiltro = StorageService.getPontos().filter(p => matchesCooperado(p, effectiveCoopId, effectiveSession));
+      console.log('[EspelhoBiometria] 📊 Pontos antes do filtro de exclusão:', pontosAntesDoFiltro.length, pontosAntesDoFiltro.map(p => ({ id: p.id, codigo: p.codigo, data: p.timestamp, relatedId: p.relatedId })));
+      
+      const allPontos = pontosAntesDoFiltro
         .filter(p => {
           // Verificar se há uma justificativa excluída associada a este ponto
           const justExcluida = todasJustificativas.find(j => 
             j.status === 'Excluído' && (j.pontoId === p.id || j.pontoId === p.relatedId)
           );
           if (justExcluida) {
-            console.log('[EspelhoBiometria] 🚫 Filtrando ponto de justificativa excluída:', p.id, p.codigo);
+            console.log('[EspelhoBiometria] 🚫 Filtrando ponto de justificativa excluída:', p.id, p.codigo, 'justificativa:', justExcluida.id);
             return false;
           }
           return true;
         });
+      console.log('[EspelhoBiometria] ✅ Pontos após filtro de exclusão:', allPontos.length);
       const existingIds = new Set(allPontos.map(p => p.id));
 
       // Unir justificativas sem ponto (ou com ponto ausente no storage) para exibir pendentes/recusadas
