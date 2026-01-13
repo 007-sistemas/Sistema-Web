@@ -709,6 +709,12 @@ export const StorageService = {
       ]);
       
       console.log('[clearCacheAndReload] ✅ Cache limpo e dados recarregados com sucesso');
+      
+      // Notificar outras abas/cooperados via localStorage event
+      const notificationKey = 'biohealth_data_updated';
+      const notification = { timestamp: Date.now(), type: 'plantao_deleted' };
+      localStorage.setItem(notificationKey, JSON.stringify(notification));
+      console.log('[clearCacheAndReload] 📢 Notificação enviada para outras abas');
     } catch (err) {
       console.error('[clearCacheAndReload] ❌ Erro ao recarregar dados:', err);
     }

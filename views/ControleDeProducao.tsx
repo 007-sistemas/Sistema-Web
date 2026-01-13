@@ -113,7 +113,20 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
       loadData();
     }, 3000);
 
-    return () => clearInterval(pollInterval);
+    // Listener para notificações de exclusão via localStorage
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'biohealth_data_updated' && e.newValue) {
+        console.log('[ControleDeProducao] 📢 Notificação recebida de exclusão, recarregando...');
+        loadData();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      clearInterval(pollInterval);
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, [mode]);
 
   // Carregar setores quando o filtro de hospital mudar
