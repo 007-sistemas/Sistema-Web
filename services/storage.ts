@@ -657,13 +657,14 @@ export const StorageService = {
     localStorage.setItem(PONTOS_KEY, JSON.stringify(pontos));
     console.log('[deletePonto] ✅ Ponto removido do localStorage');
 
-    // HARD DELETE: Remover justificativas relacionadas por pontoId
+    // HARD DELETE: Remover justificativas relacionadas
     let justificativas = StorageService.getJustificativas();
-    const justRemovidas = justificativas.filter(j => j.pontoId === id);
+    const plantaoDate = new Date(target.timestamp).toISOString().split('T')[0];
+    const justRemovidas = justificativas.filter(j => j.pontoId === id || (j.cooperadoId === target.cooperadoId && j.dataPlantao === plantaoDate));
     
     if (justRemovidas.length > 0) {
       console.log('[deletePonto] 🚫 Removendo', justRemovidas.length, 'justificativa(s) relacionada(s)');
-      justificativas = justificativas.filter(j => j.pontoId !== id);
+      justificativas = justificativas.filter(j => !(j.pontoId === id || (j.cooperadoId === target.cooperadoId && j.dataPlantao === plantaoDate)));
       localStorage.setItem(JUSTIFICATIVAS_KEY, JSON.stringify(justificativas));
       
       // Sincronizar remoção com Neon
