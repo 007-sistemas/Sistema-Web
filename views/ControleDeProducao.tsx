@@ -129,7 +129,7 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
       const isChange = e.key === 'biohealth_pontos_changed' && e.newValue;
       if (!isDelete && !isChange) return;
 
-      console.log('[ControleDeProducao] 📢 Notificação recebida:', e.key);
+      console.log('[ControleDeProducao] 📢 Notificação recebida (storage):', e.key);
       
       // Se for cooperado, limpar cache e recarregar
       if (mode === 'cooperado') {
@@ -152,10 +152,44 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
       }
     };
     
+    // Listener local para mudanças (quando na mesma aba)
+    const handleLocalChange = () => {
+      console.log('[ControleDeProducao] 📢 Notificação local recebida');
+      if (mode === 'cooperado') {
+        console.log('[ControleDeProducao] 🧹 Limpando cache do cooperado e recarregando (evento local)...');
+        const pontosKey = 'biohealth_pontos';
+        const justificativasKey = 'biohealth_justificativas';
+        localStorage.removeItem(pontosKey);
+        localStorage.removeItem(justificativasKey);
+        setTimeout(() => {
+          loadData();
+        }, 100);
+      }
+    };
+    
+    // Observer para mudanças locais em localStorage
+    const observer = new MutationObserver(() => {
+      const delKey = localStorage.getItem('biohealth_plantao_deleted');
+      const changeKey = localStorage.getItem('biohealth_pontos_changed');
+      if (delKey || changeKey) {
+        handleLocalChange();
+      }
+    });
+    
+    // Observar mudanças no localStorage via callback com setInterval (fallback)
+    const localChangeInterval = setInterval(() => {
+      const delKey = localStorage.getItem('biohealth_plantao_deleted');
+      const changeKey = localStorage.getItem('biohealth_pontos_changed');
+      if ((delKey || changeKey) && mode === 'cooperado') {
+        handleLocalChange();
+      }
+    }, 100);
+    
     window.addEventListener('storage', handleStorageChange);
 
     return () => {
       clearInterval(pollInterval);
+      clearInterval(localChangeInterval);
       window.removeEventListener('storage', handleStorageChange);
     };
   }, [mode]);
