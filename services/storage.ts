@@ -629,17 +629,8 @@ export const StorageService = {
       const justificativaId = justMatch[1];
       console.log('[deletePonto] 🧹 Detected synthetic ID, removing justificativa:', justificativaId);
 
-      // Verificar se a justificativa é recusada - neste caso NÃO excluir
-      let justificativas = StorageService.getJustificativas();
-      const targetJust = justificativas.find(j => j.id === justificativaId);
-      
-      if (targetJust?.status === 'Rejeitado' || targetJust?.status === 'Recusado') {
-        console.log('[deletePonto] ⚠️ Justificativa RECUSADA não pode ser excluída:', justificativaId);
-        alert('Justificativas recusadas não podem ser excluídas. Elas devem permanecer visíveis para o cooperado.');
-        return;
-      }
-
       // Remover justificativa do localStorage
+      let justificativas = StorageService.getJustificativas();
       const before = justificativas.length;
       justificativas = justificativas.filter(j => j.id !== justificativaId);
       localStorage.setItem(JUSTIFICATIVAS_KEY, JSON.stringify(justificativas));
@@ -679,9 +670,9 @@ export const StorageService = {
     );
     
     if (justRemovidas.length > 0) {
-      console.log('[deletePonto] 🚫 Removendo', justRemovidas.length, 'justificativa(s) relacionada(s) (exceto recusadas)');
+      console.log('[deletePonto] 🚫 Removendo', justRemovidas.length, 'justificativa(s) relacionada(s) (aprovadas/pendentes). Mantendo recusadas.');
       justificativas = justificativas.filter(j => {
-        // Manter se for recusada
+        // Manter APENAS se for recusada
         if (j.status === 'Rejeitado' || j.status === 'Recusado') return true;
         // Remover se corresponder ao ponto/cooperado/data
         return !(j.pontoId === id || (j.cooperadoId === target.cooperadoId && j.dataPlantao === plantaoDate));
