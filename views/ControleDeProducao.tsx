@@ -345,12 +345,18 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
     console.log('[ControleDeProducao] Após normalização - Fechados:', normalized.filter(p => p.status === 'Fechado').length);
 
     // Ordenar: Abertos (Pendente) → Fechados → Rejeitados (dentro de cada grupo, mais recente primeiro)
+    const getStatusOrder = (status?: string | null): number => {
+      if (isRecusadoStatus(status)) return 2;
+      if (status === 'Fechado') return 1;
+      return 0; // Aberto/Pendente
+    };
+
     const sorted = normalized.sort((a, b) => {
-      const statusOrderA = isRecusadoStatus(a.status) ? 2 : (a.status === 'Fechado' ? 1 : 0);
-      const statusOrderB = isRecusadoStatus(b.status) ? 2 : (b.status === 'Fechado' ? 1 : 0);
+      const orderA = getStatusOrder(a.status);
+      const orderB = getStatusOrder(b.status);
       
-      if (statusOrderA !== statusOrderB) {
-        return statusOrderA - statusOrderB; // Abre, Fechados, Rejeitados
+      if (orderA !== orderB) {
+        return orderA - orderB;
       }
       
       // Dentro do mesmo status, mais recente primeiro
