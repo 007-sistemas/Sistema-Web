@@ -548,13 +548,23 @@ export const StorageService = {
       // Preservar registros manuais locais que ainda não estão no Neon
       const localExisting = StorageService.getPontos();
       const localManual = localExisting.filter(p => p.isManual === true || p.isManual === 'true' || p.isManual === 1 || p.isManual === '1' || (p.codigo && String(p.codigo).startsWith('MAN-')));
+      
+      // Filtrar pontos manuais locais que estão relacionados a justificativas excluídas
+      const localManualFiltrado = localManual.filter(p => {
+        if (pontosExcluidosIds.has(p.id) || (p.relatedId && pontosExcluidosIds.has(p.relatedId))) {
+          console.log('[refreshPontosFromRemote] 🚫 Removendo ponto manual local excluído:', p.id, p.codigo);
+          return false;
+        }
+        return true;
+      });
+      
       const merged = [
         ...mapped,
-        ...localManual.filter(l => !mapped.some(r => r.id === l.id))
+        ...localManualFiltrado.filter(l => !mapped.some(r => r.id === l.id))
       ];
 
       localStorage.setItem(PONTOS_KEY, JSON.stringify(merged));
-      console.log(`[StorageService] ✅ ${mapped.length} pontos do Neon + ${localManual.length} manuais locais preservados`);
+      console.log(`[StorageService] ✅ ${mapped.length} pontos do Neon + ${localManualFiltrado.length} manuais locais preservados (${localManual.length - localManualFiltrado.length} excluídos)`);
     } catch (err) {
       console.error('[StorageService] Erro ao sincronizar pontos do Neon:', err);
     }
