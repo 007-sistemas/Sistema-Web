@@ -102,28 +102,39 @@ export const EspelhoBiometria: React.FC = () => {
         console.warn('[EspelhoBiometria] Falha ao sincronizar remoto, seguindo com dados locais:', syncErr);
       }
 
-      const allPontos = StorageService.getPontos().filter(p => matchesCooperado(p, effectiveCoopId, effectiveSession));
+      // Buscar todas as justificativas para verificar quais estão excluídas
+      let todasJustificativas: Justificativa[] = [];
+      try {
+        todasJustificativas = await apiGet<Justificativa[]>('sync?action=list_justificativas');
+      } catch (e) {
+        console.warn('[EspelhoBiometria] Falha ao buscar justificativas remotas, usando local:', e);
+        todasJustificativas = StorageService.getJustificativas();
+      }
+
+      // Filtrar pontos que não fazem parte de justificativas excluídas
+      const allPontos = StorageService.getPontos()
+        .filter(p => matchesCooperado(p, effectiveCoopId, effectiveSession))
+        .filter(p => {
+          // Verificar se há uma justificativa excluída associada a este ponto
+          const justExcluida = todasJustificativas.find(j => 
+            j.status === 'Excluído' && (j.pontoId === p.id || j.pontoId === p.relatedId)
+          );
+          if (justExcluida) {
+            console.log('[EspelhoBiometria] 🚫 Filtrando ponto de justificativa excluída:', p.id, p.codigo);
+            return false;
+          }
+          return true;
+        });
       const existingIds = new Set(allPontos.map(p => p.id));
 
       // Unir justificativas sem ponto (ou com ponto ausente no storage) para exibir pendentes/recusadas
       let synthetic: RegistroPonto[] = [];
-      try {
-        const justs = await apiGet<Justificativa[]>('sync?action=list_justificativas');
-        const filteredJust = justs.filter(j => 
-          matchesCooperado({ cooperadoId: j.cooperadoId, cooperadoNome: j.cooperadoNome }, effectiveCoopId, effectiveSession) 
-          && j.status !== 'Excluído' // Filtrar justificativas excluídas
-        );
-        const missingJust = filteredJust.filter(j => !j.pontoId || !existingIds.has(j.pontoId));
-        synthetic = buildPontosFromJustificativas(missingJust, StorageService.getHospitais(), existingIds);
-      } catch (e) {
-        console.warn('[EspelhoBiometria] Falha ao buscar justificativas remotas, usando local:', e);
-        const localJust = StorageService.getJustificativas().filter(j => 
-          matchesCooperado({ cooperadoId: j.cooperadoId, cooperadoNome: j.cooperadoNome }, effectiveCoopId, effectiveSession)
-          && j.status !== 'Excluído' // Filtrar justificativas excluídas
-        );
-        const missingJust = localJust.filter(j => !j.pontoId || !existingIds.has(j.pontoId));
-        synthetic = buildPontosFromJustificativas(missingJust, StorageService.getHospitais(), existingIds);
-      }
+      const filteredJust = todasJustificativas.filter(j => 
+        matchesCooperado({ cooperadoId: j.cooperadoId, cooperadoNome: j.cooperadoNome }, effectiveCoopId, effectiveSession) 
+        && j.status !== 'Excluído' // Filtrar justificativas excluídas
+      );
+      const missingJust = filteredJust.filter(j => !j.pontoId || !existingIds.has(j.pontoId));
+      synthetic = buildPontosFromJustificativas(missingJust, StorageService.getHospitais(), existingIds);
 
       const merged = [...allPontos, ...synthetic];
       const sorted = merged.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
