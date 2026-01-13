@@ -704,11 +704,32 @@ export const StorageService = {
     // HARD DELETE: Remover justificativas relacionadas (EXCETO as recusadas)
     let justificativas = StorageService.getJustificativas();
     const plantaoDate = new Date(target.timestamp).toISOString().split('T')[0];
-    const justRemovidas = justificativas.filter(j => 
-      (j.pontoId === id || (j.cooperadoId === target.cooperadoId && j.dataPlantao === plantaoDate))
-      && j.status !== 'Rejeitado' 
-      && j.status !== 'Recusado'
-    );
+    
+    console.log('[deletePonto] 🔍 Buscando justificativas relacionadas ao ponto:', {
+      pontoId: id,
+      cooperadoId: target.cooperadoId,
+      dataPlantao: plantaoDate,
+      totalJustificativas: justificativas.length
+    });
+    
+    const justRemovidas = justificativas.filter(j => {
+      const matchPontoId = j.pontoId === id;
+      const matchCooperadoData = j.cooperadoId === target.cooperadoId && j.dataPlantao === plantaoDate;
+      const naoRecusada = j.status !== 'Rejeitado' && j.status !== 'Recusado';
+      const shouldRemove = (matchPontoId || matchCooperadoData) && naoRecusada;
+      
+      if (shouldRemove) {
+        console.log('[deletePonto] 🎯 Justificativa será removida:', {
+          id: j.id,
+          status: j.status,
+          pontoId: j.pontoId,
+          matchPontoId,
+          matchCooperadoData
+        });
+      }
+      
+      return shouldRemove;
+    });
     
     if (justRemovidas.length > 0) {
       console.log('[deletePonto] 🚫 Removendo', justRemovidas.length, 'justificativa(s) relacionada(s) (aprovadas/pendentes). Mantendo recusadas.');
@@ -722,9 +743,11 @@ export const StorageService = {
       
       // Sincronizar remoção com Neon
       justRemovidas.forEach(j => {
-        console.log('[deletePonto] 🔄 Deletando justificativa do Neon:', j.id);
+        console.log('[deletePonto] 🔄 Deletando justificativa do Neon:', j.id, 'status:', j.status);
         syncToNeon('delete_justificativa', { id: j.id });
       });
+    } else {
+      console.log('[deletePonto] ℹ️ Nenhuma justificativa aprovada/pendente encontrada para remover');
     }
 
     StorageService.logAudit('REMOCAO_PONTO', `Registro ${target.codigo} removido permanentemente.`);
@@ -733,11 +756,13 @@ export const StorageService = {
     console.log('[deletePonto] 🔄 Deletando ponto do Neon:', id);
     syncToNeon('delete_ponto', { id });
     
-    // Notificar cooperados para limparem cache
+    // Notificar cooperados para limparem cache (dupla notificação para garantir)
+    broadcastPontoChange('delete', id);
+    
     const notificationKey = 'biohealth_plantao_deleted';
     const notification = { timestamp: Date.now(), pontoId: id };
     localStorage.setItem(notificationKey, JSON.stringify(notification));
-    console.log('[deletePonto] 📢 Notificação de exclusão enviada');
+    console.log('[deletePonto] 📢 Notificação de exclusão enviada (biohealth_plantao_deleted + biohealth_pontos_changed)');
   },
 
   clearCacheAndReload: async (): Promise<void> => {
