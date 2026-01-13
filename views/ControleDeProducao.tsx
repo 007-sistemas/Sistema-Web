@@ -1009,6 +1009,17 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
       return;
     }
 
+    // Validação: não permitir justificativa com data futura
+    const dataPlantao = new Date(missingDate);
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    dataPlantao.setHours(0, 0, 0, 0);
+
+    if (dataPlantao > hoje) {
+      alert('❌ Plantão futuro. Não permitido!');
+      return;
+    }
+
     const hospital = hospitais.find(h => String(h.id) === String(missingHospitalId));
     const localNome = hospital?.nome || 'Hospital não informado';
 
