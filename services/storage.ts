@@ -600,6 +600,24 @@ export const StorageService = {
     
     if (!target) return;
 
+    // Marcar justificativas relacionadas como canceladas
+    const justificativas = StorageService.getJustificativas();
+    const justificativasAtualizadas = justificativas.map(j => {
+      // Se a justificativa referencia este ponto (entrada ou saída)
+      if (j.pontoId === id || j.pontoId === target.relatedId) {
+        return { ...j, cancelada: true, updatedAt: new Date().toISOString() };
+      }
+      return j;
+    });
+    localStorage.setItem(JUSTIFICATIVAS_KEY, JSON.stringify(justificativasAtualizadas));
+    
+    // Sincronizar justificativas canceladas com Neon
+    justificativasAtualizadas.forEach(j => {
+      if (j.cancelada && (j.pontoId === id || j.pontoId === target.relatedId)) {
+        syncToNeon('sync_justificativa', j);
+      }
+    });
+
     // Logic: If deleting Entry, delete linked Exit. If deleting Exit, open Entry.
     if (target.tipo === 'ENTRADA') {
         // Delete this entry AND any exit that refers to it

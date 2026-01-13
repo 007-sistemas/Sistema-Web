@@ -113,6 +113,7 @@ export interface Justificativa {
   pontoSaida?: string;
   pontoTipo?: string;
   pontoDate?: string;
+  cancelada?: boolean; // Marcado quando o ponto é excluído pelo gestor
   pontoRelatedId?: string;
 }
 
