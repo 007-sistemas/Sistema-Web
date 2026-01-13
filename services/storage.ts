@@ -452,10 +452,27 @@ export const StorageService = {
       const rows = await apiGet<any[]>('sync?action=list_pontos');
       if (!Array.isArray(rows)) return;
 
+      // Buscar justificativas excluídas para filtrar pontos relacionados
+      const justificativas = await apiGet<any[]>('sync?action=list_justificativas').catch(() => []);
+      const justExcluidas = justificativas.filter(j => j.status === 'Excluído');
+      const pontosExcluidosIds = new Set<string>();
+      justExcluidas.forEach(j => {
+        if (j.pontoId) pontosExcluidosIds.add(j.pontoId);
+      });
+
       // Buscar hospitais e setores para montar o campo local corretamente
       const hospitais = StorageService.getHospitais();
       
-      const mapped: RegistroPonto[] = rows.map((row: any) => {
+      const mapped: RegistroPonto[] = rows
+        .filter(row => {
+          // Filtrar pontos que fazem parte de justificativas excluídas
+          if (pontosExcluidosIds.has(row.id) || (row.relatedId && pontosExcluidosIds.has(row.relatedId))) {
+            console.log('[refreshPontosFromRemote] 🚫 Filtrando ponto de justificativa excluída:', row.id);
+            return false;
+          }
+          return true;
+        })
+        .map((row: any) => {
         // Usar código do banco se existir, caso contrário gerar
         let codigo = row.codigo;
         if (!codigo) {
@@ -631,6 +648,12 @@ export const StorageService = {
       }
     });
 
+    // Coletar todos os IDs que serão removidos (ponto + par)
+    const idsParaRemover: string[] = [id];
+    if (parId) {
+      idsParaRemover.push(parId);
+    }
+
     // Logic: If deleting Entry, delete linked Exit. If deleting Exit, open Entry.
     if (target.tipo === 'ENTRADA') {
         // Delete this entry AND any exit that refers to it
@@ -649,8 +672,11 @@ export const StorageService = {
     localStorage.setItem(PONTOS_KEY, JSON.stringify(list));
     StorageService.logAudit('REMOCAO_PONTO', `Registro ${target.codigo} removido.`);
 
-    // Sincronizar exclusão com Neon
-    syncToNeon('delete_ponto', { id });
+    // Sincronizar exclusão de TODOS os pontos removidos com Neon
+    idsParaRemover.forEach(pontoId => {
+      console.log('[deletePonto] Sincronizando exclusão do ponto:', pontoId);
+      syncToNeon('delete_ponto', { id: pontoId });
+    });
   },
 
   getLastPonto: (cooperadoId: string): RegistroPonto | undefined => {
