@@ -107,11 +107,10 @@ export const EspelhoBiometria: React.FC = () => {
     try {
       setLoading(true);
 
-      // Cooperado: sempre limpar cache local para refletir exclusões imediatamente
-      if (effectiveSession?.type === 'COOPERADO') {
-        localStorage.removeItem('biohealth_pontos');
-        localStorage.removeItem('biohealth_justificativas');
-      }
+      // Cooperado: NUNCA usar localStorage, buscar SEMPRE do Neon para dados atualizados
+      // Limpar cache antes de cada load
+      localStorage.removeItem('biohealth_pontos');
+      localStorage.removeItem('biohealth_justificativas');
 
       // IMPORTANTE: Atualizar sessão a cada loadData
       const currentSession = StorageService.getSession();
@@ -127,45 +126,29 @@ export const EspelhoBiometria: React.FC = () => {
         console.warn('[EspelhoBiometria] Falha ao sincronizar remoto, seguindo com dados locais:', syncErr);
       }
 
-      // Buscar todas as justificativas para verificar quais estão excluídas
+      // Buscar todas as justificativas para montar pontos sintéticos de pendentes/rejeitados
       let todasJustificativas: Justificativa[] = [];
       try {
         todasJustificativas = await apiGet<Justificativa[]>('sync?action=list_justificativas');
         console.log('[EspelhoBiometria] 📋 Justificativas do Neon:', todasJustificativas.length);
-        console.log('[EspelhoBiometria] 🚫 Justificativas Excluídas:', todasJustificativas.filter(j => j.status === 'Excluído').map(j => ({ id: j.id, pontoId: j.pontoId, status: j.status })));
       } catch (e) {
         console.warn('[EspelhoBiometria] Falha ao buscar justificativas remotas, usando local:', e);
         todasJustificativas = StorageService.getJustificativas();
         console.log('[EspelhoBiometria] 📋 Justificativas locais:', todasJustificativas.length);
       }
 
-      // Filtrar pontos que não fazem parte de justificativas excluídas
+      // Todos os pontos vêm do Neon sem filtro de exclusão (não há status 'Excluído' mais)
       const pontosAntesDoFiltro = StorageService.getPontos().filter(p => matchesCooperado(p, effectiveCoopId, effectiveSession));
-      console.log('[EspelhoBiometria] 📊 Pontos antes do filtro de exclusão:', pontosAntesDoFiltro.length, pontosAntesDoFiltro.map(p => ({ id: p.id, codigo: p.codigo, data: p.timestamp, relatedId: p.relatedId, status: p.status })));
+      console.log('[EspelhoBiometria] 📊 Pontos carregados:', pontosAntesDoFiltro.length);
       
-      const justExcluidas = todasJustificativas.filter(j => j.status === 'Excluído');
-      console.log('[EspelhoBiometria] 🚫 Comparando com justificativas excluídas:', justExcluidas.map(j => ({ justId: j.id, pontoId: j.pontoId, status: j.status })));
-      
-      const allPontos = pontosAntesDoFiltro
-        .filter(p => {
-          // Verificar se há uma justificativa excluída associada a este ponto
-          const justExcluida = todasJustificativas.find(j => 
-            j.status === 'Excluído' && (j.pontoId === p.id || j.pontoId === p.relatedId)
-          );
-          if (justExcluida) {
-            console.log('[EspelhoBiometria] 🚫 Filtrando ponto de justificativa excluída:', p.id, p.codigo, 'justificativa:', justExcluida.id);
-            return false;
-          }
-          return true;
-        });
-      console.log('[EspelhoBiometria] ✅ Pontos após filtro de exclusão:', allPontos.length);
+      const allPontos = pontosAntesDoFiltro;
       const existingIds = new Set(allPontos.map(p => p.id));
 
-      // Unir justificativas sem ponto (ou com ponto ausente no storage) para exibir pendentes/recusadas
+      // Unir justificativas sem ponto (ou com ponto ausente no storage) para exibir pendentes/rejeitados
       let synthetic: RegistroPonto[] = [];
       const filteredJust = todasJustificativas.filter(j => 
-        matchesCooperado({ cooperadoId: j.cooperadoId, cooperadoNome: j.cooperadoNome }, effectiveCoopId, effectiveSession) 
-        && j.status !== 'Excluído' // Filtrar justificativas excluídas
+        matchesCooperado({ cooperadoId: j.cooperadoId, cooperadoNome: j.cooperadoNome }, effectiveCoopId, effectiveSession)
+        // Mostra TODOS os status: Pendente, Fechado, Rejeitado (sem filtro de exclusão)
       );
       const missingJust = filteredJust.filter(j => !j.pontoId || !existingIds.has(j.pontoId));
       synthetic = buildPontosFromJustificativas(missingJust, StorageService.getHospitais(), existingIds);

@@ -273,11 +273,7 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
         console.log('[ControleDeProducao] 📥 Recebidas', remoteJust.length, 'justificativas remotas');
         console.log('[ControleDeProducao] 🔍 Filtrando por cooperado:', cooperadoLogadoIdLocal, '/', cooperadoLogadoDataLocal?.nome);
         const filteredJust = remoteJust.filter(j => {
-          // Filtrar justificativas excluídas
-          if (j.status === 'Excluído') {
-            console.log('[ControleDeProducao] 🚫 Filtrando justificativa excluída:', j.id);
-            return false;
-          }
+          // Mostrar TODOS os status: Pendente, Fechado, Rejeitado
           const sameId = cooperadoLogadoIdLocal ? j.cooperadoId === cooperadoLogadoIdLocal : false;
           const sameName = cooperadoLogadoDataLocal?.nome ? j.cooperadoNome?.trim().toLowerCase() === cooperadoLogadoDataLocal.nome.trim().toLowerCase() : false;
           const matches = sameId || sameName;
@@ -294,8 +290,7 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
         const localJust = StorageService.getJustificativas();
         console.log('[ControleDeProducao] 📥 Justificativas do localStorage:', localJust.length);
         const filtered = localJust.filter(j => {
-          // Filtrar justificativas excluídas
-          if (j.status === 'Excluído') return false;
+          // Mostrar TODOS os status: Pendente, Fechado, Rejeitado
           const sameId = cooperadoLogadoIdLocal ? j.cooperadoId === cooperadoLogadoIdLocal : false;
           const sameName = cooperadoLogadoDataLocal?.nome ? j.cooperadoNome?.trim().toLowerCase() === cooperadoLogadoDataLocal.nome.trim().toLowerCase() : false;
           return sameId || sameName;
@@ -309,14 +304,15 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
     }
     
     console.log('[ControleDeProducao] Total de pontos carregados:', allPontos.length);
-    console.log('[ControleDeProducao] Pontos com status Rejeitado/Recusado:', allPontos.filter(p => isRecusadoStatus(p.status)).length);
+    console.log('[ControleDeProducao] Pontos com status Rejeitado:', allPontos.filter(p => isRecusadoStatus(p.status)).length);
     console.log('[ControleDeProducao] Pontos com status Fechado:', allPontos.filter(p => p.status === 'Fechado').length);
     console.log('[ControleDeProducao] Pontos com validadoPor:', allPontos.filter(p => p.validadoPor).length);
     console.log('[ControleDeProducao] Pontos com rejeitadoPor:', allPontos.filter(p => p.rejeitadoPor).length);
     
     // Não filtrar recusadas aqui para permitir toggle dinâmico na UI
+    // Manter TODOS os pontos, ordenar depois por status (Abertos → Fechados → Rejeitados)
     const pontosValidos = allPontos;
-    console.log('[ControleDeProducao] Pontos carregados (incluindo recusados):', pontosValidos.length);
+    console.log('[ControleDeProducao] Pontos carregados (incluindo Rejeitados):', pontosValidos.length);
     
     // Carregar setores de todos os hospitais para exibição (Hospital - Setor quando filtro vazio)
     await loadAllSetores(StorageService.getHospitais());
@@ -345,13 +341,26 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
       return { ...p, isManual: manualFlag || p.isManual };
     });
 
-    console.log('[ControleDeProducao] Após normalização - Rejeitados:', normalized.filter(p => p.status === 'Rejeitado').length);
+    console.log('[ControleDeProducao] Após normalização - Rejeitados:', normalized.filter(p => isRecusadoStatus(p.status)).length);
     console.log('[ControleDeProducao] Após normalização - Fechados:', normalized.filter(p => p.status === 'Fechado').length);
+
+    // Ordenar: Abertos (Pendente) → Fechados → Rejeitados (dentro de cada grupo, mais recente primeiro)
+    const sorted = normalized.sort((a, b) => {
+      const statusOrderA = isRecusadoStatus(a.status) ? 2 : (a.status === 'Fechado' ? 1 : 0);
+      const statusOrderB = isRecusadoStatus(b.status) ? 2 : (b.status === 'Fechado' ? 1 : 0);
+      
+      if (statusOrderA !== statusOrderB) {
+        return statusOrderA - statusOrderB; // Abre, Fechados, Rejeitados
+      }
+      
+      // Dentro do mesmo status, mais recente primeiro
+      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    });
 
     // NÃO persistir normalização - isso pode sobrescrever os dados corretos!
     // localStorage.setItem('biohealth_pontos', JSON.stringify(normalized));
 
-    setLogs(normalized);
+    setLogs(sorted);
   };
 
   const loadAllSetores = async (hospitaisList: Hospital[]) => {
