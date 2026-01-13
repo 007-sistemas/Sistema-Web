@@ -95,7 +95,7 @@ export interface Justificativa {
   motivo: string;
   descricao?: string;
   dataSolicitacao: string;
-  status: 'Pendente' | 'Fechado' | 'Rejeitado';
+  status: 'Pendente' | 'Fechado' | 'Rejeitado' | 'Excluído';
   aprovadoPor?: string; // Deprecated - usar validadoPor
   validadoPor?: string; // Nome do gestor que aprovou
   dataAprovacao?: string;
@@ -113,7 +113,6 @@ export interface Justificativa {
   pontoSaida?: string;
   pontoTipo?: string;
   pontoDate?: string;
-  cancelada?: boolean; // Marcado quando o ponto é excluído pelo gestor
   pontoRelatedId?: string;
 }
 

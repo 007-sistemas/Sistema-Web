@@ -738,6 +738,10 @@ export const AutorizacaoPonto: React.FC = () => {
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-200 justify-center">
                               Recusada
                             </span>
+                          ) : just.status === 'Excluído' ? (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-gray-200 text-gray-700 border border-gray-300 justify-center">
+                              Excluído
+                            </span>
                           ) : (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200 justify-center">
                               Pendente

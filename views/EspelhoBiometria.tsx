@@ -111,7 +111,7 @@ export const EspelhoBiometria: React.FC = () => {
         const justs = await apiGet<Justificativa[]>('sync?action=list_justificativas');
         const filteredJust = justs.filter(j => 
           matchesCooperado({ cooperadoId: j.cooperadoId, cooperadoNome: j.cooperadoNome }, effectiveCoopId, effectiveSession) 
-          && !j.cancelada // Filtrar justificativas canceladas
+          && j.status !== 'Excluído' // Filtrar justificativas excluídas
         );
         const missingJust = filteredJust.filter(j => !j.pontoId || !existingIds.has(j.pontoId));
         synthetic = buildPontosFromJustificativas(missingJust, StorageService.getHospitais(), existingIds);
@@ -119,7 +119,7 @@ export const EspelhoBiometria: React.FC = () => {
         console.warn('[EspelhoBiometria] Falha ao buscar justificativas remotas, usando local:', e);
         const localJust = StorageService.getJustificativas().filter(j => 
           matchesCooperado({ cooperadoId: j.cooperadoId, cooperadoNome: j.cooperadoNome }, effectiveCoopId, effectiveSession)
-          && !j.cancelada // Filtrar justificativas canceladas
+          && j.status !== 'Excluído' // Filtrar justificativas excluídas
         );
         const missingJust = localJust.filter(j => !j.pontoId || !existingIds.has(j.pontoId));
         synthetic = buildPontosFromJustificativas(missingJust, StorageService.getHospitais(), existingIds);
