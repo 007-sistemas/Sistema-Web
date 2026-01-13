@@ -116,7 +116,10 @@ export const EspelhoBiometria: React.FC = () => {
 
       // Filtrar pontos que não fazem parte de justificativas excluídas
       const pontosAntesDoFiltro = StorageService.getPontos().filter(p => matchesCooperado(p, effectiveCoopId, effectiveSession));
-      console.log('[EspelhoBiometria] 📊 Pontos antes do filtro de exclusão:', pontosAntesDoFiltro.length, pontosAntesDoFiltro.map(p => ({ id: p.id, codigo: p.codigo, data: p.timestamp, relatedId: p.relatedId })));
+      console.log('[EspelhoBiometria] 📊 Pontos antes do filtro de exclusão:', pontosAntesDoFiltro.length, pontosAntesDoFiltro.map(p => ({ id: p.id, codigo: p.codigo, data: p.timestamp, relatedId: p.relatedId, status: p.status })));
+      
+      const justExcluidas = todasJustificativas.filter(j => j.status === 'Excluído');
+      console.log('[EspelhoBiometria] 🚫 Comparando com justificativas excluídas:', justExcluidas.map(j => ({ justId: j.id, pontoId: j.pontoId, status: j.status })));
       
       const allPontos = pontosAntesDoFiltro
         .filter(p => {
