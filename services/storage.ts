@@ -629,8 +629,17 @@ export const StorageService = {
       const justificativaId = justMatch[1];
       console.log('[deletePonto] 🧹 Detected synthetic ID, removing justificativa:', justificativaId);
 
-      // Remover justificativa do localStorage
+      // Verificar se a justificativa é recusada - neste caso NÃO excluir
       let justificativas = StorageService.getJustificativas();
+      const targetJust = justificativas.find(j => j.id === justificativaId);
+      
+      if (targetJust?.status === 'Rejeitado' || targetJust?.status === 'Recusado') {
+        console.log('[deletePonto] ⚠️ Justificativa RECUSADA não pode ser excluída:', justificativaId);
+        alert('Justificativas recusadas não podem ser excluídas. Elas devem permanecer visíveis para o cooperado.');
+        return;
+      }
+
+      // Remover justificativa do localStorage
       const before = justificativas.length;
       justificativas = justificativas.filter(j => j.id !== justificativaId);
       localStorage.setItem(JUSTIFICATIVAS_KEY, JSON.stringify(justificativas));
@@ -660,14 +669,23 @@ export const StorageService = {
     localStorage.setItem(PONTOS_KEY, JSON.stringify(pontos));
     console.log('[deletePonto] ✅ Ponto removido do localStorage');
 
-    // HARD DELETE: Remover justificativas relacionadas
+    // HARD DELETE: Remover justificativas relacionadas (EXCETO as recusadas)
     let justificativas = StorageService.getJustificativas();
     const plantaoDate = new Date(target.timestamp).toISOString().split('T')[0];
-    const justRemovidas = justificativas.filter(j => j.pontoId === id || (j.cooperadoId === target.cooperadoId && j.dataPlantao === plantaoDate));
+    const justRemovidas = justificativas.filter(j => 
+      (j.pontoId === id || (j.cooperadoId === target.cooperadoId && j.dataPlantao === plantaoDate))
+      && j.status !== 'Rejeitado' 
+      && j.status !== 'Recusado'
+    );
     
     if (justRemovidas.length > 0) {
-      console.log('[deletePonto] 🚫 Removendo', justRemovidas.length, 'justificativa(s) relacionada(s)');
-      justificativas = justificativas.filter(j => !(j.pontoId === id || (j.cooperadoId === target.cooperadoId && j.dataPlantao === plantaoDate)));
+      console.log('[deletePonto] 🚫 Removendo', justRemovidas.length, 'justificativa(s) relacionada(s) (exceto recusadas)');
+      justificativas = justificativas.filter(j => {
+        // Manter se for recusada
+        if (j.status === 'Rejeitado' || j.status === 'Recusado') return true;
+        // Remover se corresponder ao ponto/cooperado/data
+        return !(j.pontoId === id || (j.cooperadoId === target.cooperadoId && j.dataPlantao === plantaoDate));
+      });
       localStorage.setItem(JUSTIFICATIVAS_KEY, JSON.stringify(justificativas));
       
       // Sincronizar remoção com Neon
@@ -700,6 +718,16 @@ export const StorageService = {
       ]);
       
       console.log('[clearCacheAndReload] ✅ Cache limpo e dados recarregados com sucesso');
+      
+      // Forçar atualização imediata da página para cooperado
+      console.log('[clearCacheAndReload] 🔄 Disparando evento de atualização...');
+      window.dispatchEvent(new CustomEvent('cache-cleared'));
+      
+      // Aguardar 200ms e forçar reload completo se necessário
+      setTimeout(() => {
+        console.log('[clearCacheAndReload] 🔄 Recarregando página para garantir sincronização...');
+        window.location.reload();
+      }, 200);
     } catch (err) {
       console.error('[clearCacheAndReload] ❌ Erro ao recarregar dados:', err);
     }

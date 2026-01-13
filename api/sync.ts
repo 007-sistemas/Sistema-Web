@@ -722,12 +722,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       `;
 
       // Remover justificativas vinculadas por ponto_id e por (cooperado_id + data_plantao)
+      // EXCETO as que têm status Rejeitado (devem ficar visíveis para o cooperado)
       for (const p of pontosRelacionados) {
         const dataPlantao = p.date || (p.timestamp ? p.timestamp.split('T')[0] : null);
-        await sql`DELETE FROM justificativas WHERE ponto_id = ${p.id}`;
+        await sql`DELETE FROM justificativas WHERE ponto_id = ${p.id} AND status != 'Rejeitado'`;
         if (dataPlantao) {
-          await sql`DELETE FROM justificativas WHERE cooperado_id = ${p.cooperadoId} AND data_plantao = ${dataPlantao}`;
-          console.log('[sync] Justificativas removidas por cooperado/data:', p.cooperadoId, dataPlantao);
+          await sql`DELETE FROM justificativas WHERE cooperado_id = ${p.cooperadoId} AND data_plantao = ${dataPlantao} AND status != 'Rejeitado'`;
+          console.log('[sync] Justificativas removidas por cooperado/data (exceto recusadas):', p.cooperadoId, dataPlantao);
         }
       }
       console.log('[sync] Justificativas vinculadas ao ponto removidas:', id);
