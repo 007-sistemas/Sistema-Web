@@ -639,6 +639,9 @@ export const StorageService = {
       // Auditoria e sync Neon
       StorageService.logAudit('REMOCAO_JUSTIFICATIVA', `Justificativa ${justificativaId} removida permanentemente.`);
       syncToNeon('delete_justificativa', { id: justificativaId });
+      
+      // Limpar cache e forçar reload
+      StorageService.clearCacheAndReload();
       return;
     }
 
@@ -679,6 +682,27 @@ export const StorageService = {
     // Sincronizar exclusão com Neon (hard delete)
     console.log('[deletePonto] 🔄 Deletando ponto do Neon:', id);
     syncToNeon('delete_ponto', { id });
+    
+    // Limpar cache e forçar reload
+    StorageService.clearCacheAndReload();
+  },
+
+  clearCacheAndReload: async (): Promise<void> => {
+    console.log('[clearCacheAndReload] 🧹 Limpando cache local e recarregando do Neon...');
+    
+    try {
+      // Forçar recarregamento de todos os dados do Neon
+      await Promise.all([
+        StorageService.refreshPontosFromRemote(),
+        StorageService.refreshJustificativasFromRemote(),
+        StorageService.refreshCooperadosFromRemote(),
+        StorageService.refreshHospitaisFromRemote()
+      ]);
+      
+      console.log('[clearCacheAndReload] ✅ Cache limpo e dados recarregados com sucesso');
+    } catch (err) {
+      console.error('[clearCacheAndReload] ❌ Erro ao recarregar dados:', err);
+    }
   },
 
   getLastPonto: (cooperadoId: string): RegistroPonto | undefined => {

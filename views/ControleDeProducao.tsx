@@ -971,16 +971,15 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
         console.log('[handleExcluir] 🗑️ Excluindo pontos:', idsToDelete);
         idsToDelete.forEach(id => StorageService.deletePonto(id));
         
-        // Atualizar estado imediatamente (sem aguardar Neon)
-        const updated = StorageService.getPontos();
-        const sorted = updated.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-        setLogs(sorted);
-        
+        // Limpar seleção e formulário
         setSelectedRows(new Set());
         handleNovoPlantao();
         
-        // Sincronizar com Neon em background (assíncrono)
-        loadData();
+        // Aguardar um momento para sincronização com Neon
+        setTimeout(async () => {
+          console.log('[handleExcluir] 🔄 Recarregando dados após exclusão...');
+          await loadData();
+        }, 500);
     }
   };
 
