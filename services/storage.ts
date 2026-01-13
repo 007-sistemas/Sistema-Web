@@ -470,6 +470,12 @@ export const StorageService = {
       
       const mapped: RegistroPonto[] = rows
         .filter(row => {
+          // Filtrar pontos com status Excluído (soft delete)
+          if (row.status === 'Excluído') {
+            console.log('[refreshPontosFromRemote] 🚫 Filtrando ponto excluído:', row.id, row.codigo);
+            return false;
+          }
+          
           // Filtrar pontos que fazem parte de justificativas excluídas
           if (pontosExcluidosIds.has(row.id) || (row.relatedId && pontosExcluidosIds.has(row.relatedId))) {
             console.log('[refreshPontosFromRemote] 🚫 Filtrando ponto de justificativa excluída:', row.id, row.codigo);
@@ -663,34 +669,35 @@ export const StorageService = {
       }
     });
 
-    // Coletar todos os IDs que serão removidos (ponto + par)
-    const idsParaRemover: string[] = [id];
+    // Coletar todos os IDs que serão marcados como excluídos (ponto + par)
+    const idsParaExcluir: string[] = [id];
     if (parId) {
-      idsParaRemover.push(parId);
+      idsParaExcluir.push(parId);
     }
 
-    // Logic: If deleting Entry, delete linked Exit. If deleting Exit, open Entry.
-    if (target.tipo === 'ENTRADA') {
-        // Delete this entry AND any exit that refers to it
-        list = list.filter(p => p.id !== id && p.relatedId !== id);
-    } else if (target.tipo === 'SAIDA') {
-        // Delete this exit AND update the related Entry to "Aberto"
-        if (target.relatedId) {
-            const entryIndex = list.findIndex(p => p.id === target.relatedId);
-            if (entryIndex !== -1) {
-                list[entryIndex].status = 'Aberto';
-            }
-        }
-        list = list.filter(p => p.id !== id);
-    }
+    // Marcar pontos como "Excluído" em vez de removê-los fisicamente
+    list = list.map(p => {
+      if (idsParaExcluir.includes(p.id)) {
+        console.log('[deletePonto] Marcando ponto como Excluído:', p.id, p.codigo);
+        return { 
+          ...p, 
+          status: 'Excluído',
+          updatedAt: new Date().toISOString()
+        };
+      }
+      return p;
+    });
 
     localStorage.setItem(PONTOS_KEY, JSON.stringify(list));
-    StorageService.logAudit('REMOCAO_PONTO', `Registro ${target.codigo} removido.`);
+    StorageService.logAudit('REMOCAO_PONTO', `Registro ${target.codigo} marcado como excluído.`);
 
-    // Sincronizar exclusão de TODOS os pontos removidos com Neon
-    idsParaRemover.forEach(pontoId => {
-      console.log('[deletePonto] Sincronizando exclusão do ponto:', pontoId);
-      syncToNeon('delete_ponto', { id: pontoId });
+    // Sincronizar exclusão com Neon (soft delete - marcar como excluído)
+    idsParaExcluir.forEach(pontoId => {
+      const pontoExcluido = list.find(p => p.id === pontoId);
+      if (pontoExcluido) {
+        console.log('[deletePonto] Sincronizando soft delete do ponto:', pontoId);
+        syncToNeon('sync_ponto', pontoExcluido);
+      }
     });
   },
 

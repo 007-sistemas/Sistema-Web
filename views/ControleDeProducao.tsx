@@ -212,6 +212,11 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
     
     // IMPORTANTE: Ler diretamente do localStorage sem cache
     let allPontos = StorageService.getPontos();
+    
+    // Filtrar pontos excluídos (soft delete)
+    allPontos = allPontos.filter(p => p.status !== 'Excluído');
+    console.log('[ControleDeProducao] 📋 Pontos após filtrar excluídos:', allPontos.length);
+    
     const existingIds = new Set(allPontos.map(p => p.id));
 
     // Derivar cooperado logado DIRETAMENTE da sessão (não usar state que pode estar desatualizado)
