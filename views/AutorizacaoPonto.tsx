@@ -660,7 +660,7 @@ export const AutorizacaoPonto: React.FC = () => {
                     <th className="px-4 py-3">Entrada / Saída</th>
                     <th className="px-4 py-3">Motivo</th>
                     <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Autorizado Por</th>
+                    <th className="px-4 py-3">Decidido Por</th>
                     <th className="px-4 py-3">Data Decisão</th>
                   </tr>
                 </thead>
@@ -731,21 +731,28 @@ export const AutorizacaoPonto: React.FC = () => {
                         </td>
                         <td className="px-4 py-3">
                           {just.status === 'Fechado' ? (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-200">
-                              ✓ Aprovada
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-200 justify-center">
+                              Aprovada
                             </span>
                           ) : just.status === 'Rejeitado' ? (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-200">
-                              ✕ Recusada
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-200 justify-center">
+                              Recusada
                             </span>
                           ) : (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                              ⏳ Pendente
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200 justify-center">
+                              Pendente
                             </span>
                           )}
                         </td>
                         <td className="px-4 py-3 text-xs">
-                          {just.validadoPor || just.rejeitadoPor || '-'}
+                          <div className="flex flex-col gap-0.5">
+                            <span className="font-medium text-gray-900">{just.validadoPor || just.rejeitadoPor || '-'}</span>
+                            {just.status === 'Rejeitado' && just.motivoRejeicao && (
+                              <span className="text-gray-500 italic text-[10px] max-w-[120px] truncate" title={just.motivoRejeicao}>
+                                ({just.motivoRejeicao})
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-xs">
                           {just.dataAprovacao ? new Date(just.dataAprovacao).toLocaleDateString() : '-'}
