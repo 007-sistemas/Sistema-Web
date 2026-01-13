@@ -531,8 +531,8 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
   // --- FILTER LOGIC ---
   const getFilteredLogs = () => {
     return logs.filter(log => {
-      // Mostrar recusadas somente quando marcado (aceita diferentes rótulos)
-      if (!showRecusadas && isRecusadoStatus(log.status)) return false;
+      // Filtro de recusadas APENAS para gestor (cooperado vê todos os status sempre)
+      if (mode === 'manager' && !showRecusadas && isRecusadoStatus(log.status)) return false;
 
       // 0. Modo Cooperado: filtrar apenas registros do cooperado logado
       if (mode === 'cooperado' && cooperadoLogadoId) {
