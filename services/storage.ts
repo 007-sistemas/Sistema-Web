@@ -476,11 +476,12 @@ export const StorageService = {
             return false;
           }
           
-          // Filtrar pontos que fazem parte de justificativas excluídas
-          if (pontosExcluidosIds.has(row.id) || (row.relatedId && pontosExcluidosIds.has(row.relatedId))) {
+          // Filtrar pontos que fazem parte de justificativas excluídas (apenas o ponto direto, não o par)
+          if (pontosExcluidosIds.has(row.id)) {
             console.log('[refreshPontosFromRemote] 🚫 Filtrando ponto de justificativa excluída:', row.id, row.codigo);
             return false;
           }
+          
           return true;
         })
         .map((row: any) => {
