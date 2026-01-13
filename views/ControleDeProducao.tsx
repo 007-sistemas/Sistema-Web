@@ -1307,15 +1307,17 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
         </div>
         
         <div className="mt-3 flex flex-col md:flex-row justify-between md:items-center gap-3">
-          <label className="inline-flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              className="h-4 w-4 text-primary-600 border-gray-300 rounded"
-              checked={showRecusadas}
-              onChange={(e) => setShowRecusadas(e.target.checked)}
-            />
-            <span>Mostrar plantões recusados</span>
-          </label>
+          {mode === 'manager' && (
+            <label className="inline-flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                className="h-4 w-4 text-primary-600 border-gray-300 rounded"
+                checked={showRecusadas}
+                onChange={(e) => setShowRecusadas(e.target.checked)}
+              />
+              <span>Mostrar plantões recusados</span>
+            </label>
+          )}
 
           <button 
               onClick={clearFilters}
