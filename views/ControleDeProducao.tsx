@@ -79,6 +79,13 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
   const cooperadoLogadoId = mode === 'cooperado' && session?.type === 'COOPERADO' ? session?.user?.id : null;
   const cooperadoLogadoData = mode === 'cooperado' && session?.type === 'COOPERADO' ? session?.user : null;
 
+  // Helper para normalizar status recusado/rejeitado (declarado primeiro para uso em loadData)
+  const isRecusadoStatus = (status?: string | null) => {
+    if (!status) return false;
+    const normalized = status.trim().toLowerCase();
+    return normalized === 'rejeitado' || normalized === 'recusado' || normalized === 'recusada';
+  };
+
   // Helper para matching de cooperado por ID ou nome
   const matchesCooperadoLogado = (justificativa: Justificativa): boolean => {
     if (!cooperadoLogadoId && !cooperadoLogadoData?.nome) return false;
@@ -1040,12 +1047,6 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
     } else {
       setSelectedRows(new Set(shiftRows.map(r => r.id)));
     }
-  };
-
-  const isRecusadoStatus = (status?: string | null) => {
-    if (!status) return false;
-    const normalized = status.trim().toLowerCase();
-    return normalized === 'rejeitado' || normalized === 'recusado' || normalized === 'recusada';
   };
 
   const clearFilters = () => {
