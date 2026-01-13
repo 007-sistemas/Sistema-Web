@@ -642,40 +642,18 @@ export const StorageService = {
       return;
     }
 
-    console.log('[deletePonto] 🗑️ Excluindo ponto:', id, 'tipo:', target.tipo, 'codigo:', target.codigo, 'data:', target.timestamp, 'relatedId:', target.relatedId);
+    console.log('[deletePonto] 🗑️ Excluindo ponto:', id, 'tipo:', target.tipo, 'codigo:', target.codigo, 'data:', target.timestamp, 'cooperado:', target.cooperadoNome);
 
-    // Buscar o par do ponto APENAS se for entrada/saída do MESMO plantão (mesmo cooperado, mesma data, códigos compatíveis)
-    let parId: string | undefined;
-    if (target.relatedId) {
-      const possiblePar = list.find(p => p.id === target.relatedId);
-      if (possiblePar) {
-        // Validar que é realmente o par: mesmo cooperado, mesmo código, data compatível
-        const sameCooperado = possiblePar.cooperadoId === target.cooperadoId;
-        const sameCodigo = possiblePar.codigo === target.codigo;
-        const dataTarget = new Date(target.timestamp).toISOString().split('T')[0];
-        const dataPar = new Date(possiblePar.timestamp).toISOString().split('T')[0];
-        const dataProxima = new Date(dataTarget);
-        dataProxima.setDate(dataProxima.getDate() + 1);
-        const dataProximaStr = dataProxima.toISOString().split('T')[0];
-        const dataCompativel = dataPar === dataTarget || dataPar === dataProximaStr;
-        
-        if (sameCooperado && sameCodigo && dataCompativel) {
-          parId = possiblePar.id;
-          console.log('[deletePonto] ✅ Par válido encontrado:', parId, possiblePar.codigo, 'data:', dataPar);
-        } else {
-          console.warn('[deletePonto] ⚠️ relatedId aponta para ponto incompatível - NÃO será excluído');
-          console.warn('  Target:', { cooperado: target.cooperadoId, codigo: target.codigo, data: dataTarget });
-          console.warn('  Related:', { cooperado: possiblePar.cooperadoId, codigo: possiblePar.codigo, data: dataPar });
-        }
-      }
-    }
+    // CRÍTICO: NÃO CONFIAR EM relatedId - pode estar incorreto no banco
+    // Excluir APENAS o ponto solicitado, sem buscar pares automaticamente
+    // O handleExcluir já envia AMBOS os IDs quando necessário
+    
+    console.log('[deletePonto] ⚠️ Excluindo APENAS este ponto (sem buscar par automaticamente)');
 
     // Marcar justificativas relacionadas como Excluído
     const justificativas = StorageService.getJustificativas();
     const justificativasAtualizadas = justificativas.map(j => {
-      // A justificativa pode apontar para o ponto de saída (pontoId)
-      // Verificar se pontoId da justificativa é igual ao ponto excluído OU ao seu par
-      if (j.pontoId === id || (parId && j.pontoId === parId)) {
+      if (j.pontoId === id) {
         console.log('[deletePonto] 🚫 Marcando justificativa como Excluído:', j.id, 'pontoId:', j.pontoId);
         return { ...j, status: 'Excluído' as const, updatedAt: new Date().toISOString() };
       }
@@ -690,17 +668,9 @@ export const StorageService = {
       }
     });
 
-    // Coletar todos os IDs que serão marcados como excluídos (ponto + par)
-    const idsParaExcluir: string[] = [id];
-    if (parId) {
-      idsParaExcluir.push(parId);
-    }
-
-    console.log('[deletePonto] 📋 IDs que serão excluídos:', idsParaExcluir);
-
-    // Marcar pontos como "Excluído" em vez de removê-los fisicamente
+    // Marcar o ponto como "Excluído"
     list = list.map(p => {
-      if (idsParaExcluir.includes(p.id)) {
+      if (p.id === id) {
         console.log('[deletePonto] ✅ Marcando ponto como Excluído:', p.id, p.codigo, 'tipo:', p.tipo);
         return { 
           ...p, 
@@ -714,14 +684,12 @@ export const StorageService = {
     localStorage.setItem(PONTOS_KEY, JSON.stringify(list));
     StorageService.logAudit('REMOCAO_PONTO', `Registro ${target.codigo} marcado como excluído.`);
 
-    // Sincronizar exclusão com Neon (soft delete - marcar como excluído)
-    idsParaExcluir.forEach(pontoId => {
-      const pontoExcluido = list.find(p => p.id === pontoId);
-      if (pontoExcluido) {
-        console.log('[deletePonto] 🔄 Sincronizando soft delete do ponto:', pontoId);
-        syncToNeon('sync_ponto', pontoExcluido);
-      }
-    });
+    // Sincronizar exclusão com Neon (soft delete)
+    const pontoExcluido = list.find(p => p.id === id);
+    if (pontoExcluido) {
+      console.log('[deletePonto] 🔄 Sincronizando soft delete do ponto:', id);
+      syncToNeon('sync_ponto', pontoExcluido);
+    }
   },
 
   getLastPonto: (cooperadoId: string): RegistroPonto | undefined => {
