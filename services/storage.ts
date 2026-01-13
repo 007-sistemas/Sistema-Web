@@ -13,6 +13,18 @@ const JUSTIFICATIVAS_KEY = 'biohealth_justificativas';
 const SESSION_KEY = 'biohealth_session';
 const USER_PREFS_KEY = 'biohealth_user_prefs';
 
+// Notificar outras abas sobre mudanças em pontos (save/update/delete)
+const broadcastPontoChange = (action: 'save' | 'update' | 'delete', id: string) => {
+  const notificationKey = 'biohealth_pontos_changed';
+  const notification = { action, id, timestamp: Date.now() };
+  try {
+    localStorage.setItem(notificationKey, JSON.stringify(notification));
+    console.log('[broadcastPontoChange] 📢 Enviado:', notification);
+  } catch (err) {
+    console.warn('[broadcastPontoChange] Falha ao notificar:', err);
+  }
+};
+
 const DEFAULT_USER_PREFERENCES: UserPreferences = {
   theme: 'auto',
   primaryColor: '#7c3aed',
@@ -212,6 +224,34 @@ export const StorageService = {
       return m;
     });
     
+    // Se lista estiver vazia, criar manager padrão para emergência
+    if (managers.length === 0) {
+      const defaultPerms: HospitalPermissions = {
+        dashboard: true,
+        ponto: true,
+        relatorio: true,
+        relatorios: true,
+        cadastro: true,
+        hospitais: true,
+        biometria: true,
+        auditoria: true,
+        gestao: true,
+        testes: true,
+        espelho: true,
+        autorizacao: true,
+        perfil: true,
+      };
+      managers.push({
+        id: 'manager-seed',
+        username: 'gabriel',
+        password: 'gabriel',
+        cpf: '00000000000',
+        email: 'admin@example.com',
+        permissoes: defaultPerms,
+      } as Manager);
+      hasChanges = true;
+    }
+
     // Se houve mudanças, salvar de volta ao localStorage
     if (hasChanges) {
       localStorage.setItem(MANAGERS_KEY, JSON.stringify(managers));
@@ -591,6 +631,8 @@ export const StorageService = {
       status: ponto.status,
       isManual: ponto.isManual
     });
+
+    broadcastPontoChange('save', ponto.id);
   },
 
   updatePonto: (ponto: RegistroPonto): void => {
@@ -619,6 +661,8 @@ export const StorageService = {
           status: ponto.status,
           isManual: ponto.isManual
         });
+
+        broadcastPontoChange('update', ponto.id);
     }
   },
 

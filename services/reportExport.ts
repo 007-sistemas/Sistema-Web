@@ -1,4 +1,5 @@
-import Workbook from 'exceljs';
+// Usar bundle browser do ExcelJS para evitar dependências de Node
+import ExcelJS from 'exceljs/dist/exceljs.min.js';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -47,7 +48,7 @@ export const exportToExcel = async (
   stats: ExportStats
 ) => {
   try {
-    const workbook = new Workbook.Workbook();
+    const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Relatório de Produção');
 
     // Definir largura das colunas

@@ -39,6 +39,9 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
   const [filterCooperadoInput, setFilterCooperadoInput] = useState(''); // Stores Display Text
   const [showFilterCooperadoSuggestions, setShowFilterCooperadoSuggestions] = useState(false);
 
+  // Exibir/ocultar recusadas
+  const [showRecusadas, setShowRecusadas] = useState(false);
+
   const [filterDataIni, setFilterDataIni] = useState('');
   const [filterDataFim, setFilterDataFim] = useState('');
 
@@ -113,30 +116,32 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
       loadData();
     }, 3000);
 
-    // Listener para notificações de exclusão via localStorage
+    // Listener para notificações de exclusão ou alteração via localStorage
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'biohealth_plantao_deleted' && e.newValue) {
-        console.log('[ControleDeProducao] 📢 Notificação de exclusão recebida');
+      const isDelete = e.key === 'biohealth_plantao_deleted' && e.newValue;
+      const isChange = e.key === 'biohealth_pontos_changed' && e.newValue;
+      if (!isDelete && !isChange) return;
+
+      console.log('[ControleDeProducao] 📢 Notificação recebida:', e.key);
+      
+      // Se for cooperado, limpar cache e recarregar
+      if (mode === 'cooperado') {
+        console.log('[ControleDeProducao] 🧹 Limpando cache do cooperado e recarregando...');
         
-        // Se for cooperado, limpar cache e recarregar
-        if (mode === 'cooperado') {
-          console.log('[ControleDeProducao] 🧹 Limpando cache do cooperado e recarregando...');
-          
-          // Limpar dados do localStorage
-          const pontosKey = 'biohealth_pontos';
-          const justificativasKey = 'biohealth_justificativas';
-          localStorage.removeItem(pontosKey);
-          localStorage.removeItem(justificativasKey);
-          
-          // Forçar recarregamento dos dados do Neon
-          setTimeout(() => {
-            loadData();
-          }, 100);
-        } else {
-          // Se for gestor, apenas recarregar dados (sem limpar cache)
-          console.log('[ControleDeProducao] 🔄 Recarregando dados do gestor...');
+        // Limpar dados do localStorage
+        const pontosKey = 'biohealth_pontos';
+        const justificativasKey = 'biohealth_justificativas';
+        localStorage.removeItem(pontosKey);
+        localStorage.removeItem(justificativasKey);
+        
+        // Forçar recarregamento dos dados do Neon
+        setTimeout(() => {
           loadData();
-        }
+        }, 100);
+      } else {
+        // Se for gestor, apenas recarregar dados (sem limpar cache)
+        console.log('[ControleDeProducao] 🔄 Recarregando dados do gestor...');
+        loadData();
       }
     };
     
@@ -297,16 +302,14 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
     }
     
     console.log('[ControleDeProducao] Total de pontos carregados:', allPontos.length);
-    console.log('[ControleDeProducao] Pontos com status Rejeitado:', allPontos.filter(p => p.status === 'Rejeitado').length);
+    console.log('[ControleDeProducao] Pontos com status Rejeitado/Recusado:', allPontos.filter(p => isRecusadoStatus(p.status)).length);
     console.log('[ControleDeProducao] Pontos com status Fechado:', allPontos.filter(p => p.status === 'Fechado').length);
     console.log('[ControleDeProducao] Pontos com validadoPor:', allPontos.filter(p => p.validadoPor).length);
     console.log('[ControleDeProducao] Pontos com rejeitadoPor:', allPontos.filter(p => p.rejeitadoPor).length);
     
-    // Gestor não vê rejeitados; cooperado vê tudo (inclusive recusados)
-    const pontosValidos = mode === 'manager'
-      ? allPontos.filter(p => p.status !== 'Rejeitado')
-      : allPontos;
-    console.log('[ControleDeProducao] Pontos após filtrar rejeitados:', pontosValidos.length);
+    // Não filtrar recusadas aqui para permitir toggle dinâmico na UI
+    const pontosValidos = allPontos;
+    console.log('[ControleDeProducao] Pontos carregados (incluindo recusados):', pontosValidos.length);
     
     // Carregar setores de todos os hospitais para exibição (Hospital - Setor quando filtro vazio)
     await loadAllSetores(StorageService.getHospitais());
@@ -497,6 +500,9 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
   // --- FILTER LOGIC ---
   const getFilteredLogs = () => {
     return logs.filter(log => {
+      // Mostrar recusadas somente quando marcado (aceita diferentes rótulos)
+      if (!showRecusadas && isRecusadoStatus(log.status)) return false;
+
       // 0. Modo Cooperado: filtrar apenas registros do cooperado logado
       if (mode === 'cooperado' && cooperadoLogadoId) {
         const sameId = log.cooperadoId === cooperadoLogadoId;
@@ -1036,6 +1042,12 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
     }
   };
 
+  const isRecusadoStatus = (status?: string | null) => {
+    if (!status) return false;
+    const normalized = status.trim().toLowerCase();
+    return normalized === 'rejeitado' || normalized === 'recusado' || normalized === 'recusada';
+  };
+
   const clearFilters = () => {
     setFilterHospital('');
     setFilterSetor('');
@@ -1043,6 +1055,7 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
     setFilterCooperadoInput('');
     setFilterDataIni('');
     setFilterDataFim('');
+    setShowRecusadas(false);
   }
 
   // Removido: handlers de justificativa parcial
@@ -1267,13 +1280,23 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
             </div>
         </div>
         
-        <div className="mt-3 flex justify-end">
-            <button 
-                onClick={clearFilters}
-                className="text-sm text-gray-500 hover:text-red-500 flex items-center gap-1"
-            >
-                <X className="h-4 w-4" /> Limpar Filtros
-            </button>
+        <div className="mt-3 flex flex-col md:flex-row justify-between md:items-center gap-3">
+          <label className="inline-flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              className="h-4 w-4 text-primary-600 border-gray-300 rounded"
+              checked={showRecusadas}
+              onChange={(e) => setShowRecusadas(e.target.checked)}
+            />
+            <span>Mostrar plantões recusados</span>
+          </label>
+
+          <button 
+              onClick={clearFilters}
+              className="text-sm text-gray-500 hover:text-red-500 flex items-center gap-1"
+          >
+              <X className="h-4 w-4" /> Limpar Filtros
+          </button>
         </div>
       </div>
 
