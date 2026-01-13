@@ -470,18 +470,7 @@ export const StorageService = {
       
       const mapped: RegistroPonto[] = rows
         .filter(row => {
-          // Filtrar pontos com status Excluído (soft delete)
-          if (row.status === 'Excluído') {
-            console.log('[refreshPontosFromRemote] 🚫 Filtrando ponto excluído:', row.id, row.codigo);
-            return false;
-          }
-          
-          // Filtrar pontos que fazem parte de justificativas excluídas (apenas o ponto direto, não o par)
-          if (pontosExcluidosIds.has(row.id)) {
-            console.log('[refreshPontosFromRemote] 🚫 Filtrando ponto de justificativa excluída:', row.id, row.codigo);
-            return false;
-          }
-          
+          // Ponto válido - não filtrar nada, hard delete já removeu do banco
           return true;
         })
         .map((row: any) => {
@@ -634,62 +623,42 @@ export const StorageService = {
   },
 
   deletePonto: (id: string): void => {
-    let list = StorageService.getPontos();
-    const target = list.find(p => p.id === id);
+    let pontos = StorageService.getPontos();
+    const target = pontos.find(p => p.id === id);
     
     if (!target) {
       console.warn('[deletePonto] Ponto não encontrado:', id);
       return;
     }
 
-    console.log('[deletePonto] 🗑️ Excluindo ponto:', id, 'tipo:', target.tipo, 'codigo:', target.codigo, 'data:', target.timestamp, 'cooperado:', target.cooperadoNome);
+    console.log('[deletePonto] 🗑️ Hard delete do ponto:', id, 'tipo:', target.tipo, 'codigo:', target.codigo, 'cooperado:', target.cooperadoNome);
 
-    // CRÍTICO: NÃO CONFIAR EM relatedId - pode estar incorreto no banco
-    // Excluir APENAS o ponto solicitado, sem buscar pares automaticamente
-    // O handleExcluir já envia AMBOS os IDs quando necessário
+    // HARD DELETE: Remover completamente o ponto do localStorage
+    pontos = pontos.filter(p => p.id !== id);
+    localStorage.setItem(PONTOS_KEY, JSON.stringify(pontos));
+    console.log('[deletePonto] ✅ Ponto removido do localStorage');
+
+    // HARD DELETE: Remover justificativas relacionadas
+    let justificativas = StorageService.getJustificativas();
+    const justRemovidas = justificativas.filter(j => j.pontoId === id);
     
-    console.log('[deletePonto] ⚠️ Excluindo APENAS este ponto (sem buscar par automaticamente)');
-
-    // Marcar justificativas relacionadas como Excluído
-    const justificativas = StorageService.getJustificativas();
-    const justificativasAtualizadas = justificativas.map(j => {
-      if (j.pontoId === id) {
-        console.log('[deletePonto] 🚫 Marcando justificativa como Excluído:', j.id, 'pontoId:', j.pontoId);
-        return { ...j, status: 'Excluído' as const, updatedAt: new Date().toISOString() };
-      }
-      return j;
-    });
-    localStorage.setItem(JUSTIFICATIVAS_KEY, JSON.stringify(justificativasAtualizadas));
-    
-    // Sincronizar justificativas excluídas com Neon
-    justificativasAtualizadas.forEach(j => {
-      if (j.status === 'Excluído') {
-        syncToNeon('sync_justificativa', j);
-      }
-    });
-
-    // Marcar o ponto como "Excluído"
-    list = list.map(p => {
-      if (p.id === id) {
-        console.log('[deletePonto] ✅ Marcando ponto como Excluído:', p.id, p.codigo, 'tipo:', p.tipo);
-        return { 
-          ...p, 
-          status: 'Excluído',
-          updatedAt: new Date().toISOString()
-        };
-      }
-      return p;
-    });
-
-    localStorage.setItem(PONTOS_KEY, JSON.stringify(list));
-    StorageService.logAudit('REMOCAO_PONTO', `Registro ${target.codigo} marcado como excluído.`);
-
-    // Sincronizar exclusão com Neon (soft delete)
-    const pontoExcluido = list.find(p => p.id === id);
-    if (pontoExcluido) {
-      console.log('[deletePonto] 🔄 Sincronizando soft delete do ponto:', id);
-      syncToNeon('sync_ponto', pontoExcluido);
+    if (justRemovidas.length > 0) {
+      console.log('[deletePonto] 🚫 Removendo', justRemovidas.length, 'justificativa(s) relacionada(s)');
+      justificativas = justificativas.filter(j => j.pontoId !== id);
+      localStorage.setItem(JUSTIFICATIVAS_KEY, JSON.stringify(justificativas));
+      
+      // Sincronizar remoção com Neon
+      justRemovidas.forEach(j => {
+        console.log('[deletePonto] 🔄 Deletando justificativa do Neon:', j.id);
+        syncToNeon('delete_justificativa', { id: j.id });
+      });
     }
+
+    StorageService.logAudit('REMOCAO_PONTO', `Registro ${target.codigo} removido permanentemente.`);
+
+    // Sincronizar exclusão com Neon (hard delete)
+    console.log('[deletePonto] 🔄 Deletando ponto do Neon:', id);
+    syncToNeon('delete_ponto', { id });
   },
 
   getLastPonto: (cooperadoId: string): RegistroPonto | undefined => {

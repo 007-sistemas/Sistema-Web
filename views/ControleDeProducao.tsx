@@ -212,11 +212,6 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
     
     // IMPORTANTE: Ler diretamente do localStorage sem cache
     let allPontos = StorageService.getPontos();
-    
-    // Filtrar pontos excluídos (soft delete)
-    allPontos = allPontos.filter(p => p.status !== 'Excluído');
-    console.log('[ControleDeProducao] 📋 Pontos após filtrar excluídos:', allPontos.length);
-    
     const existingIds = new Set(allPontos.map(p => p.id));
 
     // Derivar cooperado logado DIRETAMENTE da sessão (não usar state que pode estar desatualizado)
@@ -387,17 +382,6 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
     const resultados: RegistroPonto[] = [];
 
     console.log('[buildPontosFromJustificativas] 📥 Recebidas', justs.length, 'justificativas para sintetizar');
-    
-    // CRÍTICO: Filtrar justificativas excluídas antes de sintetizar pontos
-    const justificativasValidas = justs.filter(j => {
-      if (j.status === 'Excluído') {
-        console.log('[buildPontosFromJustificativas] 🚫 BLOQUEANDO justificativa excluída:', j.id, j.dataPlantao);
-        return false;
-      }
-      return true;
-    });
-    
-    console.log('[buildPontosFromJustificativas] ✅ Após filtrar excluídas:', justificativasValidas.length, 'justificativas');
 
     // Helper para criar ISO timestamp preservando a data/hora local (não UTC)
     const createLocalISOTimestamp = (dateStr: string, timeStr: string): string => {
@@ -409,7 +393,7 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
       return d.toISOString();
     };
 
-    justificativasValidas.forEach(j => {
+    justs.forEach(j => {
       if (!j.dataPlantao) return;
 
       // Se já existe ponto vinculado e está na lista atual, não sintetizar duplicado
