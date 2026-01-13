@@ -75,6 +75,21 @@ export const EspelhoBiometria: React.FC = () => {
     return () => clearInterval(interval);
   }, [cooperadoId, session]);
 
+      // Listener para notificações de exclusão (limpa cache do cooperado e recarrega)
+      useEffect(() => {
+        const handleStorageChange = (e: StorageEvent) => {
+          if (e.key === 'biohealth_plantao_deleted' && e.newValue && session?.type === 'COOPERADO') {
+            console.log('[EspelhoBiometria] 📢 Notificação de exclusão recebida. Limpando cache e recarregando...');
+            localStorage.removeItem('biohealth_pontos');
+            localStorage.removeItem('biohealth_justificativas');
+            setTimeout(() => loadData(), 50);
+          }
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+        return () => window.removeEventListener('storage', handleStorageChange);
+      }, [session]);
+
   const loadData = async (coopId?: string, sess?: any) => {
     const effectiveCoopId = coopId || cooperadoId;
     const effectiveSession = sess || session;
