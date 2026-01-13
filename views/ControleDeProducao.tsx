@@ -952,18 +952,39 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
   };
 
   const handleExcluir = () => {
-    const idsToDelete = selectedRows.size > 0 ? Array.from(selectedRows) : (selectedPontoId ? [selectedPontoId] : []);
+    // Buscar IDs reais dos pontos a partir das rows selecionadas
+    const idsToDelete: string[] = [];
+    
+    if (selectedRows.size > 0) {
+      // Múltiplas seleções - buscar entry e exit de cada row
+      selectedRows.forEach(rowId => {
+        const row = shiftRows.find(r => r.id === rowId);
+        if (row) {
+          if (row.entry) idsToDelete.push(row.entry.id);
+          if (row.exit) idsToDelete.push(row.exit.id);
+        }
+      });
+    } else if (selectedPontoId) {
+      // Seleção única - buscar pela row
+      const row = shiftRows.find(r => r.id === selectedPontoId || r.entry?.id === selectedPontoId || r.exit?.id === selectedPontoId);
+      if (row) {
+        if (row.entry) idsToDelete.push(row.entry.id);
+        if (row.exit) idsToDelete.push(row.exit.id);
+      }
+    }
     
     if (idsToDelete.length === 0) {
         alert("Selecione ao menos um registro para excluir.");
         return;
     }
     
-    const confirmMsg = idsToDelete.length === 1 
-      ? "Tem certeza? Se for uma Entrada, a Saída vinculada também será excluída."
-      : `Tem certeza que deseja excluir ${idsToDelete.length} registros? Entradas vinculadas também serão excluídas.`;
+    const plantoes = selectedRows.size > 0 ? selectedRows.size : 1;
+    const confirmMsg = plantoes === 1 
+      ? "Tem certeza que deseja excluir este plantão completo (entrada e saída)?"
+      : `Tem certeza que deseja excluir ${plantoes} plantões completos?`;
     
     if (confirm(confirmMsg)) {
+        console.log('[handleExcluir] 🗑️ Excluindo pontos:', idsToDelete);
         idsToDelete.forEach(id => StorageService.deletePonto(id));
         
         // Atualizar estado imediatamente (sem aguardar Neon)
