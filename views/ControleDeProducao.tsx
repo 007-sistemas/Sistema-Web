@@ -1313,7 +1313,10 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
                 type="checkbox"
                 className="h-4 w-4 text-primary-600 border-gray-300 rounded"
                 checked={showRecusadas}
-                onChange={(e) => setShowRecusadas(e.target.checked)}
+                onChange={(e) => {
+                  console.log('[ControleDeProducao] Toggle recusadas: antes=', showRecusadas, 'depois=', e.target.checked);
+                  setShowRecusadas(e.target.checked);
+                }}
               />
               <span>Mostrar plantões recusados</span>
             </label>
