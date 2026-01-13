@@ -701,6 +701,17 @@ export const StorageService = {
     localStorage.setItem(PONTOS_KEY, JSON.stringify(pontos));
     console.log('[deletePonto] ✅ Ponto removido do localStorage');
 
+    // Se há um ponto relacionado (relatedId), deletar também
+    if (target.relatedId) {
+      const relatedPonto = pontos.find(p => p.id === target.relatedId);
+      if (relatedPonto) {
+        console.log('[deletePonto] 🔗 Deletando ponto relacionado:', target.relatedId);
+        pontos = pontos.filter(p => p.id !== target.relatedId);
+      }
+    }
+    
+    localStorage.setItem(PONTOS_KEY, JSON.stringify(pontos));
+
     // HARD DELETE: Remover justificativas relacionadas (EXCETO as recusadas)
     let justificativas = StorageService.getJustificativas();
     const plantaoDate = new Date(target.timestamp).toISOString().split('T')[0];
@@ -755,6 +766,12 @@ export const StorageService = {
     // Sincronizar exclusão com Neon (hard delete)
     console.log('[deletePonto] 🔄 Deletando ponto do Neon:', id);
     syncToNeon('delete_ponto', { id });
+    
+    // Se há ponto relacionado, deletar também no Neon
+    if (target.relatedId) {
+      console.log('[deletePonto] 🔄 Deletando ponto relacionado do Neon:', target.relatedId);
+      syncToNeon('delete_ponto', { id: target.relatedId });
+    }
     
     // Notificar cooperados para limparem cache (dupla notificação para garantir)
     broadcastPontoChange('delete', id);
