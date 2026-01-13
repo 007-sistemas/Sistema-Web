@@ -600,11 +600,24 @@ export const StorageService = {
     
     if (!target) return;
 
+    // Buscar o par do ponto (se houver)
+    let parId: string | undefined;
+    if (target.tipo === 'ENTRADA') {
+      // Se é entrada, buscar a saída que aponta para ela
+      const saida = list.find(p => p.relatedId === id);
+      parId = saida?.id;
+    } else if (target.tipo === 'SAIDA') {
+      // Se é saída, o par é o relatedId dela
+      parId = target.relatedId;
+    }
+
     // Marcar justificativas relacionadas como Excluído
     const justificativas = StorageService.getJustificativas();
     const justificativasAtualizadas = justificativas.map(j => {
-      // Se a justificativa referencia este ponto (entrada ou saída)
-      if (j.pontoId === id || j.pontoId === target.relatedId) {
+      // A justificativa pode apontar para o ponto de saída (pontoId)
+      // Verificar se pontoId da justificativa é igual ao ponto excluído OU ao seu par
+      if (j.pontoId === id || j.pontoId === parId) {
+        console.log('[deletePonto] Marcando justificativa como Excluído:', j.id);
         return { ...j, status: 'Excluído' as const, updatedAt: new Date().toISOString() };
       }
       return j;
@@ -613,7 +626,7 @@ export const StorageService = {
     
     // Sincronizar justificativas excluídas com Neon
     justificativasAtualizadas.forEach(j => {
-      if (j.status === 'Excluído' && (j.pontoId === id || j.pontoId === target.relatedId)) {
+      if (j.status === 'Excluído') {
         syncToNeon('sync_justificativa', j);
       }
     });
