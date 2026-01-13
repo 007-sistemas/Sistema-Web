@@ -641,23 +641,31 @@ export const StorageService = {
       return;
     }
 
-    console.log('[deletePonto] 🗑️ Excluindo ponto:', id, 'tipo:', target.tipo, 'codigo:', target.codigo, 'data:', target.timestamp);
+    console.log('[deletePonto] 🗑️ Excluindo ponto:', id, 'tipo:', target.tipo, 'codigo:', target.codigo, 'data:', target.timestamp, 'relatedId:', target.relatedId);
 
-    // Buscar o par do ponto (se houver) - APENAS pelo relatedId direto
+    // Buscar o par do ponto APENAS se for entrada/saída do MESMO plantão (mesmo cooperado, mesma data, códigos compatíveis)
     let parId: string | undefined;
-    if (target.tipo === 'ENTRADA' && target.relatedId) {
-      // Se é entrada, o par é o relatedId dela (a saída)
-      const saida = list.find(p => p.id === target.relatedId);
-      if (saida) {
-        parId = saida.id;
-        console.log('[deletePonto] ✅ Par encontrado (saída):', parId, saida.codigo);
-      }
-    } else if (target.tipo === 'SAIDA' && target.relatedId) {
-      // Se é saída, o par é o relatedId dela (a entrada)
-      parId = target.relatedId;
-      const entrada = list.find(p => p.id === parId);
-      if (entrada) {
-        console.log('[deletePonto] ✅ Par encontrado (entrada):', parId, entrada.codigo);
+    if (target.relatedId) {
+      const possiblePar = list.find(p => p.id === target.relatedId);
+      if (possiblePar) {
+        // Validar que é realmente o par: mesmo cooperado, mesmo código, data compatível
+        const sameCooperado = possiblePar.cooperadoId === target.cooperadoId;
+        const sameCodigo = possiblePar.codigo === target.codigo;
+        const dataTarget = new Date(target.timestamp).toISOString().split('T')[0];
+        const dataPar = new Date(possiblePar.timestamp).toISOString().split('T')[0];
+        const dataProxima = new Date(dataTarget);
+        dataProxima.setDate(dataProxima.getDate() + 1);
+        const dataProximaStr = dataProxima.toISOString().split('T')[0];
+        const dataCompativel = dataPar === dataTarget || dataPar === dataProximaStr;
+        
+        if (sameCooperado && sameCodigo && dataCompativel) {
+          parId = possiblePar.id;
+          console.log('[deletePonto] ✅ Par válido encontrado:', parId, possiblePar.codigo, 'data:', dataPar);
+        } else {
+          console.warn('[deletePonto] ⚠️ relatedId aponta para ponto incompatível - NÃO será excluído');
+          console.warn('  Target:', { cooperado: target.cooperadoId, codigo: target.codigo, data: dataTarget });
+          console.warn('  Related:', { cooperado: possiblePar.cooperadoId, codigo: possiblePar.codigo, data: dataPar });
+        }
       }
     }
 
