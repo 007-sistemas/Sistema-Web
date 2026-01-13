@@ -103,6 +103,12 @@ export const EspelhoBiometria: React.FC = () => {
     try {
       setLoading(true);
 
+      // Cooperado: sempre limpar cache local para refletir exclusões imediatamente
+      if (effectiveSession?.type === 'COOPERADO') {
+        localStorage.removeItem('biohealth_pontos');
+        localStorage.removeItem('biohealth_justificativas');
+      }
+
       // IMPORTANTE: Atualizar sessão a cada loadData
       const currentSession = StorageService.getSession();
       setSession(currentSession);
