@@ -229,6 +229,11 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
         console.log('[ControleDeProducao] 📥 Recebidas', remoteJust.length, 'justificativas remotas');
         console.log('[ControleDeProducao] 🔍 Filtrando por cooperado:', cooperadoLogadoIdLocal, '/', cooperadoLogadoDataLocal?.nome);
         const filteredJust = remoteJust.filter(j => {
+          // Filtrar justificativas excluídas
+          if (j.status === 'Excluído') {
+            console.log('[ControleDeProducao] 🚫 Filtrando justificativa excluída:', j.id);
+            return false;
+          }
           const sameId = cooperadoLogadoIdLocal ? j.cooperadoId === cooperadoLogadoIdLocal : false;
           const sameName = cooperadoLogadoDataLocal?.nome ? j.cooperadoNome?.trim().toLowerCase() === cooperadoLogadoDataLocal.nome.trim().toLowerCase() : false;
           const matches = sameId || sameName;
@@ -245,6 +250,8 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
         const localJust = StorageService.getJustificativas();
         console.log('[ControleDeProducao] 📥 Justificativas do localStorage:', localJust.length);
         const filtered = localJust.filter(j => {
+          // Filtrar justificativas excluídas
+          if (j.status === 'Excluído') return false;
           const sameId = cooperadoLogadoIdLocal ? j.cooperadoId === cooperadoLogadoIdLocal : false;
           const sameName = cooperadoLogadoDataLocal?.nome ? j.cooperadoNome?.trim().toLowerCase() === cooperadoLogadoDataLocal.nome.trim().toLowerCase() : false;
           return sameId || sameName;
