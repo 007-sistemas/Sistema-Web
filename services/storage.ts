@@ -709,16 +709,6 @@ export const StorageService = {
       ]);
       
       console.log('[clearCacheAndReload] ✅ Cache limpo e dados recarregados com sucesso');
-      
-      // Forçar atualização imediata da página para cooperado
-      console.log('[clearCacheAndReload] 🔄 Disparando evento de atualização...');
-      window.dispatchEvent(new CustomEvent('cache-cleared'));
-      
-      // Aguardar 200ms e forçar reload completo se necessário
-      setTimeout(() => {
-        console.log('[clearCacheAndReload] 🔄 Recarregando página para garantir sincronização...');
-        window.location.reload();
-      }, 200);
     } catch (err) {
       console.error('[clearCacheAndReload] ❌ Erro ao recarregar dados:', err);
     }
