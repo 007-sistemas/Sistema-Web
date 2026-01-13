@@ -639,9 +639,6 @@ export const StorageService = {
       // Auditoria e sync Neon
       StorageService.logAudit('REMOCAO_JUSTIFICATIVA', `Justificativa ${justificativaId} removida permanentemente.`);
       syncToNeon('delete_justificativa', { id: justificativaId });
-      
-      // Limpar cache e forçar reload
-      StorageService.clearCacheAndReload();
       return;
     }
 
@@ -691,9 +688,6 @@ export const StorageService = {
     // Sincronizar exclusão com Neon (hard delete)
     console.log('[deletePonto] 🔄 Deletando ponto do Neon:', id);
     syncToNeon('delete_ponto', { id });
-    
-    // Limpar cache e forçar reload
-    StorageService.clearCacheAndReload();
   },
 
   clearCacheAndReload: async (): Promise<void> => {
