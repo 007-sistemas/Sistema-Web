@@ -68,7 +68,7 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
   const [missingDate, setMissingDate] = useState('');
   const [missingEntrada, setMissingEntrada] = useState('');
   const [missingSaida, setMissingSaida] = useState('');
-  const [missingReason, setMissingReason] = useState('Esquecimento');
+  const [missingReason, setMissingReason] = useState('');
   const [missingDesc, setMissingDesc] = useState('');
   const [missingSetores, setMissingSetores] = useState<Setor[]>([]);
 
@@ -1004,6 +1004,11 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
       return;
     }
 
+    if (!missingReason.trim()) {
+      alert('Selecione o motivo da falta de registro.');
+      return;
+    }
+
     if (missingReason === 'Outro Motivo' && !missingDesc.trim()) {
       alert('Descreva o motivo quando selecionar "Outro Motivo".');
       return;
@@ -1285,6 +1290,7 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
                 value={missingReason}
                 onChange={e => setMissingReason(e.target.value)}
               >
+                <option value="">-- Selecione um motivo --</option>
                 <option value="Esquecimento">Esquecimento</option>
                 <option value="Computador Inoperante">Computador Inoperante</option>
                 <option value="Falta de Energia">Falta de Energia</option>
