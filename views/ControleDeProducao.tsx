@@ -559,6 +559,14 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
 
   const filteredLogs = getFilteredLogs();
 
+  // Debug: log when filtering changes
+  console.log('[ControleDeProducao] 🔍 Filtro aplicado:', {
+    showRecusadas,
+    totalLogs: logs.length,
+    filteredLogs: filteredLogs.length,
+    rejeitados: logs.filter(l => isRecusadoStatus(l.status)).length
+  });
+
   // Helper to get sectors from state
   const getAvailableSetoresForForm = () => setoresDisponiveis;
   
