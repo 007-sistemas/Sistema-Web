@@ -115,9 +115,28 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
 
     // Listener para notificações de exclusão via localStorage
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'biohealth_data_updated' && e.newValue) {
-        console.log('[ControleDeProducao] 📢 Notificação recebida de exclusão, recarregando...');
-        loadData();
+      if (e.key === 'biohealth_plantao_deleted' && e.newValue) {
+        console.log('[ControleDeProducao] 📢 Notificação de exclusão recebida');
+        
+        // Se for cooperado, limpar cache e recarregar
+        if (mode === 'cooperado') {
+          console.log('[ControleDeProducao] 🧹 Limpando cache do cooperado e recarregando...');
+          
+          // Limpar dados do localStorage
+          const pontosKey = 'biohealth_pontos';
+          const justificativasKey = 'biohealth_justificativas';
+          localStorage.removeItem(pontosKey);
+          localStorage.removeItem(justificativasKey);
+          
+          // Forçar recarregamento dos dados do Neon
+          setTimeout(() => {
+            loadData();
+          }, 100);
+        } else {
+          // Se for gestor, apenas recarregar dados (sem limpar cache)
+          console.log('[ControleDeProducao] 🔄 Recarregando dados do gestor...');
+          loadData();
+        }
       }
     };
     

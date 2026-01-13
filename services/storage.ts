@@ -688,6 +688,12 @@ export const StorageService = {
     // Sincronizar exclusão com Neon (hard delete)
     console.log('[deletePonto] 🔄 Deletando ponto do Neon:', id);
     syncToNeon('delete_ponto', { id });
+    
+    // Notificar cooperados para limparem cache
+    const notificationKey = 'biohealth_plantao_deleted';
+    const notification = { timestamp: Date.now(), pontoId: id };
+    localStorage.setItem(notificationKey, JSON.stringify(notification));
+    console.log('[deletePonto] 📢 Notificação de exclusão enviada');
   },
 
   clearCacheAndReload: async (): Promise<void> => {
