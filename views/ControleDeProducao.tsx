@@ -386,6 +386,19 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
     const hospMap = new Map(hospitaisList.map(h => [String(h.id), h.nome]));
     const resultados: RegistroPonto[] = [];
 
+    console.log('[buildPontosFromJustificativas] 📥 Recebidas', justs.length, 'justificativas para sintetizar');
+    
+    // CRÍTICO: Filtrar justificativas excluídas antes de sintetizar pontos
+    const justificativasValidas = justs.filter(j => {
+      if (j.status === 'Excluído') {
+        console.log('[buildPontosFromJustificativas] 🚫 BLOQUEANDO justificativa excluída:', j.id, j.dataPlantao);
+        return false;
+      }
+      return true;
+    });
+    
+    console.log('[buildPontosFromJustificativas] ✅ Após filtrar excluídas:', justificativasValidas.length, 'justificativas');
+
     // Helper para criar ISO timestamp preservando a data/hora local (não UTC)
     const createLocalISOTimestamp = (dateStr: string, timeStr: string): string => {
       // dateStr: "2026-01-17", timeStr: "08:00"
@@ -396,7 +409,7 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
       return d.toISOString();
     };
 
-    justs.forEach(j => {
+    justificativasValidas.forEach(j => {
       if (!j.dataPlantao) return;
 
       // Se já existe ponto vinculado e está na lista atual, não sintetizar duplicado

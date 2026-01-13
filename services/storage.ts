@@ -636,17 +636,29 @@ export const StorageService = {
     let list = StorageService.getPontos();
     const target = list.find(p => p.id === id);
     
-    if (!target) return;
+    if (!target) {
+      console.warn('[deletePonto] Ponto não encontrado:', id);
+      return;
+    }
 
-    // Buscar o par do ponto (se houver)
+    console.log('[deletePonto] 🗑️ Excluindo ponto:', id, 'tipo:', target.tipo, 'codigo:', target.codigo, 'data:', target.timestamp);
+
+    // Buscar o par do ponto (se houver) - APENAS pelo relatedId direto
     let parId: string | undefined;
-    if (target.tipo === 'ENTRADA') {
-      // Se é entrada, buscar a saída que aponta para ela
-      const saida = list.find(p => p.relatedId === id);
-      parId = saida?.id;
-    } else if (target.tipo === 'SAIDA') {
-      // Se é saída, o par é o relatedId dela
+    if (target.tipo === 'ENTRADA' && target.relatedId) {
+      // Se é entrada, o par é o relatedId dela (a saída)
+      const saida = list.find(p => p.id === target.relatedId);
+      if (saida) {
+        parId = saida.id;
+        console.log('[deletePonto] ✅ Par encontrado (saída):', parId, saida.codigo);
+      }
+    } else if (target.tipo === 'SAIDA' && target.relatedId) {
+      // Se é saída, o par é o relatedId dela (a entrada)
       parId = target.relatedId;
+      const entrada = list.find(p => p.id === parId);
+      if (entrada) {
+        console.log('[deletePonto] ✅ Par encontrado (entrada):', parId, entrada.codigo);
+      }
     }
 
     // Marcar justificativas relacionadas como Excluído
@@ -654,8 +666,8 @@ export const StorageService = {
     const justificativasAtualizadas = justificativas.map(j => {
       // A justificativa pode apontar para o ponto de saída (pontoId)
       // Verificar se pontoId da justificativa é igual ao ponto excluído OU ao seu par
-      if (j.pontoId === id || j.pontoId === parId) {
-        console.log('[deletePonto] Marcando justificativa como Excluído:', j.id);
+      if (j.pontoId === id || (parId && j.pontoId === parId)) {
+        console.log('[deletePonto] 🚫 Marcando justificativa como Excluído:', j.id, 'pontoId:', j.pontoId);
         return { ...j, status: 'Excluído' as const, updatedAt: new Date().toISOString() };
       }
       return j;
@@ -675,10 +687,12 @@ export const StorageService = {
       idsParaExcluir.push(parId);
     }
 
+    console.log('[deletePonto] 📋 IDs que serão excluídos:', idsParaExcluir);
+
     // Marcar pontos como "Excluído" em vez de removê-los fisicamente
     list = list.map(p => {
       if (idsParaExcluir.includes(p.id)) {
-        console.log('[deletePonto] Marcando ponto como Excluído:', p.id, p.codigo);
+        console.log('[deletePonto] ✅ Marcando ponto como Excluído:', p.id, p.codigo, 'tipo:', p.tipo);
         return { 
           ...p, 
           status: 'Excluído',
@@ -695,7 +709,7 @@ export const StorageService = {
     idsParaExcluir.forEach(pontoId => {
       const pontoExcluido = list.find(p => p.id === pontoId);
       if (pontoExcluido) {
-        console.log('[deletePonto] Sincronizando soft delete do ponto:', pontoId);
+        console.log('[deletePonto] 🔄 Sincronizando soft delete do ponto:', pontoId);
         syncToNeon('sync_ponto', pontoExcluido);
       }
     });
