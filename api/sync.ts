@@ -714,8 +714,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'Ponto ID é obrigatório para exclusão' });
       }
 
+      // Remover justificativas que referenciam este ponto (ou seu par via related_id)
+      await sql`
+        DELETE FROM justificativas 
+        WHERE ponto_id = ${id} 
+           OR ponto_id IN (SELECT id FROM pontos WHERE related_id = ${id})
+      `;
+      console.log('[sync] Justificativas vinculadas ao ponto removidas:', id);
+
+      // Remover o ponto (e qualquer par via related_id)
       await sql`DELETE FROM pontos WHERE id = ${id} OR related_id = ${id}`;
       console.log('[sync] Ponto deletado:', id);
+      return res.status(200).json({ success: true, deleted: id });
+    }
+
+    if (action === 'delete_justificativa') {
+      const { id } = data;
+      if (!id) {
+        return res.status(400).json({ error: 'Justificativa ID é obrigatório para exclusão' });
+      }
+
+      await sql`DELETE FROM justificativas WHERE id = ${id}`;
+      console.log('[sync] Justificativa deletada:', id);
       return res.status(200).json({ success: true, deleted: id });
     }
 

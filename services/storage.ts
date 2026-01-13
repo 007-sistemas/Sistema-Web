@@ -623,6 +623,25 @@ export const StorageService = {
   },
 
   deletePonto: (id: string): void => {
+    // Suporte a IDs sintéticos de justificativa (ex.: just-<justId>-ent|sai)
+    const justMatch = /^just-(.+)-(ent|sai)$/.exec(id);
+    if (justMatch) {
+      const justificativaId = justMatch[1];
+      console.log('[deletePonto] 🧹 Detected synthetic ID, removing justificativa:', justificativaId);
+
+      // Remover justificativa do localStorage
+      let justificativas = StorageService.getJustificativas();
+      const before = justificativas.length;
+      justificativas = justificativas.filter(j => j.id !== justificativaId);
+      localStorage.setItem(JUSTIFICATIVAS_KEY, JSON.stringify(justificativas));
+      console.log('[deletePonto] 🗑️ Justificativa removida localmente. Total:', before, '→', justificativas.length);
+
+      // Auditoria e sync Neon
+      StorageService.logAudit('REMOCAO_JUSTIFICATIVA', `Justificativa ${justificativaId} removida permanentemente.`);
+      syncToNeon('delete_justificativa', { id: justificativaId });
+      return;
+    }
+
     let pontos = StorageService.getPontos();
     const target = pontos.find(p => p.id === id);
     
@@ -638,7 +657,7 @@ export const StorageService = {
     localStorage.setItem(PONTOS_KEY, JSON.stringify(pontos));
     console.log('[deletePonto] ✅ Ponto removido do localStorage');
 
-    // HARD DELETE: Remover justificativas relacionadas
+    // HARD DELETE: Remover justificativas relacionadas por pontoId
     let justificativas = StorageService.getJustificativas();
     const justRemovidas = justificativas.filter(j => j.pontoId === id);
     
