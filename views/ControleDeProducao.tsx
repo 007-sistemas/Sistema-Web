@@ -1085,6 +1085,17 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
           StorageService.deletePonto(id);
         });
         
+        // Limpar cache local para garantir atualização imediata
+        console.log('[handleExcluir] 🧹 Limpando cache local...');
+        localStorage.removeItem('biohealth_pontos');
+        localStorage.removeItem('biohealth_justificativas');
+        
+        // Disparar evento customizado para notificar outras views na mesma aba
+        const customEvent = new CustomEvent('biohealth:pontos:changed', { 
+          detail: { action: 'delete', ids: idsToDelete, timestamp: Date.now() } 
+        });
+        window.dispatchEvent(customEvent);
+        
         // Limpar seleção e formulário
         setSelectedRows(new Set());
         handleNovoPlantao();

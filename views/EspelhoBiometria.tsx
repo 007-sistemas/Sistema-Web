@@ -77,21 +77,39 @@ export const EspelhoBiometria: React.FC = () => {
 
       // Listener para notificações de exclusão ou alteração (limpa cache do cooperado e recarrega)
       useEffect(() => {
-        const handleStorageChange = (e: StorageEvent) => {
-          const isDelete = e.key === 'biohealth_plantao_deleted' && e.newValue;
-          const isChange = e.key === 'biohealth_pontos_changed' && e.newValue;
-          if (!session?.type || !isDelete && !isChange) return;
-
-          if (session.type === 'COOPERADO') {
-            console.log('[EspelhoBiometria] 📢 Notificação recebida. Limpando cache e recarregando...', e.key);
+        // Handler para StorageEvent (outras abas) e CustomEvent (mesma aba)
+        const handleDataChange = () => {
+          if (!session?.type) return;
+          if (session.type === 'COOPERADO' || session.type === 'HOSPITAL') {
+            console.log('[EspelhoBiometria] 📢 Notificação recebida. Limpando cache e recarregando...');
             localStorage.removeItem('biohealth_pontos');
             localStorage.removeItem('biohealth_justificativas');
             setTimeout(() => loadData(), 50);
           }
         };
 
+        const handleStorageChange = (e: StorageEvent) => {
+          const isDelete = e.key === 'biohealth_plantao_deleted' && e.newValue;
+          const isChange = e.key === 'biohealth_pontos_changed' && e.newValue;
+          if (isDelete || isChange) {
+            handleDataChange();
+          }
+        };
+
+        const handleCustomEvent = (e: Event) => {
+          console.log('[EspelhoBiometria] 📢 Evento customizado recebido:', (e as CustomEvent).detail);
+          handleDataChange();
+        };
+
         window.addEventListener('storage', handleStorageChange);
-        return () => window.removeEventListener('storage', handleStorageChange);
+        window.addEventListener('biohealth:plantao:deleted', handleCustomEvent);
+        window.addEventListener('biohealth:pontos:changed', handleCustomEvent);
+        
+        return () => {
+          window.removeEventListener('storage', handleStorageChange);
+          window.removeEventListener('biohealth:plantao:deleted', handleCustomEvent);
+          window.removeEventListener('biohealth:pontos:changed', handleCustomEvent);
+        };
       }, [session]);
 
   const loadData = async (coopId?: string, sess?: any) => {

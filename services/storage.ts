@@ -18,8 +18,16 @@ const broadcastPontoChange = (action: 'save' | 'update' | 'delete', id: string) 
   const notificationKey = 'biohealth_pontos_changed';
   const notification = { action, id, timestamp: Date.now() };
   try {
+    // LocalStorage para outras abas/janelas
     localStorage.setItem(notificationKey, JSON.stringify(notification));
-    console.log('[broadcastPontoChange] 📢 Enviado:', notification);
+    
+    // CustomEvent para mesma aba (StorageEvent não funciona na mesma aba)
+    const customEvent = new CustomEvent('biohealth:pontos:changed', { 
+      detail: notification 
+    });
+    window.dispatchEvent(customEvent);
+    
+    console.log('[broadcastPontoChange] 📢 Enviado (localStorage + CustomEvent):', notification);
   } catch (err) {
     console.warn('[broadcastPontoChange] Falha ao notificar:', err);
   }
@@ -779,7 +787,14 @@ export const StorageService = {
     const notificationKey = 'biohealth_plantao_deleted';
     const notification = { timestamp: Date.now(), pontoId: id };
     localStorage.setItem(notificationKey, JSON.stringify(notification));
-    console.log('[deletePonto] 📢 Notificação de exclusão enviada (biohealth_plantao_deleted + biohealth_pontos_changed)');
+    
+    // Disparar evento customizado para mesma aba (StorageEvent não funciona na mesma aba)
+    const customEvent = new CustomEvent('biohealth:plantao:deleted', { 
+      detail: { pontoId: id, timestamp: Date.now() } 
+    });
+    window.dispatchEvent(customEvent);
+    
+    console.log('[deletePonto] 📢 Notificação de exclusão enviada (biohealth_plantao_deleted + biohealth_pontos_changed + CustomEvent)');
   },
 
   clearCacheAndReload: async (): Promise<void> => {
