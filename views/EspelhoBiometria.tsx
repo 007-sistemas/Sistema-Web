@@ -44,6 +44,8 @@ export const EspelhoBiometria: React.FC = () => {
     return sameId || sameName;
   };
 
+  // Flag para parar auto-refresh durante operações críticas
+  const autoRefreshEnabledRef = React.useRef(true);
 
   useEffect(() => {
     // Recarregar session ao montar o componente
@@ -64,27 +66,43 @@ export const EspelhoBiometria: React.FC = () => {
   }, []);
 
   // Auto-refresh a cada 5 segundos para pegar aprovações do gestor
+  // Porém, respeita a flag para não conflitar com recarregamentos manuais
   useEffect(() => {
     if (!cooperadoId || !session) return;
     
     const interval = setInterval(() => {
-      console.log('[EspelhoBiometria] Auto-refresh dos pontos');
-      loadData();
-    }, 3000); // 3 segundos para atualização rápida
+      if (autoRefreshEnabledRef.current) {
+        console.log('[EspelhoBiometria] ⏱️ Auto-refresh dos pontos');
+        loadData();
+      } else {
+        console.log('[EspelhoBiometria] ⏸️ Auto-refresh pausado');
+      }
+    }, 5000); // 5 segundos para refresh regular
     
     return () => clearInterval(interval);
   }, [cooperadoId, session]);
 
       // Listener para notificações de exclusão ou alteração (limpa cache do cooperado e recarrega)
+      // Usar debounce para evitar múltiplos recarregamentos simultâneos
       useEffect(() => {
-        // Handler para StorageEvent (outras abas) e CustomEvent (mesma aba)
+        let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+        
+        // Handler para StorageEvent (outras abas) e CustomEvent (mesma aba) com debounce
         const handleDataChange = () => {
           if (!session?.type) return;
           if (session.type === 'COOPERADO' || session.type === 'HOSPITAL') {
-            console.log('[EspelhoBiometria] 📢 Notificação recebida. Limpando cache e recarregando...');
-            localStorage.removeItem('biohealth_pontos');
-            localStorage.removeItem('biohealth_justificativas');
-            setTimeout(() => loadData(), 50);
+            // Cancelar timer anterior
+            if (debounceTimer) clearTimeout(debounceTimer);
+            
+            console.log('[EspelhoBiometria] 📢 Notificação recebida. Aguardando confirmação do Neon...');
+            
+            // Aguardar 1.5 segundos para garantir que Neon está consistente
+            debounceTimer = setTimeout(() => {
+              console.log('[EspelhoBiometria] 🔄 Recarregando dados após notificação...');
+              localStorage.removeItem('biohealth_pontos');
+              localStorage.removeItem('biohealth_justificativas');
+              loadData();
+            }, 1500);
           }
         };
 
@@ -107,11 +125,11 @@ export const EspelhoBiometria: React.FC = () => {
         window.addEventListener('biohealth:justificativa:updated', handleCustomEvent);
         
         return () => {
+          if (debounceTimer) clearTimeout(debounceTimer);
           window.removeEventListener('storage', handleStorageChange);
           window.removeEventListener('biohealth:plantao:deleted', handleCustomEvent);
           window.removeEventListener('biohealth:pontos:changed', handleCustomEvent);
           window.removeEventListener('biohealth:justificativa:updated', handleCustomEvent);
-          window.removeEventListener('biohealth:pontos:changed', handleCustomEvent);
         };
       }, [session]);
 
@@ -126,26 +144,32 @@ export const EspelhoBiometria: React.FC = () => {
     }
 
     try {
+      // Pausar auto-refresh durante sincronização para evitar conflitos
+      autoRefreshEnabledRef.current = false;
       setLoading(true);
-
-      // Cooperado: NUNCA usar localStorage, buscar SEMPRE do Neon para dados atualizados
-      // Limpar cache antes de cada load
-      localStorage.removeItem('biohealth_pontos');
-      localStorage.removeItem('biohealth_justificativas');
 
       // IMPORTANTE: Atualizar sessão a cada loadData
       const currentSession = StorageService.getSession();
       setSession(currentSession);
       console.log('[EspelhoBiometria] 🔐 Sessão atualizada:', currentSession?.user?.nome);
 
-      // Mesma lógica do Controle de Produção: sincronizar storage e usar storage como fonte principal
-      try {
-        await StorageService.refreshHospitaisFromRemote();
-        await StorageService.refreshCooperadosFromRemote();
-        await StorageService.refreshPontosFromRemote();
-      } catch (syncErr) {
-        console.warn('[EspelhoBiometria] Falha ao sincronizar remoto, seguindo com dados locais:', syncErr);
-      }
+      // Sincronizar com Neon (timeout para não bloquear em caso de falha)
+      console.log('[EspelhoBiometria] 🔄 Sincronizando com Neon...');
+      const syncPromises = [
+        StorageService.refreshHospitaisFromRemote(),
+        StorageService.refreshCooperadosFromRemote(),
+        StorageService.refreshPontosFromRemote()
+      ];
+      
+      // Aguardar sincronização com timeout de 5 segundos
+      await Promise.race([
+        Promise.all(syncPromises),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Sync timeout')), 5000))
+      ]).catch(syncErr => {
+        console.warn('[EspelhoBiometria] ⚠️ Falha ao sincronizar remoto:', syncErr);
+      });
+      
+      console.log('[EspelhoBiometria] ✅ Sincronização completa');
 
       // Buscar todas as justificativas para montar pontos sintéticos de pendentes/rejeitados
       let todasJustificativas: Justificativa[] = [];
@@ -191,6 +215,9 @@ export const EspelhoBiometria: React.FC = () => {
       console.error('[EspelhoBiometria] Erro ao carregar dados:', err);
     } finally {
       setLoading(false);
+      // Reativar auto-refresh após sincronização completa
+      autoRefreshEnabledRef.current = true;
+      console.log('[EspelhoBiometria] ✅ Auto-refresh reativado');
     }
   };
 

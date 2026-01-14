@@ -1100,9 +1100,12 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
         setSelectedRows(new Set());
         handleNovoPlantao();
         
-        // Recarregar dados imediatamente (gestor)
-        console.log('[handleExcluir] 🔄 Recarregando dados após exclusão...');
-        loadData();
+        // Aguardar um pouco para garantir que Neon processa a exclusão antes de recarregar
+        console.log('[handleExcluir] ⏳ Aguardando sincronização com Neon (2 segundos)...');
+        setTimeout(() => {
+          console.log('[handleExcluir] 🔄 Recarregando dados após exclusão...');
+          loadData();
+        }, 2000);
     }
   };
 
