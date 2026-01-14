@@ -174,7 +174,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-200">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mx-auto mb-4">
-            <img src="/Idev logo.png" alt="Idev" className="h-40 w-auto" />
+            <img src="/Idev logo.png" alt="Idev" className="h-56 w-auto" />
           </div>
           <p className="text-gray-500 mt-2">Acesso Restrito</p>
         </div>
