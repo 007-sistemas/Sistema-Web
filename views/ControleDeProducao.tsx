@@ -565,8 +565,12 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
   // --- FILTER LOGIC ---
   const getFilteredLogs = () => {
     return logs.filter(log => {
-      // Filtro de recusadas APENAS para gestor (cooperado vê todos os status sempre)
-      if (mode === 'manager' && !showRecusadas && isRecusadoStatus(log.status)) return false;
+      // Filtro de recusadas e pendentes APENAS para gestor (cooperado vê todos os status sempre)
+      if (mode === 'manager' && !showRecusadas) {
+        // Ocultar recusados E pendentes quando o toggle está OFF
+        if (isRecusadoStatus(log.status)) return false;
+        if (log.status === 'Pendente' || log.status === 'Aguardando Autorização') return false;
+      }
 
       // 0. Modo Cooperado: filtrar apenas registros do cooperado logado
       if (mode === 'cooperado' && cooperadoLogadoId) {
@@ -1100,12 +1104,9 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
         setSelectedRows(new Set());
         handleNovoPlantao();
         
-        // Aguardar um pouco para garantir que Neon processa a exclusão antes de recarregar
-        console.log('[handleExcluir] ⏳ Aguardando sincronização com Neon (2 segundos)...');
-        setTimeout(() => {
-          console.log('[handleExcluir] 🔄 Recarregando dados após exclusão...');
-          loadData();
-        }, 2000);
+        // Recarregar dados imediatamente (gestor)
+        console.log('[handleExcluir] 🔄 Recarregando dados após exclusão...');
+        loadData();
     }
   };
 
@@ -1362,21 +1363,6 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
         </div>
         
         <div className="mt-3 flex flex-col md:flex-row justify-between md:items-center gap-3">
-          {mode === 'manager' && (
-            <label className="inline-flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                className="h-4 w-4 text-primary-600 border-gray-300 rounded"
-                checked={showRecusadas}
-                onChange={(e) => {
-                  console.log('[ControleDeProducao] Toggle recusadas: antes=', showRecusadas, 'depois=', e.target.checked);
-                  setShowRecusadas(e.target.checked);
-                }}
-              />
-              <span>Mostrar plantões recusados</span>
-            </label>
-          )}
-
           <button 
               onClick={clearFilters}
               className="text-sm text-gray-500 hover:text-red-500 flex items-center gap-1"
@@ -1525,7 +1511,28 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
                 <th className="px-4 py-3">Data</th>
                 <th className="px-4 py-3 text-center">Entrada</th>
                 <th className="px-4 py-3 text-center">Saída</th>
-                <th className="px-4 py-3 text-center">Status</th>
+                <th className="px-4 py-3 text-center">
+                  <div className="flex items-center justify-center gap-2">
+                    <span>Status</span>
+                    {mode === 'manager' && (
+                      <button
+                        onClick={() => {
+                          const newValue = !showRecusadas;
+                          setShowRecusadas(newValue);
+                          console.log('[ControleDeProducao] Toggle exibir todos: antes=', showRecusadas, 'depois=', newValue);
+                        }}
+                        className={`text-xs px-2 py-1 rounded transition-colors ${
+                          showRecusadas
+                            ? 'bg-primary-600 text-white'
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                        title={showRecusadas ? 'Ocultando pendentes/recusados' : 'Exibindo apenas aceitos'}
+                      >
+                        Exibir todos
+                      </button>
+                    )}
+                  </div>
+                </th>
                 {mode === 'cooperado' && <th className="px-4 py-3 text-center">Origem</th>}
               </tr>
             </thead>
