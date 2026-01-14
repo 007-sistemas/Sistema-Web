@@ -44,9 +44,12 @@ export const Dashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-800">Dashboard de Produção</h2>
-          <p className="text-gray-500">Visão geral da produtividade e plantões</p>
+        <div className="flex items-center gap-3">
+          <img src="/Idev logo.png" alt="Idev" className="h-10 w-auto" />
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">Dashboard de Produção</h2>
+            <p className="text-gray-500">Visão geral da produtividade e plantões</p>
+          </div>
         </div>
         <button 
           onClick={handleExport}

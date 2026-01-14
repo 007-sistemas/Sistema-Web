@@ -173,10 +173,9 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
       <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-200">
         <div className="text-center mb-8">
-          <div className="bg-primary-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Lock className="h-8 w-8 text-primary-600" />
+          <div className="flex items-center justify-center mx-auto mb-4">
+            <img src="/Idev logo.png" alt="Idev" className="h-20 w-auto" />
           </div>
-          <h2 className="text-3xl font-bold text-gray-800">DigitAll</h2>
           <p className="text-gray-500 mt-2">Acesso Restrito</p>
         </div>
 
