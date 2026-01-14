@@ -217,14 +217,8 @@ export const Layout: React.FC<LayoutProps> = ({
   return (
     <div className="flex h-screen bg-gray-100">
       <aside className={`bg-primary-900 text-white w-64 flex-shrink-0 hidden md:flex flex-col transition-all duration-300`}>
-        <div className="p-6 flex items-center space-x-3 border-b border-primary-800">
-          <div className="bg-white p-1 rounded-full">
-            <ClipboardCheck className="h-6 w-6 text-primary-700" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold">Idev</h1>
-            <p className="text-xs text-primary-300">Controle de Produção</p>
-          </div>
+        <div className="p-6 flex items-center justify-center border-b border-primary-800">
+          <img src="/Idev logo.png" alt="Idev" className="h-12 w-auto" />
         </div>
 
         {/* Menu Cadastros agrupado, mas alinhado com os demais */}

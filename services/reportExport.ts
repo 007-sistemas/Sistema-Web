@@ -152,6 +152,14 @@ export const exportToPDF = async (
     const pageHeight = pdf.internal.pageSize.getHeight();
     let yPosition = 15;
 
+    // === LOGO ===
+    const logoPath = '/Idev logo.png';
+    try {
+      pdf.addImage(logoPath, 'PNG', 10, 5, 15, 15);
+    } catch (err) {
+      console.warn('Logo não disponível no PDF:', err);
+    }
+
     // === CABEÇALHO ===
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(18);
