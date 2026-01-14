@@ -1,8 +1,8 @@
-# DigitAll - Instruções para Agentes de IA
+# Idev - Instruções para Agentes de IA
 
 ## Visão Geral
 
-**DigitAll** é um sistema web de gestão biométrica e controle de ponto para cooperativas médicas/hospitalares. Construído em **React 19 + TypeScript + Vite**, com backend em **Vercel Functions** e banco de dados **PostgreSQL (Neon)**.
+**Idev** é um sistema web de gestão biométrica e controle de ponto para cooperativas médicas/hospitalares. Construído em **React 19 + TypeScript + Vite**, com backend em **Vercel Functions** e banco de dados **PostgreSQL (Neon)**.
 
 ## Arquitetura
 

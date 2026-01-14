@@ -208,7 +208,7 @@ export const Layout: React.FC<LayoutProps> = ({
         </main>
         
         <footer className="p-4 text-center text-gray-400 text-xs">
-          Sistema de Controle de Produção &bull; DigitAll &bull; Modo Quiosque
+          Sistema de Controle de Produção &bull; Idev &bull; Modo Quiosque
         </footer>
       </div>
     );
@@ -222,7 +222,7 @@ export const Layout: React.FC<LayoutProps> = ({
             <ClipboardCheck className="h-6 w-6 text-primary-700" />
           </div>
           <div>
-            <h1 className="text-lg font-bold">DigitAll</h1>
+            <h1 className="text-lg font-bold">Idev</h1>
             <p className="text-xs text-primary-300">Controle de Produção</p>
           </div>
         </div>
@@ -315,7 +315,7 @@ export const Layout: React.FC<LayoutProps> = ({
         <header className="bg-white shadow-sm md:hidden flex items-center justify-between p-4">
           <div className="flex items-center space-x-2">
             <ClipboardCheck className="h-6 w-6 text-primary-700" />
-            <span className="font-bold text-gray-800">DigitAll</span>
+            <span className="font-bold text-gray-800">Idev</span>
           </div>
           <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-gray-600">
             <Menu className="h-6 w-6" />

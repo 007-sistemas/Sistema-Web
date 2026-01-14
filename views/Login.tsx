@@ -367,7 +367,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         )}
 
         <div className="mt-8 text-center text-xs text-gray-400">
-          DigitAll &bull; Controle de Produção
+          Idev &bull; Controle de Produção
         </div>
       </div>
     </div>

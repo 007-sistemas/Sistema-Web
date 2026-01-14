@@ -4,7 +4,7 @@ import crypto from 'crypto';
 
 const connectionString = process.env.DATABASE_URL;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const FROM_EMAIL = process.env.RESET_FROM_EMAIL || 'no-reply@digitall.app';
+const FROM_EMAIL = process.env.RESET_FROM_EMAIL || 'no-reply@idev.app';
 const SMTP_HOST = process.env.SMTP_HOST;
 const SMTP_PORT = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 465;
 const SMTP_USER = process.env.SMTP_USER;
@@ -34,7 +34,7 @@ async function sendEmail(to: string, code: string, username: string) {
       const info = await transporter.sendMail({
         from: FROM_EMAIL || SMTP_USER,
         to,
-        subject: 'DigitAll - Código de redefinição de senha',
+        subject: 'Idev - Código de redefinição de senha',
         text: `Olá ${username},\n\nUse este código para redefinir sua senha: ${code}\nEle expira em 15 minutos.\n\nSe não foi você, ignore este email.`,
       });
       console.log('[RESET] SMTP enviado. MessageId:', (info as any)?.messageId);
