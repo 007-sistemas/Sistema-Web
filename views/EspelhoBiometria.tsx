@@ -44,8 +44,8 @@ export const EspelhoBiometria: React.FC = () => {
     return sameId || sameName;
   };
 
-  // Flag para parar auto-refresh durante operações críticas
-  const autoRefreshEnabledRef = React.useRef(true);
+  // Ref para evitar múltiplos loadData simultâneos
+  const isLoadingRef = React.useRef(false);
 
   useEffect(() => {
     // Recarregar session ao montar o componente
@@ -65,22 +65,8 @@ export const EspelhoBiometria: React.FC = () => {
     }
   }, []);
 
-  // Auto-refresh a cada 5 segundos para pegar aprovações do gestor
-  // Porém, respeita a flag para não conflitar com recarregamentos manuais
-  useEffect(() => {
-    if (!cooperadoId || !session) return;
-    
-    const interval = setInterval(() => {
-      if (autoRefreshEnabledRef.current) {
-        console.log('[EspelhoBiometria] ⏱️ Auto-refresh dos pontos');
-        loadData();
-      } else {
-        console.log('[EspelhoBiometria] ⏸️ Auto-refresh pausado');
-      }
-    }, 5000); // 5 segundos para refresh regular
-    
-    return () => clearInterval(interval);
-  }, [cooperadoId, session]);
+  // ❌ DESABILITAR auto-refresh - causava conflitos e piscagem
+  // Apenas as notificações (eventos customizados) disparam recarregamentos
 
       // Listener para notificações de exclusão ou alteração (limpa cache do cooperado e recarrega)
       // Usar debounce para evitar múltiplos recarregamentos simultâneos
@@ -91,18 +77,25 @@ export const EspelhoBiometria: React.FC = () => {
         const handleDataChange = () => {
           if (!session?.type) return;
           if (session.type === 'COOPERADO' || session.type === 'HOSPITAL') {
-            // Cancelar timer anterior
+            // Cancelar timer anterior para resetar debounce
             if (debounceTimer) clearTimeout(debounceTimer);
             
-            console.log('[EspelhoBiometria] 📢 Notificação recebida. Aguardando confirmação do Neon...');
+            console.log('[EspelhoBiometria] 📢 Notificação recebida. Aguardando 2 segundos...');
             
-            // Aguardar 1.5 segundos para garantir que Neon está consistente
-            debounceTimer = setTimeout(() => {
+            // Aguardar 2 segundos para garantir que Neon está consistente
+            // e para agrupar múltiplas notificações que chegarem próximas
+            debounceTimer = setTimeout(async () => {
+              // Evitar múltiplos loadData simultâneos
+              if (isLoadingRef.current) {
+                console.log('[EspelhoBiometria] ⏸️ Já está carregando, ignorando notificação...');
+                return;
+              }
+              
               console.log('[EspelhoBiometria] 🔄 Recarregando dados após notificação...');
               localStorage.removeItem('biohealth_pontos');
               localStorage.removeItem('biohealth_justificativas');
-              loadData();
-            }, 1500);
+              await loadData();
+            }, 2000);
           }
         };
 
@@ -115,7 +108,7 @@ export const EspelhoBiometria: React.FC = () => {
         };
 
         const handleCustomEvent = (e: Event) => {
-          console.log('[EspelhoBiometria] 📢 Evento customizado recebido:', (e as CustomEvent).detail);
+          console.log('[EspelhoBiometria] 📢 Evento customizado:', (e as CustomEvent).detail?.action || 'update');
           handleDataChange();
         };
 
@@ -139,13 +132,17 @@ export const EspelhoBiometria: React.FC = () => {
     
     if (!effectiveCoopId || !effectiveSession) {
       console.warn('[EspelhoBiometria] Sem session ou cooperadoId, abortando loadData');
-      setLoading(false);
+      return;
+    }
+
+    // Evitar múltiplos loadData simultâneos
+    if (isLoadingRef.current) {
+      console.log('[EspelhoBiometria] ⏸️ Já está carregando, ignorando novo loadData...');
       return;
     }
 
     try {
-      // Pausar auto-refresh durante sincronização para evitar conflitos
-      autoRefreshEnabledRef.current = false;
+      isLoadingRef.current = true;
       setLoading(true);
 
       // IMPORTANTE: Atualizar sessão a cada loadData
@@ -215,9 +212,8 @@ export const EspelhoBiometria: React.FC = () => {
       console.error('[EspelhoBiometria] Erro ao carregar dados:', err);
     } finally {
       setLoading(false);
-      // Reativar auto-refresh após sincronização completa
-      autoRefreshEnabledRef.current = true;
-      console.log('[EspelhoBiometria] ✅ Auto-refresh reativado');
+      isLoadingRef.current = false;
+      console.log('[EspelhoBiometria] ✅ Carregamento completo');
     }
   };
 
