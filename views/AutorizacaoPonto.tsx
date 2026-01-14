@@ -345,6 +345,13 @@ export const AutorizacaoPonto: React.FC = () => {
         }
 
         console.log('[AutorizacaoPonto] ✅ Aprovação concluída com sucesso');
+        
+        // Disparar evento customizado para notificar outras abas/componentes
+        const customEvent = new CustomEvent('biohealth:justificativa:updated', { 
+          detail: { id: justificativa.id, status: 'Fechado', timestamp: Date.now() } 
+        });
+        window.dispatchEvent(customEvent);
+        
         alert('Justificativa aprovada com sucesso!');
         // Recarregar dados frescos do banco
         await loadData();
@@ -392,6 +399,13 @@ export const AutorizacaoPonto: React.FC = () => {
         // Novo fluxo: rejeição não cria/atualiza pontos; apenas a justificativa é marcada como Rejeitada
 
         console.log('[AutorizacaoPonto] ✅ Rejeição concluída com sucesso');
+        
+        // Disparar evento customizado para notificar outras abas/componentes
+        const customEvent = new CustomEvent('biohealth:justificativa:updated', { 
+          detail: { id: justificativa.id, status: 'Rejeitado', timestamp: Date.now() } 
+        });
+        window.dispatchEvent(customEvent);
+        
         alert('Justificativa recusada com sucesso!');
         // Recarregar dados frescos do banco
         await loadData();

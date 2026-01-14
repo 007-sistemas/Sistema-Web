@@ -104,10 +104,13 @@ export const EspelhoBiometria: React.FC = () => {
         window.addEventListener('storage', handleStorageChange);
         window.addEventListener('biohealth:plantao:deleted', handleCustomEvent);
         window.addEventListener('biohealth:pontos:changed', handleCustomEvent);
+        window.addEventListener('biohealth:justificativa:updated', handleCustomEvent);
         
         return () => {
           window.removeEventListener('storage', handleStorageChange);
           window.removeEventListener('biohealth:plantao:deleted', handleCustomEvent);
+          window.removeEventListener('biohealth:pontos:changed', handleCustomEvent);
+          window.removeEventListener('biohealth:justificativa:updated', handleCustomEvent);
           window.removeEventListener('biohealth:pontos:changed', handleCustomEvent);
         };
       }, [session]);

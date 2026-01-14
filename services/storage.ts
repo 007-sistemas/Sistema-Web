@@ -681,16 +681,15 @@ export const StorageService = {
       const justificativaId = justMatch[1];
       console.log('[deletePonto] 🧹 Detected synthetic ID, removing justificativa:', justificativaId);
 
-      // Remover justificativa do localStorage
-      let justificativas = StorageService.getJustificativas();
-      const before = justificativas.length;
-      justificativas = justificativas.filter(j => j.id !== justificativaId);
-      localStorage.setItem(JUSTIFICATIVAS_KEY, JSON.stringify(justificativas));
-      console.log('[deletePonto] 🗑️ Justificativa removida localmente. Total:', before, '→', justificativas.length);
+      // ❌ NUNCA remover do localStorage - sempre sincronizar com Neon
+      console.log('[deletePonto] 🌐 Enviando deleção para Neon:', justificativaId);
 
       // Auditoria e sync Neon
       StorageService.logAudit('REMOCAO_JUSTIFICATIVA', `Justificativa ${justificativaId} removida permanentemente.`);
       syncToNeon('delete_justificativa', { id: justificativaId });
+      
+      // Notificar mudança
+      broadcastPontoChange('delete', justificativaId);
       return;
     }
 
@@ -720,54 +719,27 @@ export const StorageService = {
     
     localStorage.setItem(PONTOS_KEY, JSON.stringify(pontos));
 
-    // HARD DELETE: Remover justificativas relacionadas (EXCETO as recusadas)
-    let justificativas = StorageService.getJustificativas();
+    // HARD DELETE: Remover justificativas relacionadas do Neon (EXCETO as recusadas)
+    // Não buscar do localStorage, diretamente notificar Neon para deletar
     const plantaoDate = new Date(target.timestamp).toISOString().split('T')[0];
     
-    console.log('[deletePonto] 🔍 Buscando justificativas relacionadas ao ponto:', {
+    console.log('[deletePonto] 🔍 Notificando Neon para remover justificativas relacionadas:', {
+      pontoId: id,
+      cooperadoId: target.cooperadoId,
+      dataPlantao: plantaoDate
+    });
+    
+    // Enviar notificação ao Neon para deletar justificativas relacionadas
+    // Neon terá a lógica de excluir apenas aprovadas/pendentes (não recusadas)
+    syncToNeon('delete_justificativas_by_ponto', { 
       pontoId: id,
       cooperadoId: target.cooperadoId,
       dataPlantao: plantaoDate,
-      totalJustificativas: justificativas.length
+      excludeStatuses: ['Rejeitado', 'Recusado']
     });
     
-    const justRemovidas = justificativas.filter(j => {
-      const matchPontoId = j.pontoId === id;
-      const matchCooperadoData = j.cooperadoId === target.cooperadoId && j.dataPlantao === plantaoDate;
-      const naoRecusada = j.status !== 'Rejeitado' && j.status !== 'Recusado';
-      const shouldRemove = (matchPontoId || matchCooperadoData) && naoRecusada;
-      
-      if (shouldRemove) {
-        console.log('[deletePonto] 🎯 Justificativa será removida:', {
-          id: j.id,
-          status: j.status,
-          pontoId: j.pontoId,
-          matchPontoId,
-          matchCooperadoData
-        });
-      }
-      
-      return shouldRemove;
-    });
-    
-    if (justRemovidas.length > 0) {
-      console.log('[deletePonto] 🚫 Removendo', justRemovidas.length, 'justificativa(s) relacionada(s) (aprovadas/pendentes). Mantendo recusadas.');
-      justificativas = justificativas.filter(j => {
-        // Manter APENAS se for recusada
-        if (j.status === 'Rejeitado' || j.status === 'Recusado') return true;
-        // Remover se corresponder ao ponto/cooperado/data
-        return !(j.pontoId === id || (j.cooperadoId === target.cooperadoId && j.dataPlantao === plantaoDate));
-      });
-      localStorage.setItem(JUSTIFICATIVAS_KEY, JSON.stringify(justificativas));
-      
-      // Sincronizar remoção com Neon
-      justRemovidas.forEach(j => {
-        console.log('[deletePonto] 🔄 Deletando justificativa do Neon:', j.id, 'status:', j.status);
-        syncToNeon('delete_justificativa', { id: j.id });
-      });
-    } else {
-      console.log('[deletePonto] ℹ️ Nenhuma justificativa aprovada/pendente encontrada para remover');
-    }
+    console.log('[deletePonto] 🚫 Requisição de remoção de justificativas enviada ao Neon');
+
 
     StorageService.logAudit('REMOCAO_PONTO', `Registro ${target.codigo} removido permanentemente.`);
 
@@ -961,23 +933,10 @@ export const StorageService = {
   // --- JUSTIFICATIVAS ---
   
   getJustificativas: (): Justificativa[] => {
-    const data = localStorage.getItem(JUSTIFICATIVAS_KEY);
-    const parsed: Justificativa[] = data ? JSON.parse(data) : [];
-
-    // Normalizar status antigos "Aguardando autorização" para "Pendente" para que apareçam na fila do gestor
-    const normalized = parsed.map(j => {
-      if (j.status === 'Aguardando autorização') {
-        return { ...j, status: 'Pendente' as const };
-      }
-      return j;
-    });
-
-    // Persistir normalização
-    if (normalized.length !== parsed.length || normalized.some((j, idx) => j.status !== parsed[idx].status)) {
-      localStorage.setItem(JUSTIFICATIVAS_KEY, JSON.stringify(normalized));
-    }
-
-    return normalized;
+    // NUNCA usar localStorage para justificativas
+    // Sempre retornar array vazio - dados devem vir do Neon via refreshJustificativasFromRemote()
+    console.warn('[getJustificativas] ⚠️ Justificativas devem ser carregadas via Neon, não localStorage');
+    return [];
   },
 
   getJustificativasByStatus: (status: 'Pendente' | 'Aprovada' | 'Rejeitada'): Justificativa[] => {
@@ -989,71 +948,59 @@ export const StorageService = {
   },
 
   saveJustificativa: (justificativa: Justificativa): void => {
-    const list = StorageService.getJustificativas();
-    const index = list.findIndex(j => j.id === justificativa.id);
+    // ❌ NUNCA salvar em localStorage
+    // Enviar DIRETAMENTE ao Neon via API
+    console.log('[StorageService] 🌐 Enviando justificativa DIRETAMENTE para Neon:', justificativa.id);
+    StorageService.logAudit('JUSTIFICATIVA_CRIADA', `Justificativa ${justificativa.id} criada - Status: ${justificativa.status}`);
     
-    if (index >= 0) {
-      list[index] = { ...justificativa, updatedAt: new Date().toISOString() };
-    } else {
-      list.push(justificativa);
-    }
-    
-    localStorage.setItem(JUSTIFICATIVAS_KEY, JSON.stringify(list));
-    console.log('[StorageService] 💾 Justificativa salva localmente:', justificativa.id, 'Total no localStorage:', list.length);
-    StorageService.logAudit('JUSTIFICATIVA_SALVA', `Justificativa ${justificativa.id} - ${justificativa.status}`);
-
     // Sincronizar com Neon
-    console.log('[StorageService] 🌐 Iniciando sync para Neon:', justificativa.id);
     syncToNeon('sync_justificativa', justificativa);
+    
+    // Notificar todas as abas/componentes
+    broadcastPontoChange('save', justificativa.id);
   },
 
   aprovarJustificativa: (id: string, aprovadoPor: string): void => {
-    const list = StorageService.getJustificativas();
-    const index = list.findIndex(j => j.id === id);
+    // ❌ NUNCA modificar localStorage
+    // Enviar update DIRETAMENTE ao Neon
+    const justificativaUpdate = {
+      id,
+      status: 'Fechado',
+      validadoPor: aprovadoPor,
+      dataAprovacao: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
     
-    if (index >= 0) {
-      const justificativa = list[index];
-      list[index] = {
-        ...justificativa,
-        status: 'Fechado',
-        validadoPor: aprovadoPor,
-        dataAprovacao: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      
-      localStorage.setItem(JUSTIFICATIVAS_KEY, JSON.stringify(list));
-      StorageService.logAudit('JUSTIFICATIVA_APROVADA', `Justificativa ${id} aprovada por ${aprovadoPor}`);
-      
-      // Novo fluxo: pontos são criados na aprovação pelo AutorizacaoPonto (não atualizar aqui)
-      
-      // Sincronizar com Neon
-      syncToNeon('sync_justificativa', list[index]);
-    }
+    console.log('[StorageService] ✅ Aprovando justificativa DIRETAMENTE no Neon:', id);
+    StorageService.logAudit('JUSTIFICATIVA_APROVADA', `Justificativa ${id} aprovada por ${aprovadoPor}`);
+    
+    // Sincronizar com Neon
+    syncToNeon('sync_justificativa', justificativaUpdate);
+    
+    // Notificar mudança
+    broadcastPontoChange('update', id);
   },
 
   rejeitarJustificativa: (id: string, rejeitadoPor: string, motivoRejeicao: string): void => {
-    const list = StorageService.getJustificativas();
-    const index = list.findIndex(j => j.id === id);
+    // ❌ NUNCA modificar localStorage
+    // Enviar update DIRETAMENTE ao Neon
+    const justificativaUpdate = {
+      id,
+      status: 'Rejeitado',
+      rejeitadoPor,
+      motivoRejeicao,
+      dataAprovacao: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
     
-    if (index >= 0) {
-      const justificativa = list[index];
-      list[index] = {
-        ...justificativa,
-        status: 'Rejeitado',
-        rejeitadoPor,
-        motivoRejeicao,
-        dataAprovacao: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      
-      localStorage.setItem(JUSTIFICATIVAS_KEY, JSON.stringify(list));
-      StorageService.logAudit('JUSTIFICATIVA_REJEITADA', `Justificativa ${id} rejeitada por ${rejeitadoPor}: ${motivoRejeicao}`);
-      
-      // Novo fluxo: rejeição não mexe em pontos (não existem até aprovação)
-      
-      // Sincronizar com Neon
-      syncToNeon('sync_justificativa', list[index]);
-    }
+    console.log('[StorageService] ❌ Rejeitando justificativa DIRETAMENTE no Neon:', id);
+    StorageService.logAudit('JUSTIFICATIVA_REJEITADA', `Justificativa ${id} rejeitada por ${rejeitadoPor}: ${motivoRejeicao}`);
+    
+    // Sincronizar com Neon
+    syncToNeon('sync_justificativa', justificativaUpdate);
+    
+    // Notificar mudança
+    broadcastPontoChange('delete', id);
   },
 
   refreshJustificativasFromRemote: async () => {
@@ -1083,33 +1030,14 @@ export const StorageService = {
         dataAprovacao: row.dataAprovacao
       }));
 
-      // MERGE inteligente: manter justificativas locais recentes que ainda não foram sincronizadas
-      const localJust = StorageService.getJustificativas();
-      const remoteIds = new Set(remoteJust.map(j => j.id));
+      // ❌ NUNCA mesclar com localStorage
+      // Usar APENAS dados remotos do Neon
+      console.log('[StorageService] 🔄 Sync Justificativas - Total remotas do Neon:', remoteJust.length);
       
-      console.log('[StorageService] 🔄 Merge - Justificativas locais:', localJust.length, 'Remotas:', remoteJust.length);
-      console.log('[StorageService] 🔄 IDs remotos:', Array.from(remoteIds));
+      // NÃO guardar em localStorage - dados virão do Neon sempre
+      // localStorage.setItem(JUSTIFICATIVAS_KEY, JSON.stringify(remoteJust));
       
-      // Manter justificativas locais criadas nos últimos 30 segundos que ainda não estão remotas
-      const now = Date.now();
-      const recentLocal = localJust.filter(j => {
-        if (remoteIds.has(j.id)) {
-          console.log('[StorageService] ⏭️  Justificativa', j.id, 'já está remota, pulando');
-          return false;
-        }
-        const age = now - new Date(j.createdAt || j.dataSolicitacao).getTime();
-        const isRecent = age < 30000;
-        console.log('[StorageService] 🕐 Justificativa', j.id, 'idade:', Math.round(age/1000) + 's', isRecent ? '✅ MANTIDA' : '❌ DESCARTADA');
-        return isRecent;
-      });
-
-      const merged = [...remoteJust, ...recentLocal];
-      
-      localStorage.setItem(JUSTIFICATIVAS_KEY, JSON.stringify(merged));
-      console.log(`[StorageService] ✅ ${remoteJust.length} justificativas remotas + ${recentLocal.length} locais recentes = ${merged.length} total`);
-      if (recentLocal.length > 0) {
-        console.log('[StorageService] 📌 Justificativas locais preservadas:', recentLocal.map(j => j.id));
-      }
+      console.log(`[StorageService] ✅ ${remoteJust.length} justificativas sincronizadas do Neon`);
     } catch (err) {
       console.error('[StorageService] Erro ao sincronizar justificativas do Neon:', err);
     }
