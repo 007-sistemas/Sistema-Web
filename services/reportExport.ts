@@ -153,7 +153,7 @@ export const exportToPDF = async (
     let yPosition = 15;
 
     // === LOGO ===
-    const logoPath = '/iDev logo atualizado.svg';
+    const logoPath = '/iDev logo Letra Preta.svg';
     try {
       pdf.addImage(logoPath, 'PNG', 10, 5, 15, 15);
     } catch (err) {

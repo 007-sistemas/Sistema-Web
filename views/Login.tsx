@@ -173,7 +173,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
       <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-200">
         <div className="text-center mb-10">
-          <img src="/iDev logo atualizado.svg" alt="Idev" className="h-96 w-auto mx-auto" />
+          <img src="/iDev logo Letra Preta.svg" alt="Idev" className="h-96 w-auto mx-auto" />
         </div>
 
         {error && (
