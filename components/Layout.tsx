@@ -222,7 +222,7 @@ export const Layout: React.FC<LayoutProps> = ({
         </div>
 
         {/* Menu Cadastros agrupado, mas alinhado com os demais */}
-        <nav className="flex-1 px-4 py-3 space-y-2 overflow-y-auto">
+        <nav className="flex-1 px-4 py-1 space-y-2 overflow-y-auto">
           {navItems.map((item) =>
             item.id !== 'cadastros' ? (
               <button
