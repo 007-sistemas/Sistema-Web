@@ -217,12 +217,12 @@ export const Layout: React.FC<LayoutProps> = ({
   return (
     <div className="flex h-screen bg-gray-100">
       <aside className={`bg-primary-900 text-white w-64 flex-shrink-0 hidden md:flex flex-col transition-all duration-300`}>
-        <div className="p-6 flex items-center justify-center border-b border-primary-700">
-          <img src="/iDev SISTEMAS Letra Branca.svg" alt="Idev" className="h-56 w-auto" />
+        <div className="p-1 flex items-center justify-center border-b border-primary-700">
+          <img src="/iDev Logo Branco.png" alt="Idev" className="h-56 w-auto" />
         </div>
 
         {/* Menu Cadastros agrupado, mas alinhado com os demais */}
-        <nav className="flex-1 px-4 py-1 space-y-2 overflow-y-auto">
+        <nav className="flex-1 px-4 py-0.5 space-y-1 overflow-y-auto">
           {navItems.map((item) =>
             item.id !== 'cadastros' ? (
               <button

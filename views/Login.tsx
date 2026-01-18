@@ -171,26 +171,26 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-200">
-        <div className="text-center mb-2">
-          <img src="/iDev logo Letra Preta.svg" alt="Idev" className="h-96 w-auto mx-auto" />
+      <div className="bg-white p-6 rounded-2xl shadow-xl w-full max-w-md border border-gray-200">
+        <div className="text-center mb-0">
+          <img src="/iDev Logo Letra Preta.png" alt="Idev" className="h-56 w-auto mx-auto" />
         </div>
 
         {error && (
-          <div className="bg-red-50 text-red-600 p-3 rounded-lg flex items-center text-sm mb-6 animate-fade-in">
+          <div className="bg-red-50 text-red-600 p-3 rounded-lg flex items-center text-sm mb-3 animate-fade-in">
             <AlertCircle className="h-4 w-4 mr-2" />
             {error}
           </div>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-5">
+        <form onSubmit={handleLogin} className="space-y-3">
           <div className="space-y-1">
             <label className="text-sm font-semibold text-gray-700 ml-1">Usuário</label>
             <div className="relative">
               <User className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
               <input
                 type="text"
-                className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all text-gray-900"
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all text-gray-900"
                 placeholder="Digite seu usuário"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -205,7 +205,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
               <input
                 type="password"
-                className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all text-gray-900"
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all text-gray-900"
                 placeholder="Digite sua senha"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
