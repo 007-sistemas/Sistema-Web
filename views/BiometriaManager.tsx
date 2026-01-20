@@ -27,15 +27,17 @@ export const BiometriaManager: React.FC = () => {
     setLoadingBio(true);
     apiGet<any[]>('biometrics')
       .then((rows) => {
+        console.log('[DEBUG biometrics API]', rows);
         // Filtrar apenas as biometrias do cooperado selecionado
-        const mapped = rows
-          .filter((b) => String(b.cooperado_id).trim().toLowerCase() === String(selectedCooperadoId).trim().toLowerCase())
-          .map((b) => ({
-            id: b.id,
-            fingerIndex: b.finger_index ?? 0,
-            hash: b.hash ?? '',
-            createdAt: b.created_at ?? '',
-          }));
+        const mapped = Array.isArray(rows)
+          ? rows.filter((b) => String(b.cooperado_id).trim().toLowerCase() === String(selectedCooperadoId).trim().toLowerCase())
+              .map((b) => ({
+                id: b.id,
+                fingerIndex: b.finger_index ?? 0,
+                hash: b.hash ?? '',
+                createdAt: b.created_at ?? '',
+              }))
+          : [];
         setBiometriasNeon(mapped);
       })
       .finally(() => setLoadingBio(false));
