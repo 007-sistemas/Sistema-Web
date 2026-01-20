@@ -218,7 +218,7 @@ export const Layout: React.FC<LayoutProps> = ({
     <div className="flex h-screen bg-gray-100">
       <aside className={`bg-primary-900 text-white w-64 flex-shrink-0 hidden md:flex flex-col transition-all duration-300`}>
         <div className="p-1 flex items-center justify-center border-b border-primary-700">
-          <img src="/iDev Logo Branco.png" alt="Idev" className="h-56 w-auto" />
+          <img src="/iDev Logo Branco.png" alt="Idev" className="h-32 w-auto" />
         </div>
 
         {/* Menu Cadastros agrupado, mas alinhado com os demais */}
