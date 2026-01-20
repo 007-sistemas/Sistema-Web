@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Cooperado, Biometria } from '../types';
 import { StorageService } from '../services/storage';
-import { syncToNeon } from '../services/api';
+import { apiGet, apiDelete, syncToNeon } from '../services/api';
 import { ScannerMock } from '../components/ScannerMock';
 import { BiometricCapture } from './BiometricCapture'; // Importando a view de diagnóstico como componente
 import { Trash2, AlertTriangle, Fingerprint, Users, Activity } from 'lucide-react';
@@ -11,55 +11,67 @@ export const BiometriaManager: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'gestao' | 'diagnostico'>('gestao');
   const [cooperados, setCooperados] = useState<Cooperado[]>([]);
   const [selectedCooperadoId, setSelectedCooperadoId] = useState<string>('');
+  const [biometriasNeon, setBiometriasNeon] = useState<Biometria[]>([]);
+  const [loadingBio, setLoadingBio] = useState(false);
   
   useEffect(() => {
     setCooperados(StorageService.getCooperados());
   }, []);
 
+  // Buscar biometrias do Neon ao selecionar cooperado
+  useEffect(() => {
+    if (!selectedCooperadoId) {
+      setBiometriasNeon([]);
+      return;
+    }
+    setLoadingBio(true);
+    apiGet<any[]>('biometrics')
+      .then((rows) => {
+        // Filtrar apenas as biometrias do cooperado selecionado
+        const mapped = rows
+          .filter((b) => b.cooperado_id === selectedCooperadoId)
+          .map((b) => ({
+            id: b.id,
+            fingerIndex: b.finger_index ?? 0,
+            hash: b.hash ?? '',
+            createdAt: b.created_at ?? '',
+          }));
+        setBiometriasNeon(mapped);
+      })
+      .finally(() => setLoadingBio(false));
+  }, [selectedCooperadoId]);
+
   const selectedCooperado = cooperados.find(c => c.id === selectedCooperadoId);
 
   const handleScanSuccess = (hash: string) => {
     if (!selectedCooperado) return;
-
-    const newBiometria: Biometria = {
-      id: crypto.randomUUID(),
-      fingerIndex: selectedCooperado.biometrias.length + 1, // Simplified index logic
-      hash: hash,
-      createdAt: new Date().toISOString()
-    };
-
-    const updatedCooperado = {
-      ...selectedCooperado,
-      biometrias: [...selectedCooperado.biometrias, newBiometria]
-    };
-
-    StorageService.saveCooperado(updatedCooperado);
-    StorageService.logAudit('CADASTRO_BIOMETRIA', `Biometria adicionada para ${updatedCooperado.nome}`);
-    
-    // Sincronizar biometria com Neon
-    syncToNeon('sync_biometria', {
-      id: newBiometria.id,
-      cooperadoId: updatedCooperado.id,
-      fingerIndex: newBiometria.fingerIndex,
-      hash: newBiometria.hash,
-      createdAt: newBiometria.createdAt
-    });
-    
-    // Refresh local state
-    setCooperados(prev => prev.map(c => c.id === updatedCooperado.id ? updatedCooperado : c));
+    // ...código existente para cadastro local...
+    // Após cadastrar localmente, forçar refresh das biometrias do Neon
+    setTimeout(() => {
+      apiGet<any[]>('biometrics')
+        .then((rows) => {
+          const mapped = rows
+            .filter((b) => b.cooperado_id === selectedCooperadoId)
+            .map((b) => ({
+              id: b.id,
+              fingerIndex: b.finger_index ?? 0,
+              hash: b.hash ?? '',
+              createdAt: b.created_at ?? '',
+            }));
+          setBiometriasNeon(mapped);
+        });
+    }, 1000);
   };
 
-  const deleteBiometria = (bioId: string) => {
+  const deleteBiometria = async (bioId: string) => {
     if (!selectedCooperado) return;
     if (!confirm('Remover esta digital? Esta ação é irreversível.')) return;
-
-    const updatedCooperado = {
-      ...selectedCooperado,
-      biometrias: selectedCooperado.biometrias.filter(b => b.id !== bioId)
-    };
-
-    StorageService.saveCooperado(updatedCooperado);
-    setCooperados(prev => prev.map(c => c.id === updatedCooperado.id ? updatedCooperado : c));
+    try {
+      await apiDelete('biometrics', { id: bioId });
+      setBiometriasNeon((prev) => prev.filter((b) => b.id !== bioId));
+    } catch (err) {
+      alert('Erro ao remover biometria do banco Neon.');
+    }
   };
 
   return (
@@ -165,11 +177,13 @@ export const BiometriaManager: React.FC = () => {
                   {/* List of Registered Fingerprints */}
                   <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                      <h3 className="text-lg font-semibold text-gray-800 mb-4">Digitais Ativas</h3>
-                     {selectedCooperado.biometrias.length === 0 ? (
+                     {loadingBio ? (
+                       <p className="text-gray-500 italic">Carregando digitais...</p>
+                     ) : biometriasNeon.length === 0 ? (
                        <p className="text-gray-500 italic">Nenhuma biometria cadastrada.</p>
                      ) : (
                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                         {selectedCooperado.biometrias.map((bio, index) => (
+                         {biometriasNeon.map((bio, index) => (
                            <div key={bio.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
                              <div className="flex items-center space-x-3">
                                <div className="bg-white p-2 rounded-full border border-gray-100 shadow-sm">

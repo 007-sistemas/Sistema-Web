@@ -13,9 +13,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     if (req.method === "GET") {
-      const rows = await sql`SELECT b.id, b.cooperado_id, b.device_id, b.captured_at FROM biometrics b ORDER BY b.captured_at DESC LIMIT 100`;
+      // Buscar todos os campos relevantes para o frontend
+      const rows = await sql`SELECT b.id, b.cooperado_id, b.finger_index, b.hash, b.created_at, b.template FROM biometrics b ORDER BY b.created_at DESC LIMIT 100`;
       res.status(200).json(rows);
       return;
+        if (req.method === "DELETE") {
+          const { id } = req.query;
+          if (!id) {
+            res.status(400).json({ error: "Missing biometria id" });
+            return;
+          }
+          await sql`DELETE FROM biometrics WHERE id = ${id}`;
+          res.status(204).end();
+          return;
+        }
     }
 
     if (req.method === "POST") {
