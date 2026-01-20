@@ -14,7 +14,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     if (req.method === "GET") {
       // Buscar todos os campos relevantes para o frontend
-      const rows = await sql`SELECT b.id, b.cooperado_id, b.finger_index, b.hash, b.created_at, b.template FROM biometrics b ORDER BY b.created_at DESC LIMIT 100`;
+      const rows = await sql`SELECT b.id, b.cooperado_id, b.finger_index, b.hash, b.created_at, b.template FROM biometrias b ORDER BY b.created_at DESC LIMIT 100`;
       res.status(200).json(rows);
       return;
     }
@@ -25,7 +25,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         res.status(400).json({ error: "Missing biometria id" });
         return;
       }
-      await sql`DELETE FROM biometrics WHERE id = ${id}`;
+      await sql`DELETE FROM biometrias WHERE id = ${id}`;
       res.status(204).end();
       return;
     }
@@ -37,7 +37,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         res.status(400).json({ error: "Missing cooperado_id or template" });
         return;
       }
-      const rows = await sql`INSERT INTO biometrics (cooperado_id, template, device_id) VALUES (${cooperado_id}, ${template}, ${device_id}) RETURNING id`;
+      const rows = await sql`INSERT INTO biometrias (cooperado_id, template, device_id) VALUES (${cooperado_id}, ${template}, ${device_id}) RETURNING id`;
       res.status(201).json({ id: rows[0]?.id });
       return;
     }
