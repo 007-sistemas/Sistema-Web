@@ -29,7 +29,7 @@ export const BiometriaManager: React.FC = () => {
       .then((rows) => {
         // Filtrar apenas as biometrias do cooperado selecionado
         const mapped = rows
-          .filter((b) => b.cooperado_id === selectedCooperadoId)
+          .filter((b) => String(b.cooperado_id).trim().toLowerCase() === String(selectedCooperadoId).trim().toLowerCase())
           .map((b) => ({
             id: b.id,
             fingerIndex: b.finger_index ?? 0,
@@ -51,7 +51,7 @@ export const BiometriaManager: React.FC = () => {
       apiGet<any[]>('biometrics')
         .then((rows) => {
           const mapped = rows
-            .filter((b) => b.cooperado_id === selectedCooperadoId)
+            .filter((b) => String(b.cooperado_id).trim().toLowerCase() === String(selectedCooperadoId).trim().toLowerCase())
             .map((b) => ({
               id: b.id,
               fingerIndex: b.finger_index ?? 0,
