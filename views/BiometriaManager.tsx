@@ -13,7 +13,6 @@ export const BiometriaManager: React.FC = () => {
   const [selectedCooperadoId, setSelectedCooperadoId] = useState<string>('');
   const [biometriasNeon, setBiometriasNeon] = useState<Biometria[]>([]);
   const [loadingBio, setLoadingBio] = useState(false);
-  const [debugRows, setDebugRows] = useState<any[]>([]);
   
   useEffect(() => {
     setCooperados(StorageService.getCooperados());
@@ -28,8 +27,6 @@ export const BiometriaManager: React.FC = () => {
     setLoadingBio(true);
     apiGet<any[]>('biometrics')
       .then((rows) => {
-        setDebugRows(rows);
-        // Filtrar apenas as biometrias do cooperado selecionado
         const mapped = Array.isArray(rows)
           ? rows.filter((b) => String(b.cooperado_id).trim().toLowerCase() === String(selectedCooperadoId).trim().toLowerCase())
               .map((b) => ({
@@ -53,7 +50,6 @@ export const BiometriaManager: React.FC = () => {
     setTimeout(() => {
       apiGet<any[]>('biometrics')
         .then((rows) => {
-          setDebugRows(rows);
           const mapped = rows
             .filter((b) => String(b.cooperado_id).trim().toLowerCase() === String(selectedCooperadoId).trim().toLowerCase())
             .map((b) => ({
@@ -116,12 +112,6 @@ export const BiometriaManager: React.FC = () => {
         </div>
       </div>
 
-      {/* Painel de Debug - Remover em produção */}
-      <div className="bg-yellow-50 border border-yellow-300 rounded p-2 mb-4 text-xs text-yellow-900">
-        <b>DEBUG:</b> selectedCooperadoId: <span className="font-mono">{selectedCooperadoId}</span><br />
-        <b>biometrics API rows:</b>
-        <pre className="overflow-x-auto max-h-40">{JSON.stringify(debugRows, null, 2)}</pre>
-      </div>
 
       {activeTab === 'diagnostico' ? (
           <div className="animate-fade-in">
