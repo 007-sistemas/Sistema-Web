@@ -92,11 +92,11 @@
         if(window.Fingerprint) {
             console.log('✅ SDK Fingerprint carregado com sucesso.');
         } else {
-            console.warn('⚠️ window.Fingerprint não encontrado no onload. Verificando caminhos...');
+            // ...existing code...
             // Tenta verificar se o script falhou silenciosamente ou se está atrasado
             setTimeout(function() {
                if(window.Fingerprint) console.log('✅ SDK Fingerprint carregado (atrasado).');
-               else console.error('❌ ERRO CRÍTICO: SDK Fingerprint não carregou. Verifique se os arquivos .js estão na pasta /public/js e se o caminho no index.html está correto.');
+               // ...existing code...
             }, 2000);
         }
       }

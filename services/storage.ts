@@ -1,4 +1,3 @@
-
 import { Cooperado, RegistroPonto, AuditLog, StatusCooperado, Hospital, Manager, HospitalPermissions, Justificativa, UserPreferences } from '../types';
 import { apiGet, syncToNeon } from './api';
 
@@ -497,26 +496,22 @@ export const StorageService = {
 
   refreshPontosFromRemote: async () => {
     try {
-      const rows = await apiGet<any[]>('sync?action=list_pontos');
-      if (!Array.isArray(rows)) return;
-
-      console.log('[refreshPontosFromRemote] 📥 Pontos do Neon:', rows.length);
+      const pontos = await apiGet<any[]>('pontos');
+      if (!Array.isArray(pontos)) return;
 
       // Buscar justificativas excluídas para filtrar pontos relacionados
       const justificativas = await apiGet<any[]>('sync?action=list_justificativas').catch(() => []);
       const justExcluidas = justificativas.filter(j => j.status === 'Excluído');
-      console.log('[refreshPontosFromRemote] 🚫 Justificativas excluídas:', justExcluidas.length, justExcluidas.map(j => ({ id: j.id, pontoId: j.pontoId })));
       
       const pontosExcluidosIds = new Set<string>();
       justExcluidas.forEach(j => {
         if (j.pontoId) pontosExcluidosIds.add(j.pontoId);
       });
-      console.log('[refreshPontosFromRemote] 🚫 IDs de pontos a serem filtrados:', Array.from(pontosExcluidosIds));
 
       // Buscar hospitais e setores para montar o campo local corretamente
       const hospitais = StorageService.getHospitais();
       
-      const mapped: RegistroPonto[] = rows
+      const mapped: RegistroPonto[] = pontos
         .filter(row => {
           // Ponto válido - não filtrar nada, hard delete já removeu do banco
           return true;
@@ -608,7 +603,6 @@ export const StorageService = {
       ];
 
       localStorage.setItem(PONTOS_KEY, JSON.stringify(merged));
-      console.log(`[StorageService] ✅ ${mapped.length} pontos do Neon + ${localManualFiltrado.length} manuais locais preservados (${localManual.length - localManualFiltrado.length} excluídos)`);
     } catch (err) {
       console.error('[StorageService] Erro ao sincronizar pontos do Neon:', err);
     }
