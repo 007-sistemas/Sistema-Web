@@ -20,7 +20,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === "DELETE") {
-      const { id } = req.query;
+      // Aceita id tanto por query quanto por body
+      let id = req.query.id;
+      if (!id && req.body) {
+        try {
+          const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+          id = body.id;
+        } catch {}
+      }
       if (!id) {
         res.status(400).json({ error: "Missing biometria id" });
         return;
