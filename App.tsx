@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Layout } from './components/Layout';
 import { StorageService } from './services/storage';
@@ -110,6 +109,29 @@ export default function App() {
       alert("Acesso negado a este módulo.");
     }
   };
+
+  // Função de inatividade: desloga após 1 hora sem interação
+  useEffect(() => {
+    let lastActivity = Date.now();
+    const resetTimer = () => { lastActivity = Date.now(); };
+    const checkInactivity = setInterval(() => {
+      if (isAuthenticated && Date.now() - lastActivity > 3600000) { // 1 hora
+        handleLogout();
+        alert('Sessão expirada por inatividade. Faça login novamente.');
+      }
+    }, 60000); // verifica a cada minuto
+    window.addEventListener('mousemove', resetTimer);
+    window.addEventListener('keydown', resetTimer);
+    window.addEventListener('click', resetTimer);
+    window.addEventListener('scroll', resetTimer);
+    return () => {
+      clearInterval(checkInactivity);
+      window.removeEventListener('mousemove', resetTimer);
+      window.removeEventListener('keydown', resetTimer);
+      window.removeEventListener('click', resetTimer);
+      window.removeEventListener('scroll', resetTimer);
+    };
+  }, [isAuthenticated]);
 
   if (!isAuthenticated) {
     return <Login onLoginSuccess={handleLoginSuccess} />;
