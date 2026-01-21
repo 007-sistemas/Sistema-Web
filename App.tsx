@@ -4,8 +4,6 @@ import { Layout } from './components/Layout';
 import { StorageService } from './services/storage';
 import { syncInitialData } from './services/syncInitial';
 import { CooperadoRegister } from './views/CooperadoRegister';
-import { BiometriaManager } from './views/BiometriaManager';
-import { PontoMachine } from './views/PontoMachine';
 import { Dashboard } from './views/Dashboard';
 import { AuditLogViewer } from './views/AuditLogViewer';
 import { HospitalRegister } from './views/HospitalRegister';
@@ -127,14 +125,12 @@ export default function App() {
     }
     switch(currentView) {
       case 'dashboard': return <Dashboard />;
-      case 'ponto': return <PontoMachine />;
       case 'relatorio': return <ControleDeProducao mode="manager" />;
       case 'relatorios': return <Relatorios />;
       case 'espelho': return <ControleDeProducao mode="cooperado" />;
       case 'autorizacao': return <AutorizacaoPonto />;
       case 'cadastro': return <CooperadoRegister />;
       case 'hospitais': return <HospitalRegister />;
-      case 'biometria': return <BiometriaManager />;
       case 'auditoria': return <AuditLogViewer />;
       case 'gestao': return <Management />;
       case 'perfil': return <UserProfile />;

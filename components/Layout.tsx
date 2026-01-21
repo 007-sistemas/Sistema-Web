@@ -103,7 +103,6 @@ export const Layout: React.FC<LayoutProps> = ({
 
   // Itens de Cadastros
   const cadastroNavItems = [
-    { id: 'biometria', label: 'Biometria', icon: Fingerprint, permissionKey: 'biometria' },
     { id: 'cadastro', label: 'Cooperados', icon: Users, permissionKey: 'cadastro' },
     { id: 'gestao', label: 'Gestão de Usuários', icon: Briefcase, permissionKey: 'gestao' },
     { id: 'hospitais', label: 'Hospitais', icon: Building2, permissionKey: 'hospitais' },
@@ -115,7 +114,6 @@ export const Layout: React.FC<LayoutProps> = ({
     { id: 'autorizacao', label: 'Justificativa de Plantão', icon: CheckSquare, permissionKey: 'autorizacao' },
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, permissionKey: 'dashboard' },
     { id: 'espelho', label: 'Espelho da Biometria', icon: FileClock, permissionKey: 'espelho' },
-    { id: 'ponto', label: 'Registrar Produção', icon: ClipboardCheck, permissionKey: 'ponto' },
     { id: 'relatorio', label: 'Controle de Produção', icon: FileText, permissionKey: 'relatorio' },
     { id: 'relatorios', label: 'Relatórios', icon: FileText, permissionKey: 'relatorios' },
   ];
