@@ -165,11 +165,12 @@ export const exportToPDF = async (
 
     // Informações institucionais (em branco, centralizadas)
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(10);
+    pdf.setFontSize(8.5);
     pdf.setTextColor(255, 255, 255);
-    pdf.text('Cooperativa de Trabalho dos Profissionais de Enfermagem do Ceará e das Demais Áreas da Saúde', pdf.internal.pageSize.getWidth() / 2, 13, { align: 'center', maxWidth: pdf.internal.pageSize.getWidth() - 62 });
+    pdf.text('Cooperativa de Trabalho dos Profissionais de Enfermagem do Ceará e das Demais Áreas da Saúde', pdf.internal.pageSize.getWidth() / 2, 12, { align: 'center', maxWidth: pdf.internal.pageSize.getWidth() - 62 });
     pdf.setFont('helvetica', 'bold');
-    pdf.text('CNPJ: 03031687000110', pdf.internal.pageSize.getWidth() / 2, 18, { align: 'center' });
+    pdf.setFontSize(10);
+    pdf.text('CNPJ: 03031687000110', pdf.internal.pageSize.getWidth() / 2, 17, { align: 'center' });
     const periodo = (filters.dataIni && filters.dataFim) ? `Período: ${filters.dataIni} a ${filters.dataFim}` : 'Período não informado';
     pdf.setFont('helvetica', 'normal');
     pdf.text(periodo, pdf.internal.pageSize.getWidth() / 2, 23, { align: 'center' });
@@ -567,11 +568,12 @@ export const exportToPDFByCooperado = async (
       // Número da página centralizado no rodapé
       pdf.text(`${data.pageNumber}`, pageWidth / 2, pdf.internal.pageSize.getHeight() - 10, { align: 'center' });
 
-      // Título do relatório
+
+      // Nome do profissional centralizado
       yPosition = 40;
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(18);
-      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(16);
+      pdf.setTextColor(106, 27, 154);
       pdf.text(cooperadoNome, pageWidth / 2, yPosition, { align: 'center', maxWidth: pageWidth - 20 });
       yPosition += 12;
 
