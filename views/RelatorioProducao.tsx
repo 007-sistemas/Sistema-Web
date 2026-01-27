@@ -18,6 +18,19 @@ interface ShiftRow {
 }
 
 export const RelatorioProducao: React.FC = () => {
+      // Critérios de ordenação
+      const orderOptions = [
+        { value: 'cooperadoNome', label: 'Nome' },
+        { value: 'categoriaProfissional', label: 'Categoria Profissional' },
+        { value: 'setorNome', label: 'Setor' },
+        { value: 'data', label: 'Data' },
+        { value: 'entrada', label: 'Entrada' },
+        { value: 'saida', label: 'Saída' },
+      ];
+      const [order1, setOrder1] = useState('cooperadoNome');
+      const [order2, setOrder2] = useState('data');
+      const [order3, setOrder3] = useState('entrada');
+      const [order4, setOrder4] = useState('');
     // Filtro de status
     const [filterStatus, setFilterStatus] = useState<'all' | 'fechados' | 'abertos'>('all');
   const [logs, setLogs] = useState<RegistroPonto[]>([]);
@@ -174,76 +187,80 @@ export const RelatorioProducao: React.FC = () => {
   const getShiftRows = (): ShiftRow[] => {
     const shifts: ShiftRow[] = [];
     const processedExits = new Set<string>();
-
     const setoresDisponiveis = getAvailableSetoresForFilter();
-
     // 1. Process Entries
     filteredLogs.forEach(log => {
       if (log.tipo === TipoPonto.ENTRADA) {
-        // Try to find matching exit in the filtered logs
-        // Logic: Find an exit that points to this entry via relatedId
         const matchingExit = filteredLogs.find(l => l.tipo === TipoPonto.SAIDA && l.relatedId === log.id);
-        
-        if (matchingExit) {
-          processedExits.add(matchingExit.id);
-        }
-
+        if (matchingExit) processedExits.add(matchingExit.id);
         shifts.push({
           id: log.id,
           cooperadoNome: log.cooperadoNome,
           local: log.local,
           setorNome: (() => {
-            const setorId = String(log.setorId); // Converter para string para comparação
+            const setorId = String(log.setorId);
             const setorName = log.setorId ? todosSetores.find(s => String(s.id) === setorId)?.nome : '';
             const hospital = hospitais.find(h => h.id === log.hospitalId);
             const isFiltered = filterHospital && filterHospital !== '';
-            const result = isFiltered
-              ? (setorName || log.local)
-              : `${hospital?.nome || log.local}${setorName ? ' - ' + setorName : ''}`;
+            const result = isFiltered ? (setorName || log.local) : `${hospital?.nome || log.local}${setorName ? ' - ' + setorName : ''}`;
             return result;
           })(),
           data: new Date(log.timestamp).toLocaleDateString(),
           entry: log,
           exit: matchingExit,
-          status: matchingExit ? 'Fechado' : 'Em Aberto'
+          status: matchingExit ? 'Fechado' : 'Em Aberto',
+          categoriaProfissional: cooperados.find(c => c.id === log.cooperadoId)?.categoriaProfissional || ''
         });
       }
     });
-
-    // 2. Process Orphan Exits (Exits without Entry in the current view)
+    // 2. Process Orphan Exits
     filteredLogs.forEach(log => {
       if (log.tipo === TipoPonto.SAIDA && !processedExits.has(log.id)) {
-        // Only add if we haven't processed this exit paired with an entry above
-        // This happens if the Entry was deleted OR if the Entry is outside the current filter date range
         shifts.push({
           id: log.id,
           cooperadoNome: log.cooperadoNome,
           local: log.local,
           setorNome: (() => {
-            const setorId = String(log.setorId); // Converter para string para comparação
+            const setorId = String(log.setorId);
             const setorName = log.setorId ? todosSetores.find(s => String(s.id) === setorId)?.nome : '';
             const hospital = hospitais.find(h => h.id === log.hospitalId);
             const isFiltered = filterHospital && filterHospital !== '';
-            const result = isFiltered
-              ? (setorName || log.local)
-              : `${hospital?.nome || log.local}${setorName ? ' - ' + setorName : ''}`;
+            const result = isFiltered ? (setorName || log.local) : `${hospital?.nome || log.local}${setorName ? ' - ' + setorName : ''}`;
             return result;
           })(),
           data: new Date(log.timestamp).toLocaleDateString(),
           entry: undefined,
           exit: log,
-          status: 'Fechado (S/E)' // Fechado sem entrada vinculada
+          status: 'Fechado (S/E)',
+          categoriaProfissional: cooperados.find(c => c.id === log.cooperadoId)?.categoriaProfissional || ''
         });
       }
     });
-
-    // Sort by Date/Time descending (Newest first usually better for reports, but keeping Ascending per logic)
-    // Re-sorting based on the Entry time (or Exit time if orphan)
-    return shifts.sort((a, b) => {
-      const timeA = a.entry ? new Date(a.entry.timestamp).getTime() : new Date(a.exit!.timestamp).getTime();
-      const timeB = b.entry ? new Date(b.entry.timestamp).getTime() : new Date(b.exit!.timestamp).getTime();
-      return timeB - timeA; // Changed to DESCENDING for better UX (latest first)
-    });
+    // Ordenação dinâmica
+    const orderFields = [order1, order2, order3, order4].filter(Boolean);
+    const compare = (a: any, b: any) => {
+      for (const field of orderFields) {
+        let valA = a[field] || '';
+        let valB = b[field] || '';
+        // Datas e horários: comparar como data
+        if (field === 'data') {
+          valA = new Date(a.entry?.timestamp || a.exit?.timestamp || 0).getTime();
+          valB = new Date(b.entry?.timestamp || b.exit?.timestamp || 0).getTime();
+        }
+        if (field === 'entrada') {
+          valA = a.entry ? new Date(a.entry.timestamp).getTime() : 0;
+          valB = b.entry ? new Date(b.entry.timestamp).getTime() : 0;
+        }
+        if (field === 'saida') {
+          valA = a.exit ? new Date(a.exit.timestamp).getTime() : 0;
+          valB = b.exit ? new Date(b.exit.timestamp).getTime() : 0;
+        }
+        if (valA < valB) return -1;
+        if (valA > valB) return 1;
+      }
+      return 0;
+    };
+    return shifts.sort(compare);
   };
 
   const shiftRows = getShiftRows();
@@ -502,6 +519,42 @@ export const RelatorioProducao: React.FC = () => {
 
       {/* --- FILTERS SECTION --- */}
       <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                {/* CLASSIFICAR E ORGANIZAR */}
+                <div className="mb-4 mt-2">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-bold text-primary-700 text-sm">Classificar e Organizar</span>
+                    <span className="text-xs text-gray-400">(opcional)</span>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <div>
+                      <label className="text-xs text-gray-500 font-semibold">1º Critério</label>
+                      <select className="w-full border rounded p-1" value={order1} onChange={e => setOrder1(e.target.value)}>
+                        {orderOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 font-semibold">2º Critério</label>
+                      <select className="w-full border rounded p-1" value={order2} onChange={e => setOrder2(e.target.value)}>
+                        <option value="">(nenhum)</option>
+                        {orderOptions.filter(opt => opt.value !== order1).map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 font-semibold">3º Critério</label>
+                      <select className="w-full border rounded p-1" value={order3} onChange={e => setOrder3(e.target.value)}>
+                        <option value="">(nenhum)</option>
+                        {orderOptions.filter(opt => opt.value !== order1 && opt.value !== order2).map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 font-semibold">4º Critério</label>
+                      <select className="w-full border rounded p-1" value={order4} onChange={e => setOrder4(e.target.value)}>
+                        <option value="">(nenhum)</option>
+                        {orderOptions.filter(opt => opt.value !== order1 && opt.value !== order2 && opt.value !== order3).map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                </div>
         <div className="flex items-center gap-2 mb-3 text-primary-700 font-semibold border-b pb-2">
             <Filter className="h-5 w-5" />
             <h3>Filtros de Visualização</h3>
