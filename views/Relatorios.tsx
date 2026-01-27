@@ -19,7 +19,7 @@ interface RelatorioRow {
 
 export const Relatorios: React.FC = () => {
     // Filtro de status
-    const [filterStatus, setFilterStatus] = useState<'all' | 'fechados' | 'abertos'>('all');
+    const [filterStatus, setFilterStatus] = useState<'all' | 'fechados' | 'abertos'>('fechados');
     // Critérios de ordenação
     const orderOptions = [
       { value: 'cooperadoNome', label: 'Nome' },
@@ -591,7 +591,7 @@ export const Relatorios: React.FC = () => {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Hospital */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -684,7 +684,29 @@ export const Relatorios: React.FC = () => {
             </select>
           </div>
 
-          {/* Status */}
+          {/* Agrupamento de Data Inicial e Data Final */}
+          <div className="col-span-1 md:col-span-2 flex gap-4">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Data Inicial</label>
+              <input
+                type="date"
+                value={filterDataIni}
+                onChange={(e) => setFilterDataIni(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Data Final</label>
+              <input
+                type="date"
+                value={filterDataFim}
+                onChange={(e) => setFilterDataFim(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          {/* Status (agora no lugar de Data Final) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
             <select
@@ -696,32 +718,6 @@ export const Relatorios: React.FC = () => {
               <option value="fechados">Apenas Fechados</option>
               <option value="abertos">Apenas Abertos</option>
             </select>
-          </div>
-
-          {/* Data Inicial */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Data Inicial
-            </label>
-            <input
-              type="date"
-              value={filterDataIni}
-              onChange={(e) => setFilterDataIni(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            />
-          </div>
-
-          {/* Data Final */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Data Final
-            </label>
-            <input
-              type="date"
-              value={filterDataFim}
-              onChange={(e) => setFilterDataFim(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            />
           </div>
         </div>
       </div>
