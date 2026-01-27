@@ -383,7 +383,7 @@ export const exportToExcelByCooperado = async (
   stats: ExportStats
 ) => {
   try {
-    const workbook = new Workbook.Workbook();
+    const workbook = new ExcelJS.Workbook();
     
     // Agrupar dados por cooperado
     const cooperadosMap = new Map<string, RelatorioRow[]>();
