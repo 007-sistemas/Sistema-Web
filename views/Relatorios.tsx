@@ -800,11 +800,30 @@ export const Relatorios: React.FC = () => {
                     <td className="px-4 py-3 text-sm">{row.categoriaProfissional}</td>
                     <td className="px-4 py-3 text-sm">{row.hospital}</td>
                     <td className="px-4 py-3 text-sm">{row.setor}</td>
+                    <td className="px-4 py-3 text-sm">{row.data}</td>
+                    <td className="px-4 py-3 text-sm text-green-600 font-medium">{row.entrada}</td>
+                    <td className="px-4 py-3 text-sm text-red-600 font-medium">{row.saida}</td>
+                    <td className="px-4 py-3 text-sm font-medium">{row.totalHoras}</td>
+                    <td className="px-4 py-3 text-sm">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        row.status === 'Fechado'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-orange-100 text-orange-700'
+                      }`}>
+                        {row.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
+                    Nenhum registro encontrado com os filtros aplicados
                   </td>
                 </tr>
-              </tbody>
-            </table>
-          </div>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
