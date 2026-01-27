@@ -154,31 +154,32 @@ export const exportToPDF = async (
 
 
     // === CABEÇALHO MODERNO ===
-    // LOGO
-    const logoPath = '/logo-coptem.png'; // Ajuste para o logo correto
+    // Faixa roxa no topo
+    pdf.setFillColor(106, 27, 154); // Roxo
+    pdf.rect(0, 0, pageWidth, 32, 'F');
+
+    // LOGO à esquerda sobre fundo roxo
     try {
-      pdf.addImage(logoPath, 'PNG', 10, 7, 22, 14);
+      // O jsPDF espera base64 ou URL absoluta acessível. Para ambiente web, use caminho relativo a partir do public.
+      // O nome do arquivo é 'iDev Logo Branco.png'.
+      // O ideal é converter para base64, mas tentaremos o caminho direto:
+      pdf.addImage('/iDev Logo Branco.png', 'PNG', 10, 6, 22, 18);
     } catch (err) {
       // fallback: nada
     }
 
-    // Informações institucionais
+    // Informações institucionais (em branco, centralizadas)
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(10);
-    pdf.setTextColor(30, 30, 30);
-    pdf.text('Nome:', 38, 13);
-    pdf.text('CNPJ:', 38, 18);
-    pdf.text('Período:', 38, 23);
-    pdf.text('Gerado em:', 38, 28);
-
+    pdf.setTextColor(255, 255, 255);
+    pdf.text('Cooperativa de Trabalho dos Profissionais de Enfermagem do Ceará e das Demais Áreas da Saúde', pageWidth / 2, 13, { align: 'center', maxWidth: pageWidth - 62 });
     pdf.setFont('helvetica', 'bold');
-    pdf.text('Cooperativa de Trabalho dos Profissionais de Enfermagem do Ceará e das Demais Áreas da Saúde', 60, 13, { maxWidth: pageWidth - 62 });
-    pdf.setFont('helvetica', 'normal');
-    pdf.text('03031687000110', 60, 18);
+    pdf.text('CNPJ: 03031687000110', pageWidth / 2, 18, { align: 'center' });
     const periodo = (filters.dataIni && filters.dataFim) ? `Período: ${filters.dataIni} a ${filters.dataFim}` : 'Período não informado';
-    pdf.text(periodo, 60, 23);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(periodo, pageWidth / 2, 23, { align: 'center' });
     const dataGeracao = new Date().toLocaleString('pt-BR');
-    pdf.text(dataGeracao, 60, 28);
+    pdf.text(`Gerado em: ${dataGeracao}`, pageWidth / 2, 28, { align: 'center' });
 
     // Página
     pdf.setFont('helvetica', 'normal');
@@ -186,12 +187,12 @@ export const exportToPDF = async (
     pdf.text(`Página 1 de {n}`, pageWidth - 32, 13); // {n} será substituído pelo jsPDF
 
     // Título do relatório
-    yPosition = 35;
+    yPosition = 40;
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(14);
-    pdf.setTextColor(30, 30, 30);
+    pdf.setFontSize(18);
+    pdf.setTextColor(255, 255, 255);
     pdf.text('Relatório Geral', pageWidth / 2, yPosition, { align: 'center', maxWidth: pageWidth - 20 });
-    yPosition += 8;
+    yPosition += 12;
 
     // Filtros aplicados
     pdf.setFont('helvetica', 'normal');
@@ -536,29 +537,32 @@ export const exportToPDFByCooperado = async (
       let yPosition = 15;
 
       // === CABEÇALHO MODERNO ===
-      // LOGO
-      const logoPath = '/logo-coptem.png';
-      try {
-        pdf.addImage(logoPath, 'PNG', 10, 7, 22, 14);
-      } catch (err) {}
+      // Faixa roxa no topo
+      pdf.setFillColor(106, 27, 154); // Roxo
+      pdf.rect(0, 0, pageWidth, 32, 'F');
 
-      // Informações institucionais
+      // LOGO à esquerda sobre fundo roxo
+      try {
+        // O jsPDF espera base64 ou URL absoluta acessível. Para ambiente web, use caminho relativo a partir do public.
+        // O nome do arquivo é 'iDev Logo Branco.png'.
+        // O ideal é converter para base64, mas tentaremos o caminho direto:
+        pdf.addImage('/iDev Logo Branco.png', 'PNG', 10, 6, 22, 18);
+      } catch (err) {
+        // fallback: nada
+      }
+
+      // Informações institucionais (em branco, centralizadas)
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(10);
-      pdf.setTextColor(30, 30, 30);
-      pdf.text('Nome:', 38, 13);
-      pdf.text('CNPJ:', 38, 18);
-      pdf.text('Período:', 38, 23);
-      pdf.text('Gerado em:', 38, 28);
-
+      pdf.setTextColor(255, 255, 255);
+      pdf.text('Cooperativa de Trabalho dos Profissionais de Enfermagem do Ceará e das Demais Áreas da Saúde', pageWidth / 2, 13, { align: 'center', maxWidth: pageWidth - 62 });
       pdf.setFont('helvetica', 'bold');
-      pdf.text('Cooperativa de Trabalho dos Profissionais de Enfermagem do Ceará e das Demais Áreas da Saúde', 60, 13, { maxWidth: pageWidth - 62 });
-      pdf.setFont('helvetica', 'normal');
-      pdf.text('03031687000110', 60, 18);
+      pdf.text('CNPJ: 03031687000110', pageWidth / 2, 18, { align: 'center' });
       const periodo = (filters.dataIni && filters.dataFim) ? `Período: ${filters.dataIni} a ${filters.dataFim}` : 'Período não informado';
-      pdf.text(periodo, 60, 23);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(periodo, pageWidth / 2, 23, { align: 'center' });
       const dataGeracao = new Date().toLocaleString('pt-BR');
-      pdf.text(dataGeracao, 60, 28);
+      pdf.text(`Gerado em: ${dataGeracao}`, pageWidth / 2, 28, { align: 'center' });
 
       // Página
       pdf.setFont('helvetica', 'normal');
@@ -566,12 +570,12 @@ export const exportToPDFByCooperado = async (
       pdf.text(`Página ${index + 1} de {n}`, pageWidth - 32, 13); // {n} será substituído pelo jsPDF
 
       // Título do relatório
-      yPosition = 35;
+      yPosition = 40;
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(14);
-      pdf.setTextColor(30, 30, 30);
+      pdf.setFontSize(18);
+      pdf.setTextColor(255, 255, 255);
       pdf.text(cooperadoNome, pageWidth / 2, yPosition, { align: 'center', maxWidth: pageWidth - 20 });
-      yPosition += 8;
+      yPosition += 12;
 
       // Categoria Profissional e info
       pdf.setFont('helvetica', 'normal');
