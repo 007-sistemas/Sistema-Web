@@ -190,7 +190,7 @@ export const exportToPDF = async (
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(14);
     pdf.setTextColor(30, 30, 30);
-    pdf.text('Relatório de Produção Hospital Geral Dr. Waldemar Alcântara - HGWA', pageWidth / 2, yPosition, { align: 'center', maxWidth: pageWidth - 20 });
+    pdf.text('Relatório Geral', pageWidth / 2, yPosition, { align: 'center', maxWidth: pageWidth - 20 });
     yPosition += 8;
 
     // Filtros aplicados
@@ -608,13 +608,12 @@ export const exportToPDFByCooperado = async (
         didDrawPage: (data) => {
           const pageSize = pdf.internal.pageSize;
           const pageHeight = pageSize.getHeight();
-          const pageWidth = pageSize.getWidth();
-
+          const pageWidthLocal = pageSize.getWidth();
           pdf.setFontSize(8);
           pdf.setTextColor(150, 150, 150);
           pdf.text(
             `Gerado em ${new Date().toLocaleString('pt-BR')}`,
-            pageWidth / 2,
+            pageWidthLocal / 2,
             pageHeight - 10,
             { align: 'center' }
           );
@@ -636,16 +635,12 @@ export const exportToPDFByCooperado = async (
           halign: 'left'
         },
         margin: 10,
-        didDrawCell: (data) => {
-          if (data.column.dataKey === 'status') {
-            const cellValue = data.cell.text.toString();
-            if (cellValue === 'Fechado') {
-              data.cell.styles.textColor = [46, 125, 50];
-              data.cell.styles.fontStyle = 'bold';
-            } else if (cellValue === 'Em Aberto') {
-              data.cell.styles.textColor = [255, 152, 0];
-              data.cell.styles.fontStyle = 'bold';
-            }
+        didDrawCell: (dataCell) => {
+          if (dataCell.column.dataKey === 'status') {
+            const cellValue = dataCell.cell.text.toString().toLowerCase();
+            if (cellValue.includes('aprov')) { dataCell.cell.styles.textColor = [46, 125, 50]; dataCell.cell.styles.fontStyle = 'bold'; }
+            else if (cellValue.includes('recus')) { dataCell.cell.styles.textColor = [198, 40, 40]; dataCell.cell.styles.fontStyle = 'bold'; }
+            else if (cellValue.includes('pend')) { dataCell.cell.styles.textColor = [255, 152, 0]; dataCell.cell.styles.fontStyle = 'bold'; }
           }
         }
       });
