@@ -713,8 +713,8 @@ export const Relatorios: React.FC = () => {
       </div>
 
       {/* CLASSIFICAR E ORGANIZAR - Prioridade visual */}
-      <div className="bg-white p-6 rounded-2xl shadow-lg border-2 border-primary-200 mb-6 flex flex-col md:flex-row md:items-end gap-6">
-        <div className="flex-1">
+      <div className="bg-white p-6 rounded-2xl shadow-lg border-2 border-primary-200 mb-6 flex flex-col gap-6">
+        <div>
           <div className="flex items-center gap-2 mb-2">
             <span className="font-bold text-primary-700 text-lg">Classificar e Organizar</span>
             <span className="text-xs text-gray-400">(opcional)</span>
@@ -748,19 +748,6 @@ export const Relatorios: React.FC = () => {
               </select>
             </div>
           </div>
-        </div>
-        {/* FILTRO DE STATUS */}
-        <div className="w-full md:w-60">
-          <label className="text-xs font-bold text-gray-500 uppercase">Status</label>
-          <select 
-            className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none mt-1"
-            value={filterStatus}
-            onChange={e => setFilterStatus(e.target.value as any)}
-          >
-            <option value="all">Fechados e Abertos</option>
-            <option value="fechados">Apenas Fechados</option>
-            <option value="abertos">Apenas Abertos</option>
-          </select>
         </div>
       </div>
 
@@ -813,32 +800,153 @@ export const Relatorios: React.FC = () => {
                     <td className="px-4 py-3 text-sm">{row.categoriaProfissional}</td>
                     <td className="px-4 py-3 text-sm">{row.hospital}</td>
                     <td className="px-4 py-3 text-sm">{row.setor}</td>
-                    <td className="px-4 py-3 text-sm">{row.data}</td>
-                    <td className="px-4 py-3 text-sm text-green-600 font-medium">{row.entrada}</td>
-                    <td className="px-4 py-3 text-sm text-red-600 font-medium">{row.saida}</td>
-                    <td className="px-4 py-3 text-sm font-medium">{row.totalHoras}</td>
-                    <td className="px-4 py-3 text-sm">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        row.status === 'Fechado' 
-                          ? 'bg-green-100 text-green-700' 
-                          : 'bg-orange-100 text-orange-700'
-                      }`}>
-                        {row.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
-                    Nenhum registro encontrado com os filtros aplicados
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-};
+                    {/* FILTROS */}
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2 text-purple-700">
+                          <Filter className="w-5 h-5" />
+                          <h3 className="font-semibold">Filtros de Relatório</h3>
+                        </div>
+                        <button
+                          onClick={handleLimparFiltros}
+                          className="flex items-center gap-2 text-sm text-gray-600 hover:text-red-600 transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                          Limpar Filtros
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {/* Hospital */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Hospital
+                          </label>
+                          <select
+                            value={filterHospital}
+                            onChange={(e) => setFilterHospital(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          >
+                            <option value="">Todos os Hospitais</option>
+                            {hospitais.map(h => (
+                              <option key={h.id} value={h.id}>{h.nome}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Setor */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Setor
+                          </label>
+                          <select
+                            value={filterSetor}
+                            onChange={(e) => setFilterSetor(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            disabled={!filterHospital}
+                          >
+                            <option value="">Todos os Setores</option>
+                            {setoresDisponiveis.map(s => (
+                              <option key={s.id} value={s.id.toString()}>{s.nome}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Cooperado */}
+                        <div className="relative">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Cooperado
+                          </label>
+                          <input
+                            type="text"
+                            value={filterCooperadoInput}
+                            onChange={(e) => {
+                              setFilterCooperadoInput(e.target.value);
+                              setShowCooperadoSuggestions(true);
+                              if (!e.target.value) setFilterCooperado('');
+                            }}
+                            onFocus={() => setShowCooperadoSuggestions(true)}
+                            placeholder="Digite o nome..."
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          />
+                          {showCooperadoSuggestions && filterCooperadoInput && (
+                            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                              {filteredCooperados.length > 0 ? (
+                                filteredCooperados.map(c => (
+                                  <div
+                                    key={c.id}
+                                    onClick={() => {
+                                      setFilterCooperado(c.id);
+                                      setFilterCooperadoInput(c.nome);
+                                      setShowCooperadoSuggestions(false);
+                                    }}
+                                    className="px-3 py-2 hover:bg-purple-50 cursor-pointer"
+                                  >
+                                    {c.nome} - {c.categoriaProfissional}
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="px-3 py-2 text-gray-500">Nenhum cooperado encontrado</div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Categoria Profissional */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Categoria Profissional
+                          </label>
+                          <select
+                            value={filterCategoria}
+                            onChange={(e) => setFilterCategoria(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          >
+                            <option value="">Todas as Categorias</option>
+                            {categoriasProfissionais.map(cat => (
+                              <option key={cat} value={cat}>{cat}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Status */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                          <select
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            value={filterStatus}
+                            onChange={e => setFilterStatus(e.target.value as any)}
+                          >
+                            <option value="all">Fechados e Abertos</option>
+                            <option value="fechados">Apenas Fechados</option>
+                            <option value="abertos">Apenas Abertos</option>
+                          </select>
+                        </div>
+
+                        {/* Data Inicial */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Data Inicial
+                          </label>
+                          <input
+                            type="date"
+                            value={filterDataIni}
+                            onChange={(e) => setFilterDataIni(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          />
+                        </div>
+
+                        {/* Data Final */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Data Final
+                          </label>
+                          <input
+                            type="date"
+                            value={filterDataFim}
+                            onChange={(e) => setFilterDataFim(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          />
+                        </div>
+                      </div>
+                    </div>
