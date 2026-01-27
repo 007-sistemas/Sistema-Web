@@ -75,7 +75,7 @@ export const Relatorios: React.FC = () => {
   // Reprocessar dados quando filtros mudarem
   useEffect(() => {
     processarRelatorio();
-  }, [logs, cooperados, hospitais, setoresDisponiveis, todosSetores, filterHospital, filterSetor, filterCooperado, filterCategoria, filterDataIni, filterDataFim]);
+  }, [logs, cooperados, hospitais, setoresDisponiveis, todosSetores, filterHospital, filterSetor, filterCooperado, filterCategoria, filterDataIni, filterDataFim, filterStatus]);
 
   const loadData = async () => {
     try {
