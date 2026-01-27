@@ -152,30 +152,54 @@ export const exportToPDF = async (
     const pageHeight = pdf.internal.pageSize.getHeight();
     let yPosition = 15;
 
-    // === LOGO ===
-    const logoPath = '/iDev logo Letra Preta.svg';
+
+    // === CABEÇALHO MODERNO ===
+    // LOGO
+    const logoPath = '/logo-coptem.png'; // Ajuste para o logo correto
     try {
-      pdf.addImage(logoPath, 'PNG', 10, 5, 15, 15);
+      pdf.addImage(logoPath, 'PNG', 10, 7, 22, 14);
     } catch (err) {
-      console.warn('Logo não disponível no PDF:', err);
+      // fallback: nada
     }
 
-    // === CABEÇALHO ===
-    pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(18);
-    pdf.setTextColor(106, 27, 154); // Roxo
-    pdf.text('RELATÓRIO DE PRODUÇÃO', pageWidth / 2, yPosition, { align: 'center' });
+    // Informações institucionais
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    pdf.setTextColor(30, 30, 30);
+    pdf.text('Nome:', 38, 13);
+    pdf.text('CNPJ:', 38, 18);
+    pdf.text('Período:', 38, 23);
+    pdf.text('Gerado em:', 38, 28);
 
-    yPosition += 10;
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Cooperativa de Trabalho dos Profissionais de Enfermagem do Ceará e das Demais Áreas da Saúde', 60, 13, { maxWidth: pageWidth - 62 });
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('03031687000110', 60, 18);
+    const periodo = (filters.dataIni && filters.dataFim) ? `Período: ${filters.dataIni} a ${filters.dataFim}` : 'Período não informado';
+    pdf.text(periodo, 60, 23);
+    const dataGeracao = new Date().toLocaleString('pt-BR');
+    pdf.text(dataGeracao, 60, 28);
+
+    // Página
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(9);
+    pdf.text(`Página 1 de {n}`, pageWidth - 32, 13); // {n} será substituído pelo jsPDF
+
+    // Título do relatório
+    yPosition = 35;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(14);
+    pdf.setTextColor(30, 30, 30);
+    pdf.text('Relatório de Produção Hospital Geral Dr. Waldemar Alcântara - HGWA', pageWidth / 2, yPosition, { align: 'center', maxWidth: pageWidth - 20 });
+    yPosition += 8;
 
     // Filtros aplicados
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(10);
-    pdf.setTextColor(100, 100, 100); // Cinza
+    pdf.setFontSize(9);
+    pdf.setTextColor(100, 100, 100);
     const filterText = buildFilterText(filters);
     const splitFilterText = pdf.splitTextToSize(filterText, pageWidth - 20);
     pdf.text(splitFilterText, 10, yPosition);
-
     yPosition += splitFilterText.length * 5 + 5;
 
     // === DASHBOARD COM CARDS ===
@@ -511,12 +535,42 @@ export const exportToPDFByCooperado = async (
       const pageWidth = pdf.internal.pageSize.getWidth();
       let yPosition = 15;
 
-      // === CABEÇALHO ===
+      // === CABEÇALHO MODERNO ===
+      // LOGO
+      const logoPath = '/logo-coptem.png';
+      try {
+        pdf.addImage(logoPath, 'PNG', 10, 7, 22, 14);
+      } catch (err) {}
+
+      // Informações institucionais
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(10);
+      pdf.setTextColor(30, 30, 30);
+      pdf.text('Nome:', 38, 13);
+      pdf.text('CNPJ:', 38, 18);
+      pdf.text('Período:', 38, 23);
+      pdf.text('Gerado em:', 38, 28);
+
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Cooperativa de Trabalho dos Profissionais de Enfermagem do Ceará e das Demais Áreas da Saúde', 60, 13, { maxWidth: pageWidth - 62 });
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('03031687000110', 60, 18);
+      const periodo = (filters.dataIni && filters.dataFim) ? `Período: ${filters.dataIni} a ${filters.dataFim}` : 'Período não informado';
+      pdf.text(periodo, 60, 23);
+      const dataGeracao = new Date().toLocaleString('pt-BR');
+      pdf.text(dataGeracao, 60, 28);
+
+      // Página
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(9);
+      pdf.text(`Página ${index + 1} de {n}`, pageWidth - 32, 13); // {n} será substituído pelo jsPDF
+
+      // Título do relatório
+      yPosition = 35;
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(14);
-      pdf.setTextColor(106, 27, 154); // Roxo
-      pdf.text(`Relatório: ${cooperadoNome}`, pageWidth / 2, yPosition, { align: 'center' });
-
+      pdf.setTextColor(30, 30, 30);
+      pdf.text(`Relatório: ${cooperadoNome}`, pageWidth / 2, yPosition, { align: 'center', maxWidth: pageWidth - 20 });
       yPosition += 8;
 
       // Especialidade e info
@@ -524,7 +578,6 @@ export const exportToPDFByCooperado = async (
       pdf.setFontSize(10);
       pdf.setTextColor(100, 100, 100);
       pdf.text(`Especialidade: ${cooperadoData[0]?.especialidade || 'N/A'}`, 10, yPosition);
-
       yPosition += 8;
 
       // Filtros aplicados (apenas na primeira página)
@@ -535,7 +588,6 @@ export const exportToPDFByCooperado = async (
         pdf.text(splitFilterText, 10, yPosition);
         yPosition += splitFilterText.length * 4 + 3;
       }
-
       yPosition += 5;
 
       // === TABELA ===
