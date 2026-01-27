@@ -18,6 +18,21 @@ interface RelatorioRow {
 }
 
 export const Relatorios: React.FC = () => {
+    // Filtro de status
+    const [filterStatus, setFilterStatus] = useState<'all' | 'fechados' | 'abertos'>('all');
+    // Critérios de ordenação
+    const orderOptions = [
+      { value: 'cooperadoNome', label: 'Nome' },
+      { value: 'categoriaProfissional', label: 'Categoria Profissional' },
+      { value: 'setor', label: 'Setor' },
+      { value: 'data', label: 'Data' },
+      { value: 'entrada', label: 'Entrada' },
+      { value: 'saida', label: 'Saída' },
+    ];
+    const [order1, setOrder1] = useState('cooperadoNome');
+    const [order2, setOrder2] = useState('data');
+    const [order3, setOrder3] = useState('entrada');
+    const [order4, setOrder4] = useState('');
   const [logs, setLogs] = useState<RegistroPonto[]>([]);
   const [cooperados, setCooperados] = useState<Cooperado[]>([]);
   const [hospitais, setHospitais] = useState<Hospital[]>([]);
@@ -154,13 +169,15 @@ export const Relatorios: React.FC = () => {
       const setor = todosSetores.find(s => s.id.toString() === entrada.setorId);
 
       if (!cooperado || !hospital) return;
-
       // Aplicar filtros
       if (filterHospital && entrada.hospitalId !== filterHospital) return;
       if (filterSetor && entrada.setorId !== filterSetor) return;
       if (filterCooperado && entrada.cooperadoId !== filterCooperado) return;
       if (filterCategoria && cooperado.categoriaProfissional !== filterCategoria) return;
-
+      // Filtro de status
+      const statusTemp = saida ? 'Fechado' : 'Em Aberto';
+      if (filterStatus === 'fechados' && statusTemp !== 'Fechado') return;
+      if (filterStatus === 'abertos' && statusTemp !== 'Em Aberto') return;
       const dataEntrada = new Date(entrada.timestamp);
       if (filterDataIni && dataEntrada < new Date(filterDataIni)) return;
       if (filterDataFim && dataEntrada > new Date(filterDataFim + 'T23:59:59')) return;
@@ -191,13 +208,33 @@ export const Relatorios: React.FC = () => {
       });
     });
 
-    // Ordenar por data (mais recente primeiro)
-    rows.sort((a, b) => {
-      const dateA = a.data.split('/').reverse().join('-');
-      const dateB = b.data.split('/').reverse().join('-');
-      return dateB.localeCompare(dateA);
-    });
-
+    // Ordenação dinâmica
+    const orderFields = [order1, order2, order3, order4].filter(Boolean);
+    const compare = (a: any, b: any) => {
+      for (const field of orderFields) {
+        let valA = a[field] || '';
+        let valB = b[field] || '';
+        // Datas e horários: comparar como data
+        if (field === 'data') {
+          const [dA, mA, yA] = a.data.split('/');
+          const [dB, mB, yB] = b.data.split('/');
+          valA = new Date(`${yA}-${mA}-${dA}`).getTime();
+          valB = new Date(`${yB}-${mB}-${dB}`).getTime();
+        }
+        if (field === 'entrada') {
+          valA = a.entrada !== '--:--' ? parseInt(a.entrada.replace(':',''), 10) : 0;
+          valB = b.entrada !== '--:--' ? parseInt(b.entrada.replace(':',''), 10) : 0;
+        }
+        if (field === 'saida') {
+          valA = a.saida !== '--:--' ? parseInt(a.saida.replace(':',''), 10) : 0;
+          valB = b.saida !== '--:--' ? parseInt(b.saida.replace(':',''), 10) : 0;
+        }
+        if (valA < valB) return -1;
+        if (valA > valB) return 1;
+      }
+      return 0;
+    };
+    rows.sort(compare);
     setRelatorioData(rows);
   };
 
@@ -677,6 +714,55 @@ export const Relatorios: React.FC = () => {
       {/* ESTATÍSTICAS */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+          {/* CLASSIFICAR E ORGANIZAR */}
+          <div className="mb-4 mt-2">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="font-bold text-primary-700 text-sm">Classificar e Organizar</span>
+              <span className="text-xs text-gray-400">(opcional)</span>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              <div>
+                <label className="text-xs text-gray-500 font-semibold">1º Critério</label>
+                <select className="w-full border rounded p-1" value={order1} onChange={e => setOrder1(e.target.value)}>
+                  {orderOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 font-semibold">2º Critério</label>
+                <select className="w-full border rounded p-1" value={order2} onChange={e => setOrder2(e.target.value)}>
+                  <option value="">(nenhum)</option>
+                  {orderOptions.filter(opt => opt.value !== order1).map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 font-semibold">3º Critério</label>
+                <select className="w-full border rounded p-1" value={order3} onChange={e => setOrder3(e.target.value)}>
+                  <option value="">(nenhum)</option>
+                  {orderOptions.filter(opt => opt.value !== order1 && opt.value !== order2).map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 font-semibold">4º Critério</label>
+                <select className="w-full border rounded p-1" value={order4} onChange={e => setOrder4(e.target.value)}>
+                  <option value="">(nenhum)</option>
+                  {orderOptions.filter(opt => opt.value !== order1 && opt.value !== order2 && opt.value !== order3).map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+              </div>
+            </div>
+          </div>
+          {/* FILTRO DE STATUS */}
+          <div className="mb-4 mt-2">
+            <label className="text-xs font-bold text-gray-500 uppercase">Status</label>
+            <select 
+              className="w-full max-w-xs bg-white text-gray-900 border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none"
+              value={filterStatus}
+              onChange={e => setFilterStatus(e.target.value as any)}
+            >
+              <option value="all">Fechados e Abertos</option>
+              <option value="fechados">Apenas Fechados</option>
+              <option value="abertos">Apenas Abertos</option>
+            </select>
+          </div>
           <div className="text-sm text-gray-600">Total de Registros</div>
           <div className="text-2xl font-bold text-purple-700">{relatorioData.length}</div>
         </div>
