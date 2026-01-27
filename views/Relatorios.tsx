@@ -254,7 +254,7 @@ export const Relatorios: React.FC = () => {
       return;
     }
 
-    // Preparar dados dos filtros com nomes legíveis
+    // O relatorioData já está filtrado pelo status!
     const filterLabels: any = {};
     if (filterHospital) {
       const hospital = hospitais.find(h => h.id === filterHospital);
@@ -269,6 +269,7 @@ export const Relatorios: React.FC = () => {
       filterLabels.cooperado = cooperado?.nome || filterCooperado;
     }
 
+    // Exportar apenas os registros filtrados (relatorioData)
     const stats = {
       totalRegistros: relatorioData.length,
       plantoesFechados: relatorioData.filter(r => r.status === 'Fechado').length,
