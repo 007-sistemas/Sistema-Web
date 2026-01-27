@@ -143,7 +143,7 @@ export const exportToPDF = async (
 ) => {
   try {
     const pdf = new jsPDF({
-      orientation: 'landscape',
+      orientation: 'portrait',
       unit: 'mm',
       format: 'a4'
     });
@@ -287,7 +287,11 @@ export const exportToPDF = async (
     console.log('[reportExport] PDF exportado com sucesso');
   } catch (error) {
     console.error('[reportExport] Erro ao exportar PDF:', error);
-    alert('Erro ao exportar PDF. Verifique o console.');
+    if (error instanceof Error) {
+      alert('Erro ao exportar PDF: ' + error.message + '\n' + (error.stack || ''));
+    } else {
+      alert('Erro ao exportar PDF. Verifique o console.');
+    }
   }
 };
 
