@@ -34,7 +34,7 @@ export async function syncInitialData() {
         email: cooperado.email,
         telefone: cooperado.telefone,
         matricula: cooperado.matricula,
-        especialidade: cooperado.especialidade,
+        categoriaProfissional: cooperado.categoriaProfissional,
         status: cooperado.status
       });
     }

@@ -7,7 +7,7 @@ export interface CsvRow {
   nome: string;
   cpf: string;
   matricula: string;
-  especialidade: string;
+  categoriaProfissional: string;
   telefone?: string;
   email?: string;
   status?: string;
@@ -31,7 +31,7 @@ export interface ImportResult {
 
 /**
  * Parse CSV string into array of rows
- * Aceita: nome, cpf, matricula, especialidade, telefone, email, status
+ * Aceita: nome, cpf, matricula, categoriaProfissional, telefone, email, status
  */
 export const parseCSV = (csvText: string): CsvRow[] => {
   const linhas = csvText.trim().split('\n');
@@ -48,7 +48,7 @@ export const parseCSV = (csvText: string): CsvRow[] => {
       nome: '',
       cpf: '',
       matricula: '',
-      especialidade: '',
+      categoriaProfissional: '',
     };
 
     header.forEach((col, idx) => {
@@ -56,7 +56,7 @@ export const parseCSV = (csvText: string): CsvRow[] => {
       if (col === 'nome') row.nome = valor;
       if (col === 'cpf') row.cpf = valor;
       if (col === 'matricula') row.matricula = valor;
-      if (col === 'especialidade') row.especialidade = valor;
+      if (col === 'categoriaProfissional') row.categoriaProfissional = valor;
       if (col === 'telefone') row.telefone = valor;
       if (col === 'email') row.email = valor;
       if (col === 'status') row.status = valor;
@@ -130,7 +130,7 @@ export const validateAndPrepareImport = (csvRows: CsvRow[]): ImportResult => {
       nome: row.nome,
       cpf: row.cpf,
       matricula: row.matricula,
-      especialidade: row.especialidade,
+      categoriaProfissional: row.categoriaProfissional,
       telefone: row.telefone || '',
       email: row.email || '',
       status: (row.status || 'ATIVO') as StatusCooperado,
@@ -185,7 +185,7 @@ export const parseExcelFile = async (file: File): Promise<CsvRow[]> => {
           nome: String(row.nome || '').trim(),
           cpf: String(row.cpf || '').trim(),
           matricula: String(row.matricula || '').trim(),
-          especialidade: String(row.especialidade || '').trim(),
+          categoriaProfissional: String(row.categoriaProfissional || '').trim(),
           telefone: String(row.telefone || '').trim(),
           email: String(row.email || '').trim(),
           status: String(row.status || '').trim(),

@@ -136,7 +136,7 @@ export const BiometriaManager: React.FC = () => {
               {selectedCooperado && (
                 <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-100">
                   <h4 className="font-semibold text-gray-800">{selectedCooperado.nome}</h4>
-                  <p className="text-sm text-gray-500">{selectedCooperado.especialidade}</p>
+                  <p className="text-sm text-gray-500">{selectedCooperado.categoriaProfissional}</p>
                   <div className="mt-4 flex items-center justify-between text-sm">
                     <span className="text-gray-600">Digitais cadastradas:</span>
                     <span className="font-bold bg-primary-100 text-primary-700 px-2 py-0.5 rounded">

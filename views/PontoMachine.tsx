@@ -376,7 +376,7 @@ export const PontoMachine: React.FC = () => {
               {identifiedCooperado && (
                 <div className="mt-6 p-4 bg-gray-50 rounded-xl border border-gray-200 w-full max-w-sm shadow-sm animate-fade-in">
                    <p className="font-bold text-xl text-gray-800">{identifiedCooperado.nome}</p>
-                   <p className="text-gray-500 text-sm">{identifiedCooperado.especialidade}</p>
+                   <p className="text-gray-500 text-sm">{identifiedCooperado.categoriaProfissional}</p>
                    <div className="mt-3 text-xs text-gray-400 border-t border-gray-200 pt-2 flex items-center justify-center">
                       <MapPin className="h-3 w-3 mr-1" />
                       {getCurrentLocationString()}

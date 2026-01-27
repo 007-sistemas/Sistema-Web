@@ -408,7 +408,7 @@ export const StorageService = {
         nome: row.name || row.nome || '',
         cpf: row.cpf || '',
         matricula: row.matricula || '',
-        especialidade: row.specialty || row.especialidade || '',
+        categoriaProfissional: row.specialty || row.categoriaProfissional || '',
         telefone: row.phone || row.telefone || '',
         email: row.email || '',
         status: row.status || StatusCooperado.ATIVO,
@@ -473,7 +473,7 @@ export const StorageService = {
       email: cooperado.email,
       telefone: cooperado.telefone,
       matricula: cooperado.matricula,
-      especialidade: cooperado.especialidade,
+      categoriaProfissional: cooperado.categoriaProfissional,
       status: cooperado.status
     });
   },

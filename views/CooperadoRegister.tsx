@@ -30,7 +30,7 @@ export const CooperadoRegister: React.FC = () => {
     nome: '',
     cpf: '',
     matricula: '',
-    especialidade: '', // This will map to "Categoria Profissional"
+    categoriaProfissional: '', // Categoria Profissional
     email: '',
     telefone: '',
     status: StatusCooperado.ATIVO,
@@ -175,7 +175,7 @@ export const CooperadoRegister: React.FC = () => {
     // Criar template Excel vazio com 10 linhas para preenchimento
     // Status sempre será ATIVO por padrão
     const templateData = [
-      { nome: '', cpf: '', matricula: '', especialidade: '', telefone: '', email: '' },
+      { nome: '', cpf: '', matricula: '', categoriaProfissional: '', telefone: '', email: '' },
       { nome: '', cpf: '', matricula: '', especialidade: '', telefone: '', email: '' },
       { nome: '', cpf: '', matricula: '', especialidade: '', telefone: '', email: '' },
       { nome: '', cpf: '', matricula: '', especialidade: '', telefone: '', email: '' },
@@ -194,7 +194,7 @@ export const CooperadoRegister: React.FC = () => {
       { wch: 25 }, // nome
       { wch: 15 }, // cpf
       { wch: 15 }, // matricula
-      { wch: 20 }, // especialidade
+      { wch: 20 }, // categoriaProfissional
       { wch: 15 }, // telefone
       { wch: 25 }  // email
     ];
@@ -325,7 +325,7 @@ export const CooperadoRegister: React.FC = () => {
 
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <p className="text-xs font-semibold text-gray-700 mb-2">Colunas obrigatórias:</p>
-                  <p className="text-xs text-gray-600 font-mono mb-3">nome | cpf | matricula | especialidade | telefone | email</p>
+                  <p className="text-xs text-gray-600 font-mono mb-3">nome | cpf | matricula | categoriaProfissional | telefone | email</p>
                   <div className="text-xs text-gray-600 space-y-1">
                     <p><span className="font-semibold">Nota:</span> O status será sempre "ATIVO" por padrão</p>
                     <p><span className="font-semibold">Exemplo:</span></p>
@@ -388,7 +388,7 @@ export const CooperadoRegister: React.FC = () => {
                               <td className="px-3 py-2">{c.nome}</td>
                               <td className="px-3 py-2">{c.cpf}</td>
                               <td className="px-3 py-2">{c.matricula}</td>
-                              <td className="px-3 py-2">{c.especialidade}</td>
+                              <td className="px-3 py-2">{c.categoriaProfissional}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -510,14 +510,14 @@ export const CooperadoRegister: React.FC = () => {
               />
             </div>
             
-            {/* Categoria Profissional (antiga Especialidade) */}
+            {/* Categoria Profissional */}
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-700">Categoria Profissional</label>
               <div className="flex gap-2">
                 <select 
                   className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none"
-                  value={formData.especialidade}
-                  onChange={e => setFormData({...formData, especialidade: e.target.value})}
+                  value={formData.categoriaProfissional}
+                  onChange={e => setFormData({...formData, categoriaProfissional: e.target.value})}
                 >
                   <option value="">Selecione...</option>
                   {categorias.map((cat) => (
@@ -613,7 +613,7 @@ export const CooperadoRegister: React.FC = () => {
                   <tr key={c.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 font-medium text-gray-900">{c.nome}</td>
                     <td className="px-6 py-4">{c.matricula}</td>
-                    <td className="px-6 py-4">{c.especialidade}</td>
+                    <td className="px-6 py-4">{c.categoriaProfissional}</td>
                     <td className="px-6 py-4">
                       <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                         c.status === StatusCooperado.ATIVO ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'

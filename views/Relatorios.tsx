@@ -7,7 +7,7 @@ import { FileText, Download, Filter, X, FileSpreadsheet, Calendar } from 'lucide
 
 interface RelatorioRow {
   cooperadoNome: string;
-  especialidade: string;
+  categoriaProfissional: string;
   hospital: string;
   setor: string;
   data: string;
@@ -159,7 +159,7 @@ export const Relatorios: React.FC = () => {
       if (filterHospital && entrada.hospitalId !== filterHospital) return;
       if (filterSetor && entrada.setorId !== filterSetor) return;
       if (filterCooperado && entrada.cooperadoId !== filterCooperado) return;
-      if (filterCategoria && cooperado.especialidade !== filterCategoria) return;
+      if (filterCategoria && cooperado.categoriaProfissional !== filterCategoria) return;
 
       const dataEntrada = new Date(entrada.timestamp);
       if (filterDataIni && dataEntrada < new Date(filterDataIni)) return;
@@ -180,7 +180,7 @@ export const Relatorios: React.FC = () => {
 
       rows.push({
         cooperadoNome: cooperado.nome,
-        especialidade: cooperado.especialidade || 'N/A',
+        categoriaProfissional: cooperado.categoriaProfissional || 'N/A',
         hospital: hospital.nome,
         setor: setor?.nome || 'N/A',
         data: dataEntrada.toLocaleDateString('pt-BR'),
@@ -476,7 +476,7 @@ export const Relatorios: React.FC = () => {
     c.nome.toLowerCase().includes(filterCooperadoInput.toLowerCase())
   );
 
-  const categoriasProfissionais = Array.from(new Set(cooperados.map(c => c.especialidade).filter(Boolean)));
+  const categoriasProfissionais = Array.from(new Set(cooperados.map(c => c.categoriaProfissional).filter(Boolean)));
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-20">
@@ -726,7 +726,7 @@ export const Relatorios: React.FC = () => {
                 relatorioData.map((row, idx) => (
                   <tr key={idx} className="border-b hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm">{row.cooperadoNome}</td>
-                    <td className="px-4 py-3 text-sm">{row.especialidade}</td>
+                    <td className="px-4 py-3 text-sm">{row.categoriaProfissional}</td>
                     <td className="px-4 py-3 text-sm">{row.hospital}</td>
                     <td className="px-4 py-3 text-sm">{row.setor}</td>
                     <td className="px-4 py-3 text-sm">{row.data}</td>

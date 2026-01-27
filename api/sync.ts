@@ -554,14 +554,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         )
         VALUES (
           ${c.id}, ${c.nome}, ${c.cpf || null}, ${c.email || null}, ${c.telefone || null},
-          ${c.especialidade || null}, ${c.matricula || null}, ${c.status || 'ATIVO'}, NOW()
+          ${c.categoriaProfissional || null}, ${c.matricula || null}, ${c.status || 'ATIVO'}, NOW()
         )
         ON CONFLICT (id) DO UPDATE SET
           name = ${c.nome},
           cpf = ${c.cpf || null},
           email = ${c.email || null},
           phone = ${c.telefone || null},
-          specialty = ${c.especialidade || null},
+          specialty = ${c.categoriaProfissional || null},
           matricula = ${c.matricula || null},
           status = ${c.status || 'ATIVO'},
           updated_at = NOW()
