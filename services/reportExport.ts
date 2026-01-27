@@ -184,7 +184,7 @@ export const exportToPDF = async (
     pdf.text(`${data.pageNumber}`, pdf.internal.pageSize.getWidth() / 2, pdf.internal.pageSize.getHeight() - 10, { align: 'center' });
 
     // Título do relatório
-    yPosition = 40;
+    let yPosition = 40;
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(18);
     pdf.setTextColor(255, 255, 255);
@@ -504,7 +504,7 @@ export const exportToPDFByCooperado = async (
 ) => {
   try {
     const pdf = new jsPDF({
-      orientation: 'landscape',
+      orientation: 'portrait',
       unit: 'mm',
       format: 'a4'
     });
