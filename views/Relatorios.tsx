@@ -711,82 +711,79 @@ export const Relatorios: React.FC = () => {
         </div>
       </div>
 
-      {/* ESTATÍSTICAS */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-          {/* CLASSIFICAR E ORGANIZAR */}
-          <div className="mb-4 mt-2">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="font-bold text-primary-700 text-sm">Classificar e Organizar</span>
-              <span className="text-xs text-gray-400">(opcional)</span>
+      {/* CLASSIFICAR E ORGANIZAR - Prioridade visual */}
+      <div className="bg-white p-6 rounded-2xl shadow-lg border-2 border-primary-200 mb-6 flex flex-col md:flex-row md:items-end gap-6">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="font-bold text-primary-700 text-lg">Classificar e Organizar</span>
+            <span className="text-xs text-gray-400">(opcional)</span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div>
+              <label className="text-xs text-gray-500 font-semibold">1º Critério</label>
+              <select className="w-full border rounded p-2" value={order1} onChange={e => setOrder1(e.target.value)}>
+                {orderOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+              </select>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              <div>
-                <label className="text-xs text-gray-500 font-semibold">1º Critério</label>
-                <select className="w-full border rounded p-1" value={order1} onChange={e => setOrder1(e.target.value)}>
-                  {orderOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 font-semibold">2º Critério</label>
-                <select className="w-full border rounded p-1" value={order2} onChange={e => setOrder2(e.target.value)}>
-                  <option value="">(nenhum)</option>
-                  {orderOptions.filter(opt => opt.value !== order1).map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 font-semibold">3º Critério</label>
-                <select className="w-full border rounded p-1" value={order3} onChange={e => setOrder3(e.target.value)}>
-                  <option value="">(nenhum)</option>
-                  {orderOptions.filter(opt => opt.value !== order1 && opt.value !== order2).map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 font-semibold">4º Critério</label>
-                <select className="w-full border rounded p-1" value={order4} onChange={e => setOrder4(e.target.value)}>
-                  <option value="">(nenhum)</option>
-                  {orderOptions.filter(opt => opt.value !== order1 && opt.value !== order2 && opt.value !== order3).map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                </select>
-              </div>
+            <div>
+              <label className="text-xs text-gray-500 font-semibold">2º Critério</label>
+              <select className="w-full border rounded p-2" value={order2} onChange={e => setOrder2(e.target.value)}>
+                <option value="">(nenhum)</option>
+                {orderOptions.filter(opt => opt.value !== order1).map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 font-semibold">3º Critério</label>
+              <select className="w-full border rounded p-2" value={order3} onChange={e => setOrder3(e.target.value)}>
+                <option value="">(nenhum)</option>
+                {orderOptions.filter(opt => opt.value !== order1 && opt.value !== order2).map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 font-semibold">4º Critério</label>
+              <select className="w-full border rounded p-2" value={order4} onChange={e => setOrder4(e.target.value)}>
+                <option value="">(nenhum)</option>
+                {orderOptions.filter(opt => opt.value !== order1 && opt.value !== order2 && opt.value !== order3).map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+              </select>
             </div>
           </div>
-          {/* FILTRO DE STATUS */}
-          <div className="mb-4 mt-2">
-            <label className="text-xs font-bold text-gray-500 uppercase">Status</label>
-            <select 
-              className="w-full max-w-xs bg-white text-gray-900 border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none"
-              value={filterStatus}
-              onChange={e => setFilterStatus(e.target.value as any)}
-            >
-              <option value="all">Fechados e Abertos</option>
-              <option value="fechados">Apenas Fechados</option>
-              <option value="abertos">Apenas Abertos</option>
-            </select>
-          </div>
-          <div className="text-sm text-gray-600">Total de Registros</div>
-          <div className="text-2xl font-bold text-purple-700">{relatorioData.length}</div>
         </div>
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-          <div className="text-sm text-gray-600">Plantões Fechados</div>
-          <div className="text-2xl font-bold text-green-600">
-            {relatorioData.filter(r => r.status === 'Fechado').length}
-          </div>
+        {/* FILTRO DE STATUS */}
+        <div className="w-full md:w-60">
+          <label className="text-xs font-bold text-gray-500 uppercase">Status</label>
+          <select 
+            className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none mt-1"
+            value={filterStatus}
+            onChange={e => setFilterStatus(e.target.value as any)}
+          >
+            <option value="all">Fechados e Abertos</option>
+            <option value="fechados">Apenas Fechados</option>
+            <option value="abertos">Apenas Abertos</option>
+          </select>
         </div>
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-          <div className="text-sm text-gray-600">Plantões em Aberto</div>
-          <div className="text-2xl font-bold text-orange-600">
-            {relatorioData.filter(r => r.status === 'Em Aberto').length}
-          </div>
+      </div>
+
+      {/* ESTATÍSTICAS - Cards menores e menos destacados */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+        <div className="bg-gray-50 p-3 rounded-lg shadow border border-gray-100 flex flex-col items-center">
+          <div className="text-xs text-gray-500">Total de Registros</div>
+          <div className="text-xl font-bold text-purple-700">{relatorioData.length}</div>
         </div>
-        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-          <div className="text-sm text-gray-600">Total de Horas</div>
-          <div className="text-2xl font-bold text-blue-600">
-            {relatorioData.reduce((acc, r) => {
-              if (r.totalHoras === '--') return acc;
-              const [hours, minutes] = r.totalHoras.replace('h', '').replace('m', '').split(' ').map(Number);
-              return acc + hours + (minutes / 60);
-            }, 0).toFixed(1)}h
-          </div>
+        <div className="bg-gray-50 p-3 rounded-lg shadow border border-gray-100 flex flex-col items-center">
+          <div className="text-xs text-gray-500">Plantões Fechados</div>
+          <div className="text-xl font-bold text-green-600">{relatorioData.filter(r => r.status === 'Fechado').length}</div>
+        </div>
+        <div className="bg-gray-50 p-3 rounded-lg shadow border border-gray-100 flex flex-col items-center">
+          <div className="text-xs text-gray-500">Plantões em Aberto</div>
+          <div className="text-xl font-bold text-orange-600">{relatorioData.filter(r => r.status === 'Em Aberto').length}</div>
+        </div>
+        <div className="bg-gray-50 p-3 rounded-lg shadow border border-gray-100 flex flex-col items-center">
+          <div className="text-xs text-gray-500">Total de Horas</div>
+          <div className="text-xl font-bold text-blue-600">{relatorioData.reduce((acc, r) => {
+            if (r.totalHoras === '--') return acc;
+            const [hours, minutes] = r.totalHoras.replace('h', '').replace('m', '').split(' ').map(Number);
+            return acc + hours + (minutes / 60);
+          }, 0).toFixed(1)}h</div>
         </div>
       </div>
 
