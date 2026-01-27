@@ -698,17 +698,10 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
             setorNome = setor?.nome || '';
           }
           
-          // Se está filtrando por hospital, mostrar apenas setor
-          const isFiltered = filterHospital && filterHospital !== '';
-          if (isFiltered) {
-            return setorNome || hospitalNome;
-          }
-          
-          // Senão, mostrar Hospital - Setor
+          // Sempre mostrar Hospital - Setor (NUNCA só setor)
           if (setorNome) {
             return `${hospitalNome} - ${setorNome}`;
           }
-          
           return hospitalNome;
         };
 
@@ -832,23 +825,17 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
     setSelectedPontoId(row.entry ? row.entry.id : row.exit?.id || null);
     setSelectedEntryId(row.entry?.id || null);
     setSelectedExitId(row.exit?.id || null);
-    
-    // Definir o hospital do registro
-    setFilterHospital(ponto.hospitalId);
-    
+    // NÃO alterar filtro de hospital automaticamente!
     setFormCooperadoId(ponto.cooperadoId);
     setFormCooperadoInput(ponto.cooperadoNome); 
     setFormSetorId(ponto.setorId ? ponto.setorId.toString() : '');
-    
     const d = new Date(ponto.timestamp);
     setFormData(d.toISOString().split('T')[0]);
     setFormHora(''); // Deixar em branco para usuário preencher manualmente
-    
     // Carregar código da entrada se existir
     if (row.entry) {
       setFormInputCodigo(row.entry.codigo);
     }
-    
     // NÃO setar o tipo automaticamente - deixar para o usuário escolher
     // O usuário deve escolher se quer editar a entrada ou saída
   };
