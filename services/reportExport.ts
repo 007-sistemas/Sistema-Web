@@ -5,7 +5,7 @@ import autoTable from 'jspdf-autotable';
 
 export interface RelatorioRow {
   cooperadoNome: string;
-  especialidade: string;
+  categoriaProfissional: string;
   hospital: string;
   setor: string;
   data: string;
@@ -54,7 +54,7 @@ export const exportToExcel = async (
     // Definir largura das colunas
     worksheet.columns = [
       { header: 'Cooperado', key: 'cooperadoNome', width: 20 },
-      { header: 'Categoria', key: 'especialidade', width: 18 },
+      { header: 'Categoria Profissional', key: 'categoriaProfissional', width: 18 },
       { header: 'Hospital', key: 'hospital', width: 18 },
       { header: 'Setor', key: 'setor', width: 18 },
       { header: 'Data', key: 'data', width: 12 },
@@ -227,7 +227,7 @@ export const exportToPDF = async (
     // === TABELA ===
     const tableColumns = [
       { header: 'Cooperado', dataKey: 'cooperadoNome' },
-      { header: 'Categoria', dataKey: 'especialidade' },
+      { header: 'Categoria Profissional', dataKey: 'categoriaProfissional' },
       { header: 'Hospital', dataKey: 'hospital' },
       { header: 'Setor', dataKey: 'setor' },
       { header: 'Data', dataKey: 'data' },
@@ -403,7 +403,7 @@ export const exportToExcelByCooperado = async (
 
       // Definir largura das colunas
       worksheet.columns = [
-        { header: 'Categoria', key: 'especialidade', width: 18 },
+        { header: 'Categoria Profissional', key: 'categoriaProfissional', width: 18 },
         { header: 'Hospital', key: 'hospital', width: 18 },
         { header: 'Setor', key: 'setor', width: 18 },
         { header: 'Data', key: 'data', width: 12 },
@@ -421,14 +421,14 @@ export const exportToExcelByCooperado = async (
       headerRow.height = 20;
 
       // Adicionar informações do cooperado no topo
-      const infoRow = worksheet.insertRow(1, [`Cooperado: ${cooperadoNome} | Especialidade: ${cooperadoData[0]?.especialidade}`]);
+      const infoRow = worksheet.insertRow(1, [`Cooperado: ${cooperadoNome} | Categoria Profissional: ${cooperadoData[0]?.categoriaProfissional}`]);
       infoRow.font = { bold: true, color: { argb: 'FF333333' } };
       infoRow.alignment = { horizontal: 'left' };
 
       // Adicionar dados
       cooperadoData.forEach((row) => {
         const newRow = worksheet.addRow({
-          especialidade: row.especialidade,
+          categoriaProfissional: row.categoriaProfissional,
           hospital: row.hospital,
           setor: row.setor,
           data: row.data,
@@ -469,7 +469,7 @@ export const exportToExcelByCooperado = async (
       }, 0);
 
       const resumoRow = worksheet.addRow({
-        especialidade: 'RESUMO DO COOPERADO',
+        categoriaProfissional: 'RESUMO DO COOPERADO',
         totalHoras: `${totalHoras.toFixed(1)}h`
       });
 
@@ -570,14 +570,14 @@ export const exportToPDFByCooperado = async (
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(14);
       pdf.setTextColor(30, 30, 30);
-      pdf.text(`Relatório: ${cooperadoNome}`, pageWidth / 2, yPosition, { align: 'center', maxWidth: pageWidth - 20 });
+      pdf.text(cooperadoNome, pageWidth / 2, yPosition, { align: 'center', maxWidth: pageWidth - 20 });
       yPosition += 8;
 
-      // Especialidade e info
+      // Categoria Profissional e info
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(10);
       pdf.setTextColor(100, 100, 100);
-      pdf.text(`Especialidade: ${cooperadoData[0]?.especialidade || 'N/A'}`, 10, yPosition);
+      pdf.text(`Categoria Profissional: ${cooperadoData[0]?.categoriaProfissional || 'N/A'}`, 10, yPosition);
       yPosition += 8;
 
       // Filtros aplicados (apenas na primeira página)

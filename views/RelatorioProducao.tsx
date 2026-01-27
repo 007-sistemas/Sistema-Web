@@ -18,6 +18,8 @@ interface ShiftRow {
 }
 
 export const RelatorioProducao: React.FC = () => {
+    // Filtro de status
+    const [filterStatus, setFilterStatus] = useState<'all' | 'fechados' | 'abertos'>('all');
   const [logs, setLogs] = useState<RegistroPonto[]>([]);
   const [cooperados, setCooperados] = useState<Cooperado[]>([]);
   const [hospitais, setHospitais] = useState<Hospital[]>([]);
@@ -141,13 +143,10 @@ export const RelatorioProducao: React.FC = () => {
     return logs.filter(log => {
       // 1. Hospital Filter
       if (filterHospital && log.hospitalId !== filterHospital) return false;
-      
       // 2. Setor Filter
       if (filterSetor && log.setorId !== filterSetor) return false;
-
       // 3. Cooperado Filter
       if (filterCooperado && log.cooperadoId !== filterCooperado) return false;
-
       // 4. Date Range
       if (filterDataIni) {
         const logDate = new Date(log.timestamp).toISOString().split('T')[0];
@@ -157,7 +156,9 @@ export const RelatorioProducao: React.FC = () => {
         const logDate = new Date(log.timestamp).toISOString().split('T')[0];
         if (logDate > filterDataFim) return false;
       }
-
+      // 5. Status Filter
+      if (filterStatus === 'fechados' && log.status !== 'Fechado') return false;
+      if (filterStatus === 'abertos' && log.status !== 'Aberto') return false;
       return true;
     });
   };
@@ -506,7 +507,20 @@ export const RelatorioProducao: React.FC = () => {
             <h3>Filtros de Visualização</h3>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+                  {/* Status Filter */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-500 uppercase">Status</label>
+                    <select 
+                      className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none"
+                      value={filterStatus}
+                      onChange={e => setFilterStatus(e.target.value as any)}
+                    >
+                      <option value="all">Fechados e Abertos</option>
+                      <option value="fechados">Apenas Fechados</option>
+                      <option value="abertos">Apenas Abertos</option>
+                    </select>
+                  </div>
             {/* Hospital Filter */}
             <div className="space-y-1">
                 <label className="text-xs font-bold text-gray-500 uppercase">Hospital</label>

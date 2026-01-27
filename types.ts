@@ -24,7 +24,7 @@ export interface Cooperado {
   nome: string;
   cpf: string;
   matricula: string;
-  especialidade: string;
+  categoriaProfissional: string;
   telefone: string;
   email: string;
   status: StatusCooperado;
