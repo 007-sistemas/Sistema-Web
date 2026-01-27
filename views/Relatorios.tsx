@@ -684,6 +684,20 @@ export const Relatorios: React.FC = () => {
             </select>
           </div>
 
+          {/* Status */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <select
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              value={filterStatus}
+              onChange={e => setFilterStatus(e.target.value as any)}
+            >
+              <option value="all">Fechados e Abertos</option>
+              <option value="fechados">Apenas Fechados</option>
+              <option value="abertos">Apenas Abertos</option>
+            </select>
+          </div>
+
           {/* Data Inicial */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
