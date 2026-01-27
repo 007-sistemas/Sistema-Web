@@ -148,15 +148,10 @@ export const exportToPDF = async (
       format: 'a4'
     });
 
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    let yPosition = 15;
-
-
     // === CABEÇALHO MODERNO ===
     // Faixa roxa no topo
     pdf.setFillColor(106, 27, 154); // Roxo
-    pdf.rect(0, 0, pageWidth, 32, 'F');
+    pdf.rect(0, 0, pdf.internal.pageSize.getWidth(), 32, 'F');
 
     // LOGO à esquerda sobre fundo roxo
     try {
@@ -172,26 +167,28 @@ export const exportToPDF = async (
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(10);
     pdf.setTextColor(255, 255, 255);
-    pdf.text('Cooperativa de Trabalho dos Profissionais de Enfermagem do Ceará e das Demais Áreas da Saúde', pageWidth / 2, 13, { align: 'center', maxWidth: pageWidth - 62 });
+    pdf.text('Cooperativa de Trabalho dos Profissionais de Enfermagem do Ceará e das Demais Áreas da Saúde', pdf.internal.pageSize.getWidth() / 2, 13, { align: 'center', maxWidth: pdf.internal.pageSize.getWidth() - 62 });
     pdf.setFont('helvetica', 'bold');
-    pdf.text('CNPJ: 03031687000110', pageWidth / 2, 18, { align: 'center' });
+    pdf.text('CNPJ: 03031687000110', pdf.internal.pageSize.getWidth() / 2, 18, { align: 'center' });
     const periodo = (filters.dataIni && filters.dataFim) ? `Período: ${filters.dataIni} a ${filters.dataFim}` : 'Período não informado';
     pdf.setFont('helvetica', 'normal');
-    pdf.text(periodo, pageWidth / 2, 23, { align: 'center' });
+    pdf.text(periodo, pdf.internal.pageSize.getWidth() / 2, 23, { align: 'center' });
     const dataGeracao = new Date().toLocaleString('pt-BR');
-    pdf.text(`Gerado em: ${dataGeracao}`, pageWidth / 2, 28, { align: 'center' });
+    pdf.text(`Gerado em: ${dataGeracao}`, pdf.internal.pageSize.getWidth() / 2, 28, { align: 'center' });
 
     // Página
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(9);
-    pdf.text(`Página 1 de {n}`, pageWidth - 32, 13); // {n} será substituído pelo jsPDF
+    // pdf.text(`Página 1 de {n}`, pdf.internal.pageSize.getWidth() - 32, 13); // {n} será substituído pelo jsPDF
+    // Número da página centralizado no rodapé
+    pdf.text(`${data.pageNumber}`, pdf.internal.pageSize.getWidth() / 2, pdf.internal.pageSize.getHeight() - 10, { align: 'center' });
 
     // Título do relatório
     yPosition = 40;
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(18);
     pdf.setTextColor(255, 255, 255);
-    pdf.text('Relatório Geral', pageWidth / 2, yPosition, { align: 'center', maxWidth: pageWidth - 20 });
+    pdf.text('Relatório Geral', pdf.internal.pageSize.getWidth() / 2, yPosition, { align: 'center', maxWidth: pdf.internal.pageSize.getWidth() - 20 });
     yPosition += 12;
 
     // Filtros aplicados
@@ -199,12 +196,12 @@ export const exportToPDF = async (
     pdf.setFontSize(9);
     pdf.setTextColor(100, 100, 100);
     const filterText = buildFilterText(filters);
-    const splitFilterText = pdf.splitTextToSize(filterText, pageWidth - 20);
+    const splitFilterText = pdf.splitTextToSize(filterText, pdf.internal.pageSize.getWidth() - 20);
     pdf.text(splitFilterText, 10, yPosition);
     yPosition += splitFilterText.length * 5 + 5;
 
     // === DASHBOARD COM CARDS ===
-    const cardWidth = (pageWidth - 20) / 4 - 3;
+    const cardWidth = (pdf.internal.pageSize.getWidth() - 20) / 4 - 3;
     const cardHeight = 25;
     const cardYPos = yPosition;
 
@@ -247,15 +244,10 @@ export const exportToPDF = async (
         const pageSize = pdf.internal.pageSize;
         const pageHeight = pageSize.getHeight();
         const pageWidth = pageSize.getWidth();
-
         pdf.setFontSize(8);
         pdf.setTextColor(150, 150, 150);
-        pdf.text(
-          `Gerado em ${new Date().toLocaleString('pt-BR')} | Página ${data.pageNumber}`,
-          pageWidth / 2,
-          pageHeight - 10,
-          { align: 'center' }
-        );
+        // Número da página centralizado no rodapé
+        pdf.text(`${data.pageNumber}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
       },
       theme: 'grid',
       headStyles: {
@@ -567,7 +559,9 @@ export const exportToPDFByCooperado = async (
       // Página
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(9);
-      pdf.text(`Página ${index + 1} de {n}`, pageWidth - 32, 13); // {n} será substituído pelo jsPDF
+      // pdf.text(`Página 1 de {n}`, pageWidth - 32, 13); // {n} será substituído pelo jsPDF
+      // Número da página centralizado no rodapé
+      pdf.text(`${data.pageNumber}`, pageWidth / 2, pdf.internal.pageSize.getHeight() - 10, { align: 'center' });
 
       // Título do relatório
       yPosition = 40;
@@ -820,18 +814,15 @@ export const exportJustificativasToPDF = async (
       columns: tableColumns,
       body: data,
       startY: yPosition,
-      didDrawPage: (dataCtx) => {
+      didDrawPage: (data) => {
+        // Adicionar rodapé em cada página
         const pageSize = pdf.internal.pageSize;
         const pageHeight = pageSize.getHeight();
-        const pageWidthLocal = pageSize.getWidth();
+        const pageWidth = pageSize.getWidth();
         pdf.setFontSize(8);
         pdf.setTextColor(150, 150, 150);
-        pdf.text(
-          `Gerado em ${new Date().toLocaleString('pt-BR')} | Página ${dataCtx.pageNumber}`,
-          pageWidthLocal / 2,
-          pageHeight - 10,
-          { align: 'center' }
-        );
+        // Número da página centralizado no rodapé
+        pdf.text(`${data.pageNumber}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
       },
       theme: 'grid',
       headStyles: { fillColor: [106, 27, 154], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center', fontSize: 10 },

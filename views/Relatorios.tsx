@@ -529,7 +529,7 @@ export const Relatorios: React.FC = () => {
               title="Exportar todos os dados em um único arquivo"
             >
               <FileText className="w-4 h-4" />
-              PDF
+              PDF Geral
             </button>
             <button
               onClick={handleExportarExcel}
@@ -537,7 +537,7 @@ export const Relatorios: React.FC = () => {
               title="Exportar todos os dados em um único arquivo"
             >
               <FileSpreadsheet className="w-4 h-4" />
-              Excel
+              Excel Geral
             </button>
           </div>
 
@@ -545,7 +545,7 @@ export const Relatorios: React.FC = () => {
           <div className="flex gap-2 border-l border-gray-300 pl-6">
             <button
               onClick={handleExportarPDFByCooperado}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
               title="Exportar com uma página para cada cooperado"
             >
               <FileText className="w-4 h-4" />
@@ -553,7 +553,7 @@ export const Relatorios: React.FC = () => {
             </button>
             <button
               onClick={handleExportarExcelByCooperado}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
               title="Exportar com uma aba para cada cooperado"
             >
               <FileSpreadsheet className="w-4 h-4" />
