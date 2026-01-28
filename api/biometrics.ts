@@ -36,7 +36,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       res.status(204).end();
       return;
     }
-    }
+
 
     if (req.method === "POST") {
       const { cooperado_id, template, device_id } = req.body || {};

@@ -22,12 +22,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     // Atualiza todos os nomes para caixa alta e sem acento
-    const { rowCount } = await sql`
+    await sql`
       UPDATE cooperados
       SET name = upper(unaccent(name))
       WHERE name IS NOT NULL
     `;
-    res.status(200).json({ message: `Nomes atualizados: ${rowCount}` });
+    res.status(200).json({ message: `Nomes atualizados com sucesso!` });
   } catch (err: any) {
     res.status(500).json({ error: err?.message || "Unknown error" });
   }
