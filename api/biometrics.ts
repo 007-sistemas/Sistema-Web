@@ -32,8 +32,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         res.status(400).json({ error: "Missing biometria id" });
         return;
       }
-      await sql`DELETE FROM biometrias WHERE id = ${id}`;
-      res.status(204).end();
+      try {
+        await sql`DELETE FROM biometrias WHERE id = ${id}`;
+        res.status(204).end();
+      } catch (err: any) {
+        res.status(500).json({ error: err?.message || "Unknown error" });
+      }
       return;
     }
 
