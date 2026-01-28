@@ -1,3 +1,21 @@
+import { normalizeNome } from './normalize';
+  // Atualiza todos os nomes dos cooperados já cadastrados para o padrão (caixa alta, sem acento)
+  updateAllCooperadosNomes: () => {
+    const cooperados = StorageService.getCooperados();
+    let alterou = false;
+    const atualizados = cooperados.map(c => {
+      const nomeNormalizado = normalizeNome(c.nome);
+      if (c.nome !== nomeNormalizado) {
+        alterou = true;
+        return { ...c, nome: nomeNormalizado };
+      }
+      return c;
+    });
+    if (alterou) {
+      localStorage.setItem('biohealth_cooperados', JSON.stringify(atualizados));
+    }
+    return alterou;
+  },
 import { Cooperado, RegistroPonto, AuditLog, StatusCooperado, Hospital, Manager, HospitalPermissions, Justificativa, UserPreferences } from '../types';
 import { apiGet, syncToNeon } from './api';
 

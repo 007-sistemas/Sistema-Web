@@ -11,6 +11,7 @@ export const CooperadoRegister: React.FC = () => {
   const [categorias, setCategorias] = useState<string[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortConfig, setSortConfig] = useState<{ key: keyof Cooperado; direction: 'asc' | 'desc' }>({ key: 'nome', direction: 'asc' });
   
   // Category Modal State
   const [isCatModalOpen, setIsCatModalOpen] = useState(false);
@@ -206,17 +207,40 @@ export const CooperadoRegister: React.FC = () => {
     XLSX.writeFile(wb, 'cooperados_modelo.xlsx');
   };
 
+
   const filteredCooperados = cooperados.filter(c => 
     c.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.matricula.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Ordenação
+  const sortedCooperados = [...filteredCooperados].sort((a, b) => {
+    const { key, direction } = sortConfig;
+    let aValue = a[key];
+    let bValue = b[key];
+    if (typeof aValue === 'string' && typeof bValue === 'string') {
+      aValue = aValue.toUpperCase();
+      bValue = bValue.toUpperCase();
+    }
+    if (aValue < bValue) return direction === 'asc' ? -1 : 1;
+    if (aValue > bValue) return direction === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const handleSort = (key: keyof Cooperado) => {
+    setSortConfig(prev => {
+      if (prev.key === key) {
+        return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { key, direction: 'asc' };
+    });
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Cadastro de Cooperados</h2>
-          <p className="text-gray-500">Gerencie os profissionais da cooperativa</p>
         </div>
         <div className="flex items-center gap-2">
           <button 
@@ -602,16 +626,15 @@ export const CooperadoRegister: React.FC = () => {
             <table className="w-full text-left text-sm text-gray-600">
               <thead className="bg-gray-50 text-gray-700 font-medium">
                 <tr>
-                  <th className="px-6 py-3">Nome</th>
-                  <th className="px-6 py-3">Matrícula</th>
-                  <th className="px-6 py-3">Categoria</th>
-                  <th className="px-6 py-3">Status</th>
-                  <th className="px-6 py-3">Biometrias</th>
+                  <th className="px-6 py-3 cursor-pointer select-none" onClick={() => handleSort('nome')}>Nome {sortConfig.key === 'nome' && (sortConfig.direction === 'asc' ? '▲' : '▼')}</th>
+                  <th className="px-6 py-3 cursor-pointer select-none" onClick={() => handleSort('matricula')}>Matrícula {sortConfig.key === 'matricula' && (sortConfig.direction === 'asc' ? '▲' : '▼')}</th>
+                  <th className="px-6 py-3 cursor-pointer select-none" onClick={() => handleSort('categoriaProfissional')}>Categoria {sortConfig.key === 'categoriaProfissional' && (sortConfig.direction === 'asc' ? '▲' : '▼')}</th>
+                  <th className="px-6 py-3 cursor-pointer select-none" onClick={() => handleSort('status')}>Status {sortConfig.key === 'status' && (sortConfig.direction === 'asc' ? '▲' : '▼')}</th>
                   <th className="px-6 py-3 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filteredCooperados.map(c => (
+                {sortedCooperados.map(c => (
                   <tr key={c.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 font-medium text-gray-900">{c.nome}</td>
                     <td className="px-6 py-4">{c.matricula}</td>
@@ -622,12 +645,6 @@ export const CooperadoRegister: React.FC = () => {
                       }`}>
                         {c.status}
                       </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center space-x-1">
-                         <Fingerprint className="h-4 w-4 text-primary-500" />
-                         <span>{c.biometrias.length}</span>
-                      </div>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end space-x-2">
@@ -652,9 +669,9 @@ export const CooperadoRegister: React.FC = () => {
                     </td>
                   </tr>
                 ))}
-                {filteredCooperados.length === 0 && (
+                {sortedCooperados.length === 0 && (
                    <tr>
-                     <td colSpan={6} className="px-6 py-8 text-center text-gray-400">
+                     <td colSpan={5} className="px-6 py-8 text-center text-gray-400">
                        Nenhum cooperado encontrado.
                      </td>
                    </tr>
