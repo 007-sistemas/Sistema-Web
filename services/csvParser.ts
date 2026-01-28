@@ -1,5 +1,6 @@
 import { Cooperado, StatusCooperado } from '../types';
 import { StorageService } from './storage';
+import { normalizeNome } from './normalize';
 import * as XLSX from 'xlsx';
 
 export interface CsvRow {
@@ -53,7 +54,7 @@ export const parseCSV = (csvText: string): CsvRow[] => {
 
     header.forEach((col, idx) => {
       const valor = valores[idx] || '';
-      if (col === 'nome') row.nome = valor;
+      if (col === 'nome') row.nome = normalizeNome(valor);
       if (col === 'cpf') row.cpf = valor;
       if (col === 'matricula') row.matricula = valor;
       if (col === 'categoriaProfissional') row.categoriaProfissional = valor;
@@ -127,7 +128,7 @@ export const validateAndPrepareImport = (csvRows: CsvRow[]): ImportResult => {
     // Preparar cooperado
     const cooperado: Cooperado = {
       id: crypto.randomUUID(),
-      nome: row.nome,
+      nome: normalizeNome(row.nome),
       cpf: row.cpf,
       matricula: row.matricula,
       categoriaProfissional: row.categoriaProfissional,
@@ -182,7 +183,7 @@ export const parseExcelFile = async (file: File): Promise<CsvRow[]> => {
         
         // Convert to CsvRow format
         const rows: CsvRow[] = jsonData.map((row: any) => ({
-          nome: String(row.nome || '').trim(),
+          nome: normalizeNome(String(row.nome || '').trim()),
           cpf: String(row.cpf || '').trim(),
           matricula: String(row.matricula || '').trim(),
           categoriaProfissional: String(row.categoriaProfissional || '').trim(),

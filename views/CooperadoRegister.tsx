@@ -3,6 +3,7 @@ import { Cooperado, StatusCooperado } from '../types';
 import { StorageService } from '../services/storage';
 import { Plus, Save, Search, Edit2, Trash2, X, Fingerprint, Briefcase, AlertCircle, Upload, Download, CheckCircle, AlertTriangle } from 'lucide-react';
 import { parseCSV, validateAndPrepareImport, importCooperados, parseExcelFile } from '../services/csvParser';
+import { normalizeNome } from '../services/normalize';
 import * as XLSX from 'xlsx';
 
 export const CooperadoRegister: React.FC = () => {
@@ -73,6 +74,7 @@ export const CooperadoRegister: React.FC = () => {
 
     const newCooperado: Cooperado = {
       ...formData as Cooperado,
+      nome: normalizeNome(formData.nome || ''),
       id: formData.id || crypto.randomUUID(),
       updatedAt: new Date().toISOString(),
       biometrias: formData.biometrias || []
@@ -385,7 +387,7 @@ export const CooperadoRegister: React.FC = () => {
                         <tbody className="divide-y divide-green-100">
                           {csvPreview.sucesso.slice(0, 10).map((c: any, i: number) => (
                             <tr key={i}>
-                              <td className="px-3 py-2">{c.nome}</td>
+                              <td className="px-3 py-2">{normalizeNome(c.nome)}</td>
                               <td className="px-3 py-2">{c.cpf}</td>
                               <td className="px-3 py-2">{c.matricula}</td>
                               <td className="px-3 py-2">{c.categoriaProfissional}</td>
