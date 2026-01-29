@@ -2,8 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Manager, HospitalPermissions } from '../types';
 import { StorageService } from '../services/storage';
-import { Plus, Save, Trash2, Edit2, Shield, Lock, X, Briefcase, RefreshCw, Wrench, AlertCircle } from 'lucide-react';
-import { apiGet, apiPost } from '../services/api';
+import { Plus, Save, Trash2, Edit2, Shield, Lock, X, Briefcase, AlertCircle } from 'lucide-react';
 
 export const Management: React.FC = () => {
   const [managers, setManagers] = useState<Manager[]>([]);
@@ -25,11 +24,7 @@ export const Management: React.FC = () => {
     setManagers(StorageService.getManagers());
   }, []);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [auditLoading, setAuditLoading] = useState(false);
-  const [auditSummary, setAuditSummary] = useState<any | null>(null);
-  const [auditDetails, setAuditDetails] = useState<any | null>(null);
-  const [consolidateLoading, setConsolidateLoading] = useState(false);
-  const [consolidateResult, setConsolidateResult] = useState<any | null>(null);
+  // Removido: estados de auditoria e consolidação
   const [duplicateManager, setDuplicateManager] = useState<Manager | null>(null);
   
   const initialFormState: Manager = {
@@ -65,35 +60,7 @@ export const Management: React.FC = () => {
     setManagers(StorageService.getManagers());
   };
 
-  const runAudit = async () => {
-    try {
-      setAuditLoading(true);
-      setConsolidateResult(null);
-      const result = await apiGet<any>('health');
-      setAuditSummary(result.summary);
-      setAuditDetails(result.details);
-    } catch (err) {
-      alert('Falha ao auditar dados.');
-      console.warn(err);
-    } finally {
-      setAuditLoading(false);
-    }
-  };
-
-  const runConsolidate = async () => {
-    try {
-      setConsolidateLoading(true);
-      const result = await apiPost<any>('consolidate', {});
-      setConsolidateResult(result.changes);
-      // Reexecutar auditoria para refletir estado atual
-      await runAudit();
-    } catch (err) {
-      alert('Falha ao consolidar dados.');
-      console.warn(err);
-    } finally {
-      setConsolidateLoading(false);
-    }
-  };
+  // Removido: funções de auditoria e consolidação
 
   const handleNewManager = () => {
     setFormData(initialFormState);
@@ -234,7 +201,7 @@ export const Management: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Gestão de Usuários</h2>
-          <p className="text-gray-500">Administre os gestores do sistema e suas permissões</p>
+          {/* Frase removida conforme solicitado */}
         </div>
         <div className="flex items-center gap-2">
           <button 
@@ -243,23 +210,6 @@ export const Management: React.FC = () => {
           >
             <Plus className="h-4 w-4" />
             <span>Novo Gestor</span>
-          </button>
-          <button
-            onClick={runAudit}
-            className="flex items-center justify-center space-x-2 bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg transition-colors"
-            title="Auditar dados no banco"
-          >
-            <RefreshCw className={`h-4 w-4 ${auditLoading ? 'animate-spin' : ''}`} />
-            <span>{auditLoading ? 'Auditando...' : 'Auditar Dados'}</span>
-          </button>
-          <button
-            onClick={runConsolidate}
-            disabled={consolidateLoading}
-            className="flex items-center justify-center space-x-2 bg-gray-700 hover:bg-gray-800 disabled:opacity-50 text-white px-4 py-2 rounded-lg transition-colors"
-            title="Aplicar correções automáticas"
-          >
-            <Wrench className={`h-4 w-4 ${consolidateLoading ? 'animate-spin' : ''}`} />
-            <span>{consolidateLoading ? 'Consolidando...' : 'Consolidar'}</span>
           </button>
         </div>
       </div>
@@ -411,43 +361,7 @@ export const Management: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Audit Panel */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center gap-2 mb-3 text-gray-700 font-semibold border-b border-gray-100 pb-2">
-              <RefreshCw className="h-5 w-5" />
-              <span>Auditoria de Dados</span>
-            </div>
-            {auditSummary ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div className="space-y-1">
-                  <div className="flex justify-between"><span>Hospitais duplicados (slug):</span><span className="font-mono">{auditSummary.duplicateHospitals}</span></div>
-                  <div className="flex justify-between"><span>Pontos órfãos (cooperado):</span><span className="font-mono">{auditSummary.orphanPontos}</span></div>
-                  <div className="flex justify-between"><span>Managers duplicados (username):</span><span className="font-mono">{auditSummary.duplicateManagers}</span></div>
-                </div>
-                <div className="space-y-1">
-                  <div className="flex justify-between"><span>Biometrias órfãs:</span><span className="font-mono">{auditSummary.orphanBiometrias}</span></div>
-                  <div className="flex justify-between"><span>Justificativas órfãs (cooperado):</span><span className="font-mono">{auditSummary.orphanJustificativasCoop}</span></div>
-                  <div className="flex justify-between"><span>Justificativas com ponto inexistente:</span><span className="font-mono">{auditSummary.orphanJustificativasPonto}</span></div>
-                </div>
-              </div>
-            ) : (
-              <p className="text-gray-500 text-sm">Clique em "Auditar Dados" para gerar o relatório.</p>
-            )}
-
-            {consolidateResult && (
-              <div className="mt-4 text-sm">
-                <div className="font-semibold text-gray-700 mb-2">Correções aplicadas:</div>
-                <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  <li>Hospitais deduplicados: {consolidateResult.hospitalsDedup}</li>
-                  <li>Cooperados criados a partir de pontos: {consolidateResult.cooperadosFromPontos}</li>
-                  <li>Managers deduplicados: {consolidateResult.managersDedup}</li>
-                  <li>Cooperados criados a partir de biometrias: {consolidateResult.cooperadosFromBiometrias}</li>
-                  <li>Justificativas com ponto nulo ajustadas: {consolidateResult.justificativasNullPonto}</li>
-                  <li>Cooperados criados a partir de justificativas: {consolidateResult.cooperadosFromJustificativas}</li>
-                </ul>
-              </div>
-            )}
-          </div>
+          {/* Painel de auditoria/consolidação removido */}
 
           {/* Managers Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
