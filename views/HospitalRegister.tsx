@@ -268,7 +268,7 @@ export const HospitalRegister: React.FC = () => {
     { key: 'relatorios', label: 'Relatórios' },
     { key: 'autorizacao', label: 'Justificativa de Plantão' },
     { key: 'cadastro', label: 'Cooperados' },
-    { key: 'hospitais', label: 'Hospitais & Setores' },
+    { key: 'hospitais', label: 'Unidades & Setores' },
     { key: 'biometria', label: 'Biometria' },
     { key: 'auditoria', label: 'Auditoria & Logs' },
     { key: 'gestao', label: 'Gestão de Usuários' },
@@ -288,7 +288,7 @@ export const HospitalRegister: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">Cadastro de Hospitais</h2>
+          <h2 className="text-2xl font-bold text-gray-800">Cadastro de Unidades</h2>
           <p className="text-gray-500">Gerencie unidades e setores</p>
         </div>
         <button 
@@ -296,7 +296,7 @@ export const HospitalRegister: React.FC = () => {
           className="flex items-center justify-center space-x-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg transition-colors"
         >
           <Plus className="h-4 w-4" />
-          <span>Novo Hospital</span>
+          <span>Nova Unidade</span>
         </button>
       </div>
 
@@ -304,7 +304,7 @@ export const HospitalRegister: React.FC = () => {
         <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100 animate-fade-in max-w-3xl mx-auto">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-semibold text-gray-700">
-              {formData.id ? 'Editar Hospital' : 'Novo Hospital'}
+              {formData.id ? 'Editar Unidade' : 'Nova Unidade'}
             </h3>
             <button onClick={() => setIsFormOpen(false)} className="text-gray-400 hover:text-gray-600">
               <X className="h-5 w-5" />
@@ -316,7 +316,7 @@ export const HospitalRegister: React.FC = () => {
             {/* Identification Section */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700">Nome da Unidade Hospitalar</label>
+                <label className="text-sm font-medium text-gray-700">Nome da Unidade</label>
                 <input 
                   required
                   type="text" 

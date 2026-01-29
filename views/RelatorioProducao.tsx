@@ -576,13 +576,13 @@ export const RelatorioProducao: React.FC = () => {
                   </div>
             {/* Hospital Filter */}
             <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-500 uppercase">Hospital</label>
+                <label className="text-xs font-bold text-gray-500 uppercase">Unidade</label>
                 <select 
                     className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none"
                     value={filterHospital}
                     onChange={e => { setFilterHospital(e.target.value); setFilterSetor(''); }}
                 >
-                    <option value="">Todos os Hospitais</option>
+                    <option value="">Todas as Unidades</option>
                     {hospitais.map(h => (
                         <option key={h.id} value={h.id}>{h.nome}</option>
                     ))}
@@ -775,7 +775,7 @@ export const RelatorioProducao: React.FC = () => {
             <Filter className="h-4 w-4 mr-2" />
             {filterHospital 
                 ? <span>Unidade Selecionada: <strong>{hospitais.find(h => h.id === filterHospital)?.nome}</strong></span>
-                : <span className="text-red-600 font-bold">Atenção: Selecione um Hospital no filtro acima para habilitar o cadastro.</span>
+                : <span className="text-red-600 font-bold">Atenção: Selecione uma Unidade no filtro acima para habilitar o cadastro.</span>
             }
         </div>
 

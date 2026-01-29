@@ -174,7 +174,7 @@ export const Management: React.FC = () => {
     { key: 'relatorios', label: 'Relatórios' },
     { key: 'autorizacao', label: 'Aprovação de Ponto' },
     { key: 'cadastro', label: 'Cooperados' },
-    { key: 'hospitais', label: 'Hospitais & Setores' },
+    { key: 'hospitais', label: 'Unidades & Setores' },
     { key: 'setores', label: 'Setores' },
     { key: 'biometria', label: 'Biometria' },
     { key: 'auditoria', label: 'Auditoria & Logs' },

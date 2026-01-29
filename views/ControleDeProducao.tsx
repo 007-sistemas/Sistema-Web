@@ -1241,13 +1241,13 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
         <div className={`grid grid-cols-1 md:grid-cols-2 ${mode === 'manager' ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-4`}>
             {/* Hospital Filter */}
             <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-500 uppercase">Hospital</label>
+                <label className="text-xs font-bold text-gray-500 uppercase">Unidade</label>
                 <select 
                     className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none"
                     value={filterHospital}
                     onChange={e => { setFilterHospital(e.target.value); setFilterSetor(''); }}
                 >
-                    <option value="">Todos os {mode === 'cooperado' ? 'Locais' : 'Hospitais'}</option>
+                    <option value="">Todas as {mode === 'cooperado' ? 'Locais' : 'Unidades'}</option>
                     {hospitais.map(h => (
                         <option key={h.id} value={h.id}>{h.nome}</option>
                     ))}
@@ -1369,7 +1369,7 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="space-y-1">
-              <label className="text-xs font-bold text-gray-500 uppercase">Hospital</label>
+              <label className="text-xs font-bold text-gray-500 uppercase">Unidade</label>
               <select
                 className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-primary-500 outline-none"
                 value={missingHospitalId}
