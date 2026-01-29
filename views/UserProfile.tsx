@@ -27,7 +27,7 @@ const ALL_TABS = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'espelho', label: 'Espelho da Biometria' },
   { key: 'gestao', label: 'Gestão de Usuários' },
-  { key: 'hospitais', label: 'Hospitais & Setores' },
+  { key: 'hospitais', label: 'Unidades & Setores' },
   { key: 'perfil', label: 'Meu Perfil' },
   { key: 'ponto', label: 'Registro de Ponto' },
   { key: 'relatorio', label: 'Relatórios' },

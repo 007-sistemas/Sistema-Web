@@ -152,7 +152,7 @@ export default function App() {
       case 'espelho': return <ControleDeProducao mode="cooperado" />;
       case 'autorizacao': return <AutorizacaoPonto />;
       case 'cadastro': return <CooperadoRegister />;
-      case 'hospitais': return <HospitalRegister />;
+      case 'hospitais': return <HospitalRegister />; // Exibe 'Unidades' no menu
       case 'auditoria': return <AuditLogViewer />;
       case 'gestao': return <Management />;
       case 'perfil': return <UserProfile />;

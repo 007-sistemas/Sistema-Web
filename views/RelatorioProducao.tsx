@@ -313,8 +313,8 @@ export const RelatorioProducao: React.FC = () => {
 
   const handleSalvar = () => {
     if (!filterHospital) {
-        alert("Selecione uma Unidade Hospitalar no filtro acima para realizar lançamentos.");
-        return;
+      alert("Selecione uma Unidade no filtro acima para realizar lançamentos.");
+      return;
     }
 
     if (!formCooperadoId || !formSetorId || !formData || !formHora) {
@@ -334,7 +334,7 @@ export const RelatorioProducao: React.FC = () => {
 
     if (!cooperado || !hospital || !setor) {
       console.error('Validação falhou:', { cooperado: !!cooperado, hospital: !!hospital, setor: !!setor, formSetorId, setoresDisponiveis });
-      alert("Erro: Cooperado, Hospital ou Setor não encontrado.");
+      alert("Erro: Cooperado, Unidade ou Setor não encontrado.");
       return;
     }
 

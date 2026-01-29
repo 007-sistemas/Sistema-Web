@@ -595,14 +595,14 @@ export const Relatorios: React.FC = () => {
           {/* Hospital */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Hospital
+              Unidade
             </label>
             <select
               value={filterHospital}
               onChange={(e) => setFilterHospital(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             >
-              <option value="">Todos os Hospitais</option>
+              <option value="">Todas as Unidades</option>
               {hospitais.map(h => (
                 <option key={h.id} value={h.id}>{h.nome}</option>
               ))}

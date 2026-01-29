@@ -274,14 +274,14 @@ export const PontoMachine: React.FC = () => {
                 
                 {/* HOSPITAL SELECTION LOGIC */}
                 {isHospitalUser ? (
-                   // Scenario A: Hospital User - Static Text
+                   // Scenario A: Unidade User - Static Text
                    <div className="pb-2 border-b border-primary-200">
                       <div className="flex items-center space-x-2 text-primary-800 font-semibold mb-1">
                         <Building2 className="h-5 w-5" />
                         <h3 className="uppercase text-xs tracking-wider">Local de Produção</h3>
                       </div>
                       <div className="text-lg font-bold text-gray-900 ml-7">
-                        {currentHospital ? currentHospital.nome : 'Hospital não encontrado'}
+                        {currentHospital ? currentHospital.nome : 'Unidade não encontrada'}
                       </div>
                    </div>
                 ) : (
@@ -293,7 +293,7 @@ export const PontoMachine: React.FC = () => {
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-semibold text-gray-500 uppercase flex items-center gap-1">
-                        <Building2 className="h-3 w-3" /> Unidade Hospitalar
+                        <Building2 className="h-3 w-3" /> Unidade
                       </label>
                       <select 
                         className="w-full bg-white border border-gray-300 text-gray-800 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block p-2.5 outline-none"

@@ -105,7 +105,7 @@ export const Layout: React.FC<LayoutProps> = ({
   const cadastroNavItems = [
     { id: 'cadastro', label: 'Cooperados', icon: Users, permissionKey: 'cadastro' },
     { id: 'gestao', label: 'Gestão de Usuários', icon: Briefcase, permissionKey: 'gestao' },
-    { id: 'hospitais', label: 'Hospitais', icon: Building2, permissionKey: 'hospitais' },
+    { id: 'hospitais', label: 'Unidades', icon: Building2, permissionKey: 'hospitais' },
     { id: 'setores', label: 'Setores', icon: ShieldCheck, permissionKey: 'setores' },
   ].sort((a, b) => a.label.localeCompare(b.label));
 
