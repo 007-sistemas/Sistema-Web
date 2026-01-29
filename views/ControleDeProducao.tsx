@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { StorageService } from '../services/storage';
 import { RegistroPonto, Cooperado, Hospital, TipoPonto, Setor, Justificativa } from '../types';
@@ -71,7 +70,7 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
   const [missingDate, setMissingDate] = useState('');
   const [missingEntrada, setMissingEntrada] = useState('');
   const [missingSaida, setMissingSaida] = useState('');
-  const [missingReason, setMissingReason] = useState('');
+  const [missingReason, setMissingReason] = useState('Esquecimento');
   const [missingDesc, setMissingDesc] = useState('');
   const [missingSetores, setMissingSetores] = useState<Setor[]>([]);
 
