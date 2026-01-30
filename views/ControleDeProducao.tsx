@@ -367,15 +367,30 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
         || (p.codigo && String(p.codigo).startsWith('MAN-'))
         || p.status === 'Pendente';
 
-      // Se for ponto de teste (MAN-), preservar status original se já for Fechado/Em Aberto/Rejeitado
-      if (
-        (p.codigo && String(p.codigo).startsWith('MAN-')) &&
-        (p.status === 'Fechado' || p.status === 'Em Aberto' || p.status === 'Rejeitado')
-      ) {
-        return { ...p, isManual: manualFlag || p.isManual };
+      // --- Pontos de Teste (MAN-) ---
+      if (p.codigo && String(p.codigo).startsWith('MAN-')) {
+        // Se for ENTRADA, verificar se existe SAÍDA pareada pelo mesmo código
+        if (p.tipo === 'ENTRADA') {
+          const hasSaida = pontosValidos.some(
+            s => s.codigo === p.codigo && s.tipo === 'SAIDA'
+          );
+          return {
+            ...p,
+            isManual: true,
+            status: hasSaida ? 'Fechado' : 'Em Aberto',
+          };
+        }
+        // Se for SAÍDA, status sempre 'Fechado'
+        if (p.tipo === 'SAIDA') {
+          return {
+            ...p,
+            isManual: true,
+            status: 'Fechado',
+          };
+        }
       }
 
-      // Se for ponto de justificativa (JUST-), sobrescrever para Pendente se não validado/rejeitado
+      // Pontos de justificativa (JUST-) continuam como 'Pendente' se não validados/rejeitados
       if (
         (p.codigo && String(p.codigo).startsWith('JUST-')) &&
         !p.validadoPor && !p.rejeitadoPor
