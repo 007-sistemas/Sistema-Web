@@ -435,8 +435,15 @@ export const Relatorios: React.FC = () => {
       const rand = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
       const randChoice = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
-      const cooperadosAmostra = [...cooperados].sort(() => Math.random() - 0.5).slice(0, Math.min(6, cooperados.length));
+      // Intervalos de plantão permitidos
+      const intervalos = [
+        { entrada: 7, saida: 19 },   // 07:00 às 19:00
+        { entrada: 7, saida: 13 },   // 07:00 às 13:00
+        { entrada: 13, saida: 19 },  // 13:00 às 19:00
+        { entrada: 19, saida: 7 }    // 19:00 às 07:00 (noturno)
+      ];
 
+      const cooperadosAmostra = [...cooperados].sort(() => Math.random() - 0.5).slice(0, Math.min(6, cooperados.length));
       let criados = 0;
 
       for (const coop of cooperadosAmostra) {
@@ -448,18 +455,41 @@ export const Relatorios: React.FC = () => {
           const diasAtras = rand(1, 25);
           const dataBase = new Date();
           dataBase.setDate(dataBase.getDate() - diasAtras);
-          dataBase.setHours(rand(6, 20));
-          dataBase.setMinutes(randChoice([0, 15, 30, 45]));
           dataBase.setSeconds(0);
 
+          // Escolher um dos intervalos e gerar entrada/saída
+          const intervalo = randChoice(intervalos);
+          let entradaHora = intervalo.entrada;
+          let saidaHora = intervalo.saida;
+          let entradaMin = randChoice([0, 5, 10, 15, 20]);
+          let saidaMin = randChoice([0, 5, 10, 15, 20]);
+
+          // Pequena variação de até 10 minutos para mais/menos
+          entradaHora += rand(-0.1, 0.1); // até 6 minutos para mais/menos
+          if (saidaHora > entradaHora) {
+            saidaHora += rand(-0.1, 0.1);
+          }
+
+          // Montar datas
           const entradaTimestamp = new Date(dataBase);
-          const duracaoHoras = rand(4, 12);
-          const duracaoMin = randChoice([0, 15, 30, 45]);
-          const saidaTimestamp = new Date(entradaTimestamp.getTime() + (duracaoHoras * 60 + duracaoMin) * 60 * 1000);
+          entradaTimestamp.setHours(Math.floor(entradaHora), entradaMin, 0, 0);
+
+          let saidaTimestamp: Date;
+          if (intervalo.saida > intervalo.entrada) {
+            saidaTimestamp = new Date(entradaTimestamp);
+            saidaTimestamp.setHours(intervalo.saida, saidaMin, 0, 0);
+          } else {
+            // Plantão noturno: saída no dia seguinte
+            saidaTimestamp = new Date(entradaTimestamp);
+            saidaTimestamp.setDate(saidaTimestamp.getDate() + 1);
+            saidaTimestamp.setHours(intervalo.saida, saidaMin, 0, 0);
+          }
 
           const codigo = `MAN-${rand(100000, 999999)}`;
-
           const entradaId = crypto.randomUUID();
+
+          // 20% dos plantões ficam em aberto (apenas ENTRADA, status Em Aberto)
+          const deixaAberto = Math.random() < 0.2;
           const entrada: RegistroPonto = {
             id: entradaId,
             codigo,
@@ -471,16 +501,14 @@ export const Relatorios: React.FC = () => {
             hospitalId: hospital.id,
             setorId: String(setor.id),
             observacao: '',
-            status: 'Aberto',
+            status: deixaAberto ? 'Em Aberto' : 'Fechado',
             isManual: true
           } as any;
-
           StorageService.savePonto(entrada);
           criados++;
 
-          // 20% dos plantões ficam em aberto
-          const deixaAberto = Math.random() < 0.2;
           if (!deixaAberto) {
+            // Só gera SAÍDA se for plantão fechado
             const saida: RegistroPonto = {
               id: crypto.randomUUID(),
               codigo,
