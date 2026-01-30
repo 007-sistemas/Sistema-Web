@@ -369,6 +369,10 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
 
       // --- Agrupamento MAN- para status correto ---
       if (p.codigo && String(p.codigo).startsWith('MAN-')) {
+        // Se já está como Fechado ou Em Aberto, nunca sobrescrever
+        if (p.status === 'Fechado' || p.status === 'Em Aberto') {
+          return { ...p, isManual: true };
+        }
         // Agrupar todos os pontos MAN- por código
         const pontosDoCodigo = pontosValidos.filter(x => x.codigo === p.codigo);
         const temEntrada = pontosDoCodigo.some(x => x.tipo === 'ENTRADA');
