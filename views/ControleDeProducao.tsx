@@ -57,8 +57,9 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
 
   const [formSetorId, setFormSetorId] = useState('');
   const [formData, setFormData] = useState(''); // Date string YYYY-MM-DD
-  const [formHora, setFormHora] = useState(''); // Time string HH:MM
-  const [formTipo, setFormTipo] = useState<TipoPonto>(TipoPonto.ENTRADA);
+  const [formHoraEntrada, setFormHoraEntrada] = useState(''); // Hora de entrada
+  const [formHoraSaida, setFormHoraSaida] = useState(''); // Hora de saída
+  // Removido: tipo de registro (entrada/saída)
   const [formInputCodigo, setFormInputCodigo] = useState(''); // For Exit to reference Entry
 
   // Justificativa State (modo cooperado)
@@ -370,7 +371,7 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
       // --- Agrupamento MAN- para status correto ---
       if (p.codigo && String(p.codigo).startsWith('MAN-')) {
         // Se já está como Fechado ou Em Aberto, nunca sobrescrever
-        if (p.status === 'Fechado' || p.status === 'Em Aberto') {
+        if (p.status === 'Fechado' || p.status === 'Aberto') {
           return { ...p, isManual: true };
         }
         // Agrupar todos os pontos MAN- por código
@@ -412,7 +413,7 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
       }
 
       // Para outros casos, manter lógica anterior
-      if (p.validadoPor || p.rejeitadoPor || p.status === 'Fechado' || p.status === 'Rejeitado' || p.status === 'Em Aberto') {
+      if (p.validadoPor || p.rejeitadoPor || p.status === 'Fechado' || p.status === 'Rejeitado' || p.status === 'Aberto') {
         return { ...p, isManual: manualFlag || p.isManual };
       }
 
@@ -859,26 +860,24 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
   const shiftRows = getShiftRows();
 
   const handleSelectRow = (row: ShiftRow) => {
-    // Prefer loading Entry data for editing/viewing
-    const ponto = row.entry || row.exit;
+    // Preencher formulário com dados da entrada e saída
+    const pontoEntrada = row.entry;
+    const pontoSaida = row.exit;
+    const ponto = pontoEntrada || pontoSaida;
     if (!ponto) return;
 
-    setSelectedPontoId(row.entry ? row.entry.id : row.exit?.id || null);
-    setSelectedEntryId(row.entry?.id || null);
-    setSelectedExitId(row.exit?.id || null);
-    // NÃO alterar filtro de hospital automaticamente!
+    setSelectedPontoId(pontoEntrada ? pontoEntrada.id : pontoSaida?.id || null);
+    setSelectedEntryId(pontoEntrada?.id || null);
+    setSelectedExitId(pontoSaida?.id || null);
     setFormCooperadoId(ponto.cooperadoId);
-    setFormCooperadoInput(ponto.cooperadoNome); 
+    setFormCooperadoInput(ponto.cooperadoNome);
     setFormSetorId(ponto.setorId ? ponto.setorId.toString() : '');
-    const d = new Date(ponto.timestamp);
-    setFormData(d.toISOString().split('T')[0]);
-    setFormHora(''); // Deixar em branco para usuário preencher manualmente
-    // Carregar código da entrada se existir
-    if (row.entry) {
-      setFormInputCodigo(row.entry.codigo);
-    }
-    // NÃO setar o tipo automaticamente - deixar para o usuário escolher
-    // O usuário deve escolher se quer editar a entrada ou saída
+    const data = new Date(ponto.timestamp);
+    setFormData(data.toISOString().split('T')[0]);
+    // Preencher hora de entrada e saída
+    setFormHoraEntrada(pontoEntrada ? pontoEntrada.timestamp.substring(11, 16) : '');
+    setFormHoraSaida(pontoSaida ? pontoSaida.timestamp.substring(11, 16) : '');
+    if (pontoEntrada) setFormInputCodigo(pontoEntrada.codigo);
   };
 
   const handleNovoPlantao = () => {
@@ -889,8 +888,8 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
     setFormCooperadoInput('');
     setFormSetorId('');
     setFormData('');
-    setFormHora('');
-    setFormTipo(TipoPonto.ENTRADA);
+    setFormHoraEntrada('');
+    setFormHoraSaida('');
     setFormInputCodigo('');
   };
 
@@ -900,161 +899,66 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
 
   const handleSalvar = () => {
     if (!filterHospital) {
-        alert("Selecione uma Unidade Hospitalar no filtro acima para realizar lançamentos.");
-        return;
+      alert("Selecione uma Unidade Hospitalar no filtro acima para realizar lançamentos.");
+      return;
     }
-
-    if (!formCooperadoId || !formSetorId || !formData || !formHora) {
-        alert("Preencha todos os campos obrigatórios.");
-        return;
+    if (!formCooperadoId || !formSetorId || !formData || !formHoraEntrada) {
+      alert("Preencha todos os campos obrigatórios (entrada).");
+      return;
     }
-
-    if (!formTipo) {
-        alert("Selecione o tipo de registro (Entrada ou Saída).");
-        return;
-    }
-
-    const timestamp = new Date(`${formData}T${formHora}:00`).toISOString();
     const cooperado = cooperados.find(c => c.id === formCooperadoId);
     const hospital = hospitais.find(h => h.id === filterHospital);
     const setor = setoresDisponiveis.find(s => s.id.toString() === formSetorId);
-
     if (!cooperado || !hospital || !setor) {
-      console.error('Validação falhou:', { cooperado: !!cooperado, hospital: !!hospital, setor: !!setor, formSetorId, setoresDisponiveis });
       alert("Erro: Cooperado, Hospital ou Setor não encontrado.");
       return;
     }
+    // Montar timestamps
+    const entradaTimestamp = new Date(`${formData}T${formHoraEntrada}:00`).toISOString();
+    const saidaTimestamp = formHoraSaida ? new Date(`${formData}T${formHoraSaida}:00`).toISOString() : null;
 
-    // Se há um registro selecionado, EDITAR ao invés de criar novo
-    if (selectedPontoId) {
-        // Validar que um tipo foi selecionado
-        if (formTipo === TipoPonto.ENTRADA && selectedEntryId) {
-            const existingEntry = logs.find(p => p.id === selectedEntryId);
-            if (existingEntry) {
-                const updatedEntry: RegistroPonto = {
-                    ...existingEntry,
-                    timestamp: timestamp,
-                    local: `${hospital.nome} - ${setor.nome}`,
-                    hospitalId: hospital.id,
-                    setorId: setor.id.toString()
-                };
-                StorageService.updatePonto(updatedEntry);
-                loadData();
-                handleNovoPlantao();
-                return;
-            }
-        } else if (formTipo === TipoPonto.SAIDA) {
-            // Se existe saída já, editar a saída existente
-            if (selectedExitId) {
-                const existingExit = logs.find(p => p.id === selectedExitId);
-                if (existingExit) {
-                    const updatedExit: RegistroPonto = {
-                        ...existingExit,
-                        timestamp: timestamp,
-                        local: `${hospital.nome} - ${setor.nome}`,
-                        hospitalId: hospital.id,
-                        setorId: setor.id.toString()
-                    };
-                    StorageService.updatePonto(updatedExit);
-                    loadData();
-                    handleNovoPlantao();
-                    return;
-                }
-            } 
-            // Se NÃO existe saída ainda, criar uma nova saída vinculada à entrada
-            else if (selectedEntryId) {
-                const entryPonto = logs.find(p => p.id === selectedEntryId);
-                if (!entryPonto) {
-                    alert("Entrada não encontrada.");
-                    return;
-                }
-                if (entryPonto.status === 'Fechado') {
-                    alert("Este registro já foi fechado.");
-                    return;
-                }
-                if (entryPonto.cooperadoId !== cooperado.id) {
-                    alert("O código pertence a outro cooperado.");
-                    return;
-                }
-
-                const exitPonto: RegistroPonto = {
-                    id: crypto.randomUUID(),
-                    codigo: entryPonto.codigo,
-                    cooperadoId: cooperado.id,
-                    cooperadoNome: cooperado.nome,
-                    timestamp: timestamp,
-                    tipo: TipoPonto.SAIDA,
-                    local: `${hospital.nome} - ${setor.nome}`,
-                    hospitalId: hospital.id,
-                    setorId: setor.id.toString(),
-                    isManual: true,
-                    status: 'Fechado',
-                    validadoPor: 'Admin',
-                    relatedId: entryPonto.id
-                };
-
-                // Atualizar entrada para vincular bidirecional
-                const updatedEntry = { ...entryPonto, status: 'Fechado' as const, relatedId: exitPonto.id };
-                
-                StorageService.savePonto(exitPonto);
-                StorageService.updatePonto(updatedEntry);
-                
-                loadData();
-                handleNovoPlantao();
-                return;
-            }
-        }
-        
-        alert("Por favor, selecione o tipo de registro (Entrada ou Saída) para editar.");
+    // Edição de registro existente
+    if (selectedEntryId) {
+      const entryPonto = logs.find(p => p.id === selectedEntryId);
+      if (!entryPonto) {
+        alert("Entrada não encontrada.");
         return;
-    }
+      }
+      // Atualizar entrada
+      const updatedEntry: RegistroPonto = {
+        ...entryPonto,
+        timestamp: entradaTimestamp,
+        local: `${hospital.nome} - ${setor.nome}`,
+        hospitalId: hospital.id,
+        setorId: setor.id.toString(),
+        status: formHoraSaida ? 'Fechado' : 'Em Aberto',
+        relatedId: entryPonto.relatedId // pode ser atualizado abaixo
+      };
+      StorageService.updatePonto(updatedEntry);
 
-    // CRIAR novo registro
-    if (formTipo === TipoPonto.ENTRADA) {
-        const newCode = generateRandomCode();
-        const novoPonto: RegistroPonto = {
-            id: crypto.randomUUID(),
-            codigo: newCode,
-            cooperadoId: cooperado.id,
-            cooperadoNome: cooperado.nome,
-            timestamp: timestamp,
-            tipo: TipoPonto.ENTRADA,
+      // Se hora de saída foi preenchida
+      if (formHoraSaida) {
+        let exitPonto = logs.find(p => p.relatedId === entryPonto.id && p.tipo === 'SAIDA');
+        if (exitPonto) {
+          // Atualizar saída existente
+          const updatedExit: RegistroPonto = {
+            ...exitPonto,
+            timestamp: saidaTimestamp!,
             local: `${hospital.nome} - ${setor.nome}`,
             hospitalId: hospital.id,
             setorId: setor.id.toString(),
-            isManual: true,
-            status: 'Aberto',
-            validadoPor: 'Admin'
-        };
-        StorageService.savePonto(novoPonto);
-        alert(`Entrada registrada! Código: ${newCode}`);
-    } 
-    else {
-        if (!formInputCodigo) {
-            alert("Para registrar SAÍDA, informe o Código de Registro da Entrada.");
-            return;
-        }
-        const entryPonto = logs.find(p => p.codigo === formInputCodigo && p.tipo === TipoPonto.ENTRADA);
-
-        if (!entryPonto) {
-            alert("Código de entrada não encontrado.");
-            return;
-        }
-        if (entryPonto.status === 'Fechado') {
-            alert("Este registro já foi fechado.");
-            return;
-        }
-        if (entryPonto.cooperadoId !== cooperado.id) {
-            alert("O código pertence a outro cooperado.");
-            return;
-        }
-
-        const exitPonto: RegistroPonto = {
+            status: 'Fechado',
+            relatedId: entryPonto.id
+          };
+          StorageService.updatePonto(updatedExit);
+        } else {
+          // Criar nova saída
+          const newExit: RegistroPonto = {
             id: crypto.randomUUID(),
             codigo: entryPonto.codigo,
             cooperadoId: cooperado.id,
             cooperadoNome: cooperado.nome,
-            timestamp: timestamp,
+            timestamp: saidaTimestamp!,
             tipo: TipoPonto.SAIDA,
             local: `${hospital.nome} - ${setor.nome}`,
             hospitalId: hospital.id,
@@ -1063,17 +967,56 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
             status: 'Fechado',
             validadoPor: 'Admin',
             relatedId: entryPonto.id
-        };
-
-        // Atualizar entrada para vincular bidirecional e marcar como fechada
-        const updatedEntry = { ...entryPonto, status: 'Fechado' as const, relatedId: exitPonto.id };
-        
-        StorageService.savePonto(exitPonto);
-        StorageService.updatePonto(updatedEntry);
-        
-        alert("Saída registrada!");
+          };
+          StorageService.savePonto(newExit);
+        }
+      } else {
+        // Se hora de saída foi apagada, remover saída existente
+        const exitPonto = logs.find(p => p.relatedId === entryPonto.id && p.tipo === 'SAIDA');
+        if (exitPonto) {
+          StorageService.deletePonto(exitPonto.id);
+        }
+      }
+      loadData();
+      handleNovoPlantao();
+      return;
     }
 
+    // Novo registro
+    const newCode = generateRandomCode();
+    const novoPonto: RegistroPonto = {
+      id: crypto.randomUUID(),
+      codigo: newCode,
+      cooperadoId: cooperado.id,
+      cooperadoNome: cooperado.nome,
+      timestamp: entradaTimestamp,
+      tipo: TipoPonto.ENTRADA,
+      local: `${hospital.nome} - ${setor.nome}`,
+      hospitalId: hospital.id,
+      setorId: setor.id.toString(),
+      isManual: true,
+      status: formHoraSaida ? 'Fechado' : 'Em Aberto',
+      validadoPor: formHoraSaida ? 'Admin' : undefined
+    };
+    StorageService.savePonto(novoPonto);
+    if (formHoraSaida) {
+      const newExit: RegistroPonto = {
+        id: crypto.randomUUID(),
+        codigo: newCode,
+        cooperadoId: cooperado.id,
+        cooperadoNome: cooperado.nome,
+        timestamp: saidaTimestamp!,
+        tipo: TipoPonto.SAIDA,
+        local: `${hospital.nome} - ${setor.nome}`,
+        hospitalId: hospital.id,
+        setorId: setor.id.toString(),
+        isManual: true,
+        status: 'Fechado',
+        validadoPor: 'Admin',
+        relatedId: novoPonto.id
+      };
+      StorageService.savePonto(newExit);
+    }
     loadData();
     handleNovoPlantao();
   };
@@ -1760,50 +1703,35 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
             <div className="space-y-1 lg:block hidden"></div>
 
             {/* Row 2 */}
+
             <div className="space-y-1">
-                <label className="text-sm font-bold text-gray-700">Data do Plantão</label>
-                <input 
-                    type="date" 
-                    className="w-full bg-white text-gray-900 border border-gray-300 rounded p-2 outline-none"
-                    value={formData}
-                    onChange={e => setFormData(e.target.value)}
-                />
+              <label className="text-sm font-bold text-gray-700">Data do Plantão</label>
+              <input 
+                type="date" 
+                className="w-full bg-white text-gray-900 border border-gray-300 rounded p-2 outline-none"
+                value={formData}
+                onChange={e => setFormData(e.target.value)}
+              />
             </div>
 
             <div className="space-y-1">
-                <label className="text-sm font-bold text-gray-700">Hora</label>
-                <input 
-                    type="time" 
-                    className="w-full bg-white text-gray-900 border border-gray-300 rounded p-2 outline-none"
-                    value={formHora}
-                    onChange={e => setFormHora(e.target.value)}
-                />
+              <label className="text-sm font-bold text-gray-700">Hora de Entrada</label>
+              <input 
+                type="time" 
+                className="w-full bg-white text-gray-900 border border-gray-300 rounded p-2 outline-none"
+                value={formHoraEntrada}
+                onChange={e => setFormHoraEntrada(e.target.value)}
+              />
             </div>
 
             <div className="space-y-1">
-                <label className="text-sm font-bold text-gray-700 block mb-2">Tipo de Registro</label>
-                <div className="flex items-center space-x-6">
-                    <label className="flex items-center cursor-pointer">
-                        <input 
-                            type="radio" 
-                            name="tipoPonto" 
-                            className="w-4 h-4 text-primary-600 focus:ring-primary-500"
-                            checked={formTipo === TipoPonto.ENTRADA}
-                            onChange={() => setFormTipo(TipoPonto.ENTRADA)}
-                        />
-                        <span className="ml-2 text-gray-900 font-medium">Entrada</span>
-                    </label>
-                    <label className="flex items-center cursor-pointer">
-                        <input 
-                            type="radio" 
-                            name="tipoPonto" 
-                            className="w-4 h-4 text-primary-600 focus:ring-primary-500"
-                            checked={formTipo === TipoPonto.SAIDA}
-                            onChange={() => setFormTipo(TipoPonto.SAIDA)}
-                        />
-                        <span className="ml-2 text-gray-900 font-medium">Saída</span>
-                    </label>
-                </div>
+              <label className="text-sm font-bold text-gray-700">Hora de Saída</label>
+              <input 
+                type="time" 
+                className="w-full bg-white text-gray-900 border border-gray-300 rounded p-2 outline-none"
+                value={formHoraSaida}
+                onChange={e => setFormHoraSaida(e.target.value)}
+              />
             </div>
 
         </div>
