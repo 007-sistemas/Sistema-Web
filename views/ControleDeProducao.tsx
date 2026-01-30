@@ -367,14 +367,28 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
         || (p.codigo && String(p.codigo).startsWith('MAN-'))
         || p.status === 'Pendente';
 
-      // CRÍTICO: NÃO sobrescrever se já tem validadoPor, rejeitadoPor ou status Fechado/Rejeitado
-      if (p.validadoPor || p.rejeitadoPor || p.status === 'Fechado' || p.status === 'Rejeitado') {
-        console.log('[ControleDeProducao] Preservando ponto:', p.id, 'status:', p.status, 'validadoPor:', p.validadoPor, 'rejeitadoPor:', p.rejeitadoPor);
+      // Se for ponto de teste (MAN-), preservar status original se já for Fechado/Em Aberto/Rejeitado
+      if (
+        (p.codigo && String(p.codigo).startsWith('MAN-')) &&
+        (p.status === 'Fechado' || p.status === 'Em Aberto' || p.status === 'Rejeitado')
+      ) {
         return { ...p, isManual: manualFlag || p.isManual };
       }
 
-      // Só sobrescrever status para 'Pendente' se for manual E NÃO tiver sido aprovado/rejeitado
-      if (manualFlag && !p.validadoPor && !p.rejeitadoPor) {
+      // Se for ponto de justificativa (JUST-), sobrescrever para Pendente se não validado/rejeitado
+      if (
+        (p.codigo && String(p.codigo).startsWith('JUST-')) &&
+        !p.validadoPor && !p.rejeitadoPor
+      ) {
+        return { ...p, isManual: true, status: 'Pendente' };
+      }
+
+      // Para outros casos, manter lógica anterior
+      if (p.validadoPor || p.rejeitadoPor || p.status === 'Fechado' || p.status === 'Rejeitado' || p.status === 'Em Aberto') {
+        return { ...p, isManual: manualFlag || p.isManual };
+      }
+
+      if (manualFlag && !p.validadoPor && !p.rejeitadoPor && !p.status) {
         return { ...p, isManual: true, status: 'Pendente' };
       }
 
