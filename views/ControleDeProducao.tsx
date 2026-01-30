@@ -125,15 +125,15 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
 
     // Listener para notificações de exclusão ou alteração via localStorage
     const handleStorageChange = (e: StorageEvent) => {
-      const isDelete = e.key === 'biohealth_plantao_deleted' && e.newValue;
-      const isChange = e.key === 'biohealth_pontos_changed' && e.newValue;
-      if (!isDelete && !isChange) return;
-
-      console.log('[ControleDeProducao] 📢 Notificação recebida (storage):', e.key);
-      
-      // Se for cooperado, limpar cache e recarregar
-      if (mode === 'cooperado') {
-        console.log('[ControleDeProducao] 🧹 Limpando cache do cooperado e recarregando...');
+        <tr 
+          key={row.id} 
+          onDoubleClick={mode === 'manager' ? () => handleSelectRow(row) : undefined}
+          className={mode === 'manager' ? `cursor-pointer transition-colors ${
+            (selectedPontoId === row.entry?.id || selectedPontoId === row.exit?.id) 
+              ? 'bg-primary-200 dark:bg-primary-800 font-semibold' 
+              : 'hover:bg-gray-100 dark:hover:bg-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100'
+          }` : 'bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100'}
+        >
         
         // Limpar dados do localStorage
         const pontosKey = 'biohealth_pontos';
@@ -880,6 +880,24 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
     if (pontoEntrada) setFormInputCodigo(pontoEntrada.codigo);
   };
 
+    // Sincronizar hospital do filtro
+    if (ponto.hospitalId) {
+      setFilterHospital(ponto.hospitalId.toString());
+    }
+
+    // Após setar hospital, filtrar setores e setar setor do registro
+    setTimeout(() => {
+      setFormSetorId(ponto.setorId ? ponto.setorId.toString() : '');
+    }, 0);
+
+    // Data baseada na entrada (ou saída se não houver entrada)
+    const data = new Date(pontoEntrada ? pontoEntrada.timestamp : pontoSaida?.timestamp);
+    setFormData(data.toISOString().split('T')[0]);
+    // Preencher hora de entrada e saída
+    setFormHoraEntrada(pontoEntrada ? pontoEntrada.timestamp.substring(11, 16) : '');
+    setFormHoraSaida(pontoSaida ? pontoSaida.timestamp.substring(11, 16) : '');
+    if (pontoEntrada) setFormInputCodigo(pontoEntrada.codigo);
+  };
   const handleNovoPlantao = () => {
     setSelectedPontoId(null);
     setSelectedEntryId(null);
