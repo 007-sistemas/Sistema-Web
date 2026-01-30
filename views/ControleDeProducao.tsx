@@ -367,21 +367,30 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
         || (p.codigo && String(p.codigo).startsWith('MAN-'))
         || p.status === 'Pendente';
 
-      // --- Pontos de Teste (MAN-) ---
+      // --- Agrupamento MAN- para status correto ---
       if (p.codigo && String(p.codigo).startsWith('MAN-')) {
-        // Se for ENTRADA, verificar se existe SAÍDA pareada pelo mesmo código
-        if (p.tipo === 'ENTRADA') {
-          const hasSaida = pontosValidos.some(
-            s => s.codigo === p.codigo && s.tipo === 'SAIDA'
-          );
+        // Agrupar todos os pontos MAN- por código
+        const pontosDoCodigo = pontosValidos.filter(x => x.codigo === p.codigo);
+        const temEntrada = pontosDoCodigo.some(x => x.tipo === 'ENTRADA');
+        const temSaida = pontosDoCodigo.some(x => x.tipo === 'SAIDA');
+        // Se tem ENTRADA e SAÍDA, ambos ficam 'Fechado'
+        if (temEntrada && temSaida) {
           return {
             ...p,
             isManual: true,
-            status: hasSaida ? 'Fechado' : 'Em Aberto',
+            status: 'Fechado',
           };
         }
-        // Se for SAÍDA, status sempre 'Fechado'
-        if (p.tipo === 'SAIDA') {
+        // Só ENTRADA, fica 'Em Aberto'
+        if (temEntrada && !temSaida && p.tipo === 'ENTRADA') {
+          return {
+            ...p,
+            isManual: true,
+            status: 'Em Aberto',
+          };
+        }
+        // Só SAÍDA, manter 'Fechado' (caso raro)
+        if (!temEntrada && temSaida && p.tipo === 'SAIDA') {
           return {
             ...p,
             isManual: true,
