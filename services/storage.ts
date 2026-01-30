@@ -588,7 +588,7 @@ export const StorageService = {
       // Preservar registros manuais locais que ainda não estão no Neon
       const localExisting = StorageService.getPontos();
       const localManual = localExisting.filter(p => p.isManual === true || p.isManual === 'true' || p.isManual === 1 || p.isManual === '1' || (p.codigo && String(p.codigo).startsWith('MAN-')));
-      
+
       // Filtrar pontos manuais locais que estão relacionados a justificativas excluídas
       const localManualFiltrado = localManual.filter(p => {
         if (pontosExcluidosIds.has(p.id) || (p.relatedId && pontosExcluidosIds.has(p.relatedId))) {
@@ -596,6 +596,13 @@ export const StorageService = {
           return false;
         }
         return true;
+      }).map(p => {
+        // Se for ponto de teste (MAN-) e já tiver status 'Fechado' ou 'Em Aberto', preservar status
+        if (p.codigo && String(p.codigo).startsWith('MAN-') && (p.status === 'Fechado' || p.status === 'Em Aberto')) {
+          return { ...p };
+        }
+        // Caso contrário, manter lógica anterior
+        return { ...p };
       });
       
       const merged = [
