@@ -855,14 +855,6 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
     setSelectedExitId(pontoSaida?.id || null);
     setFormCooperadoId(ponto.cooperadoId);
     setFormCooperadoInput(ponto.cooperadoNome);
-    setFormSetorId(ponto.setorId ? ponto.setorId.toString() : '');
-    const data = new Date(ponto.timestamp);
-    setFormData(data.toISOString().split('T')[0]);
-    // Preencher hora de entrada e saída
-    setFormHoraEntrada(pontoEntrada ? pontoEntrada.timestamp.substring(11, 16) : '');
-    setFormHoraSaida(pontoSaida ? pontoSaida.timestamp.substring(11, 16) : '');
-    if (pontoEntrada) setFormInputCodigo(pontoEntrada.codigo);
-  };
 
     // Sincronizar hospital do filtro
     if (ponto.hospitalId) {
