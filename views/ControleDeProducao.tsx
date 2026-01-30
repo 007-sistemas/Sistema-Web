@@ -870,8 +870,16 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
     const data = new Date(pontoEntrada ? pontoEntrada.timestamp : pontoSaida?.timestamp);
     setFormData(data.toISOString().split('T')[0]);
     // Preencher hora de entrada e saída
-    setFormHoraEntrada(pontoEntrada ? pontoEntrada.timestamp.substring(11, 16) : '');
-    setFormHoraSaida(pontoSaida ? pontoSaida.timestamp.substring(11, 16) : '');
+    // Função auxiliar para extrair hora local no formato HH:MM
+    const getHoraLocal = (timestamp?: string) => {
+      if (!timestamp) return '';
+      const d = new Date(timestamp);
+      const h = d.getHours().toString().padStart(2, '0');
+      const m = d.getMinutes().toString().padStart(2, '0');
+      return `${h}:${m}`;
+    };
+    setFormHoraEntrada(pontoEntrada ? getHoraLocal(pontoEntrada.timestamp) : '');
+    setFormHoraSaida(pontoSaida ? getHoraLocal(pontoSaida.timestamp) : '');
     if (pontoEntrada) setFormInputCodigo(pontoEntrada.codigo);
   };
   const handleNovoPlantao = () => {
@@ -1504,13 +1512,13 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
             <tbody className="divide-y divide-gray-100 bg-white dark:bg-gray-900">
               {shiftRows.map((row) => (
                 <tr 
-                    key={row.id} 
-                    onClick={mode === 'manager' ? () => handleSelectRow(row) : undefined}
-                    className={mode === 'manager' ? `cursor-pointer transition-colors ${
-                        (selectedPontoId === row.entry?.id || selectedPontoId === row.exit?.id) 
-                          ? 'bg-primary-200 dark:bg-primary-800 font-semibold' 
-                          : 'hover:bg-gray-100 dark:hover:bg-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100'
-                    }` : 'bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100'}
+                  key={row.id} 
+                  onDoubleClick={mode === 'manager' ? () => handleSelectRow(row) : undefined}
+                  className={mode === 'manager' ? `cursor-pointer transition-colors ${
+                    (selectedPontoId === row.entry?.id || selectedPontoId === row.exit?.id) 
+                      ? 'bg-primary-200 dark:bg-primary-800 font-semibold' 
+                      : 'hover:bg-gray-100 dark:hover:bg-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100'
+                  }` : 'bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100'}
                 >
                   {mode === 'manager' && (
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
