@@ -125,31 +125,15 @@ export const ControleDeProducao: React.FC<Props> = ({ mode = 'manager' }) => {
 
     // Listener para notificações de exclusão ou alteração via localStorage
     const handleStorageChange = (e: StorageEvent) => {
-        <tr 
-          key={row.id} 
-          onDoubleClick={mode === 'manager' ? () => handleSelectRow(row) : undefined}
-          className={mode === 'manager' ? `cursor-pointer transition-colors ${
-            (selectedPontoId === row.entry?.id || selectedPontoId === row.exit?.id) 
-              ? 'bg-primary-200 dark:bg-primary-800 font-semibold' 
-              : 'hover:bg-gray-100 dark:hover:bg-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100'
-          }` : 'bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100'}
-        >
-        
-        // Limpar dados do localStorage
-        const pontosKey = 'biohealth_pontos';
-        const justificativasKey = 'biohealth_justificativas';
-        localStorage.removeItem(pontosKey);
-        localStorage.removeItem(justificativasKey);
-        
-        // Forçar recarregamento dos dados do Neon
-        setTimeout(() => {
-          loadData();
-        }, 100);
-      } else {
-        // Se for gestor, apenas recarregar dados (sem limpar cache)
-        console.log('[ControleDeProducao] 🔄 Recarregando dados do gestor...');
+      // Limpar dados do localStorage
+      const pontosKey = 'biohealth_pontos';
+      const justificativasKey = 'biohealth_justificativas';
+      localStorage.removeItem(pontosKey);
+      localStorage.removeItem(justificativasKey);
+      // Forçar recarregamento dos dados do Neon
+      setTimeout(() => {
         loadData();
-      }
+      }, 100);
     };
     
     // Listener local para mudanças (quando na mesma aba)
