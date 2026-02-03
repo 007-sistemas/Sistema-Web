@@ -37,6 +37,33 @@ export interface Setor {
   nome: string;
 }
 
+// Turno Padrão (Template Global)
+export interface TurnoPadrao {
+  id: string;
+  nome: string; // Ex: MT, N, T
+  horarioInicio: string; // HH:mm
+  horarioFim: string; // HH:mm
+  toleranciaAntes: number; // minutos
+  toleranciaDepois: number; // minutos
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Turno de Unidade (com valor financeiro)
+export interface TurnoUnidade {
+  id: string;
+  hospitalId: string; // Referência à unidade
+  turnoPadraoId: string; // Referência ao turno padrão
+  valorHora: number; // Valor específico da unidade
+  createdAt: string;
+  updatedAt: string;
+  // Campos desnormalizados para facilitar exibição
+  turnoPadraoNome?: string;
+  hospitalNome?: string;
+  horarioInicio?: string;
+  horarioFim?: string;
+}
+
 export interface HospitalPermissions {
   dashboard: boolean;
   ponto: boolean;

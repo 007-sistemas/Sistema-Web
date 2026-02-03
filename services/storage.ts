@@ -1,5 +1,5 @@
 import { normalizeNome } from './normalize';
-import { Cooperado, RegistroPonto, AuditLog, StatusCooperado, Hospital, Manager, HospitalPermissions, Justificativa, UserPreferences } from '../types';
+import { Cooperado, RegistroPonto, AuditLog, StatusCooperado, Hospital, Manager, HospitalPermissions, Justificativa, UserPreferences, TurnoPadrao, TurnoUnidade } from '../types';
 import { apiGet, syncToNeon } from './api';
 
 const COOPERADOS_KEY = 'biohealth_cooperados';
@@ -12,6 +12,8 @@ const SETORES_KEY = 'biohealth_setores';
 const JUSTIFICATIVAS_KEY = 'biohealth_justificativas';
 const SESSION_KEY = 'biohealth_session';
 const USER_PREFS_KEY = 'biohealth_user_prefs';
+const TURNOS_PADROES_KEY = 'biohealth_turnos_padroes';
+const TURNOS_UNIDADES_KEY = 'biohealth_turnos_unidades';
 
 // Notificar outras abas sobre mudanças em pontos (save/update/delete)
 const broadcastPontoChange = (action: 'save' | 'update' | 'delete', id: string) => {
@@ -1088,5 +1090,25 @@ export const StorageService = {
     } else {
       StorageService.logAudit('PREFERENCIAS_ATUALIZADAS', `Preferências de tema e abas atualizadas`);
     }
+  },
+
+  // --- TURNOS ---
+  
+  getTurnosPadroes: (): TurnoPadrao[] => {
+    const data = localStorage.getItem(TURNOS_PADROES_KEY);
+    return data ? JSON.parse(data) : [];
+  },
+
+  saveTurnosPadroes: (turnos: TurnoPadrao[]) => {
+    localStorage.setItem(TURNOS_PADROES_KEY, JSON.stringify(turnos));
+  },
+
+  getTurnosUnidades: (): TurnoUnidade[] => {
+    const data = localStorage.getItem(TURNOS_UNIDADES_KEY);
+    return data ? JSON.parse(data) : [];
+  },
+
+  saveTurnosUnidades: (turnos: TurnoUnidade[]) => {
+    localStorage.setItem(TURNOS_UNIDADES_KEY, JSON.stringify(turnos));
   }
 };

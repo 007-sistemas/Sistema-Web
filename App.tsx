@@ -12,6 +12,7 @@ import { Management } from './views/Management';
 import { Login } from './views/Login';
 import { AutorizacaoPonto } from './views/AutorizacaoPonto';
 import { UserProfile } from './views/UserProfile';
+import { TurnosValores } from './views/TurnosValores';
 
 import { SetoresView } from './views/Setores';
 import { HospitalPermissions } from './types';
@@ -94,8 +95,8 @@ export default function App() {
   };
 
   const handleChangeView = (view: string) => {
-    // Permite acesso à view Setores para todos gestores autenticados
-    if (view === 'setores') {
+    // Permite acesso à view Setores e TurnosValores para todos gestores autenticados
+    if (view === 'setores' || view === 'turnos-valores') {
       setCurrentView(view);
       return;
     }
@@ -138,9 +139,12 @@ export default function App() {
   }
 
   const renderView = () => {
-    // Permite acesso à view Setores para todos gestores autenticados
+    // Permite acesso à view Setores e TurnosValores para todos gestores autenticados
     if (currentView === 'setores') {
       return <SetoresView />;
+    }
+    if (currentView === 'turnos-valores') {
+      return <TurnosValores />;
     }
     if (userPermissions && !userPermissions[currentView as keyof HospitalPermissions]) {
         return <div className="p-10 text-center text-gray-500">Acesso não autorizado.</div>;
