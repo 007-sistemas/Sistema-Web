@@ -1,0 +1,416 @@
+
+import React, { useState, useEffect } from 'react';
+import { Manager, HospitalPermissions } from '../types';
+import { StorageService } from '../services/storage';
+import { Plus, Save, Trash2, Edit2, Shield, Lock, X, Briefcase, AlertCircle } from 'lucide-react';
+
+export const Management: React.FC = () => {
+  const [managers, setManagers] = useState<Manager[]>([]);
+
+  // Garante que todos os gestores tenham acesso a setores
+  useEffect(() => {
+    const all = StorageService.getManagers();
+    let changed = false;
+    all.forEach(m => {
+      if (!m.permissoes) m.permissoes = {} as any;
+      if (!m.permissoes.setores) {
+        m.permissoes.setores = true;
+        changed = true;
+      }
+    });
+    if (changed) {
+      all.forEach(StorageService.saveManager);
+    }
+    setManagers(StorageService.getManagers());
+  }, []);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  // Removido: estados de auditoria e consolidação
+  const [duplicateManager, setDuplicateManager] = useState<Manager | null>(null);
+  
+  const initialFormState: Manager = {
+    id: '',
+    username: '',
+    password: '',
+    cpf: '',
+    email: '',
+    permissoes: {
+      dashboard: true,
+      ponto: true,
+      relatorio: true,
+      relatorios: true,
+      cadastro: true,
+      hospitais: true,
+      biometria: true,
+      auditoria: true,
+      gestao: true,
+      espelho: true,
+      autorizacao: true,
+      perfil: true,
+      setores: true
+    }
+  };
+  
+  const [formData, setFormData] = useState<Manager>(initialFormState);
+
+  useEffect(() => {
+    loadManagers();
+  }, []);
+
+  const loadManagers = () => {
+    setManagers(StorageService.getManagers());
+  };
+
+  // Removido: funções de auditoria e consolidação
+
+  const handleNewManager = () => {
+    setFormData(initialFormState);
+    setIsFormOpen(true);
+  };
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log('[Management.handleSave] Iniciando salvamento...');
+    
+    if (!formData.username) {
+      console.error('[Management.handleSave] Username vazio');
+      return alert('Nome de usuário é obrigatório');
+    }
+    if (!formData.password) {
+      console.error('[Management.handleSave] Password vazio');
+      return alert('Senha é obrigatória');
+    }
+    if (!formData.cpf) {
+      console.error('[Management.handleSave] CPF vazio');
+      return alert('CPF é obrigatório');
+    }
+    if (!formData.email) {
+      console.error('[Management.handleSave] Email vazio');
+      return alert('Email é obrigatório');
+    }
+    
+    console.log('[Management.handleSave] Validações passaram. FormData:', formData);
+    
+    // Verificar se existe CPF duplicado
+    const duplicate = StorageService.checkDuplicateCpf(formData.cpf, formData.id);
+    if (duplicate) {
+      console.warn('[Management.handleSave] CPF duplicado encontrado:', duplicate.username);
+      setDuplicateManager(duplicate);
+      return;
+    }
+
+    const newManager: Manager = {
+      ...formData,
+      id: formData.id || crypto.randomUUID(),
+    };
+
+    console.log('💾 Salvando gestor:', newManager.username, 'ID:', newManager.id, 'Permissões:', newManager.permissoes);
+    StorageService.saveManager(newManager);
+    console.log('✅ Gestor salvo com sucesso');
+    
+    // Se estiver editando o usuário atual, atualiza a sessão com as novas permissões
+    const currentSession = StorageService.getSession();
+    if (currentSession && currentSession.user.id === newManager.id) {
+      const updatedSession = {
+        ...currentSession,
+        permissions: newManager.permissoes
+      };
+      StorageService.setSession(updatedSession);
+      
+      console.log('🔄 Sessão atualizada com novas permissões:', updatedSession.permissions);
+      // Dispara evento customizado para atualizar as abas SOMENTE após salvar
+      window.dispatchEvent(new CustomEvent('permissionsUpdated'));
+    }
+
+    loadManagers();
+    setIsFormOpen(false);
+    setFormData(initialFormState);
+  };
+
+  const handleAccessDuplicate = () => {
+    if (duplicateManager) {
+      setFormData(duplicateManager);
+      setDuplicateManager(null);
+    }
+  };
+
+  const handleCloseDuplicateModal = () => {
+    setDuplicateManager(null);
+  };
+
+  const handleCloseModal = () => {
+    setIsFormOpen(false);
+    setFormData(initialFormState);
+  };
+
+  const handleEdit = (m: Manager) => {
+    // Recarrega do localStorage para garantir que tem os dados mais recentes
+    const fresh = StorageService.getManagers().find(manager => manager.id === m.id);
+    if (fresh) {
+      console.log('✅ Carregando dados frescos do gestor:', fresh.username, fresh.permissoes);
+      setFormData(fresh);
+    } else {
+      console.log('⚠️ Usando dados do cache:', m.username);
+      setFormData(m);
+    }
+    setIsFormOpen(true);
+  };
+
+  const handleDelete = (id: string) => {
+    if (id === 'master-001') {
+        alert('O usuário master não pode ser excluído.');
+        return;
+    }
+    if (confirm('Tem certeza que deseja remover este gestor?')) {
+      StorageService.deleteManager(id);
+      loadManagers();
+    }
+  };
+
+  // Permission Labels Map
+  const permissionLabels: { key: keyof HospitalPermissions; label: string }[] = [
+    { key: 'dashboard', label: 'Dashboard' },
+    { key: 'ponto', label: 'Registrar Produção' },
+    { key: 'relatorio', label: 'Controle de Produção' },
+    { key: 'relatorios', label: 'Relatórios' },
+    { key: 'autorizacao', label: 'Aprovação de Ponto' },
+    { key: 'cadastro', label: 'Cooperados' },
+    { key: 'hospitais', label: 'Unidades & Setores' },
+    { key: 'setores', label: 'Setores' },
+    { key: 'biometria', label: 'Biometria' },
+    { key: 'auditoria', label: 'Auditoria & Logs' },
+    { key: 'gestao', label: 'Gestão de Usuários' },
+    { key: 'perfil', label: 'Meu Perfil' },
+  ];
+
+  const togglePermission = (key: keyof HospitalPermissions) => {
+    setFormData(prev => {
+      const updated = {
+        ...prev,
+        permissoes: {
+          ...prev.permissoes,
+          [key]: !prev.permissoes[key]
+        }
+      };
+      console.log(`🔘 Toggle ${key}: ${prev.permissoes[key]} → ${!prev.permissoes[key]}`);
+      return updated;
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800">Gestão de Usuários</h2>
+          {/* Frase removida conforme solicitado */}
+        </div>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={handleNewManager}
+            className="flex items-center justify-center space-x-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Novo Gestor</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Duplicate Manager Modal - Renderizado Fora */}
+      {duplicateManager && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm animate-fade-in mx-4">
+            <div className="flex items-center gap-2 mb-4 text-orange-600">
+              <AlertCircle className="h-6 w-6" />
+              <h3 className="text-lg font-bold text-gray-800">CPF Já Cadastrado</h3>
+            </div>
+            <p className="text-gray-600 text-sm mb-4">
+              Já existe um gestor registrado com este CPF:
+            </p>
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
+              <div className="space-y-2 text-sm">
+                <div><span className="font-semibold text-gray-700">Usuário:</span> {duplicateManager.username}</div>
+                <div><span className="font-semibold text-gray-700">Email:</span> {duplicateManager.email}</div>
+                <div><span className="font-semibold text-gray-700">CPF:</span> {duplicateManager.cpf}</div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={handleCloseDuplicateModal}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleAccessDuplicate}
+                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+              >
+                Acessar Cadastro
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isFormOpen ? (
+        <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100 animate-fade-in max-w-3xl mx-auto">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-lg font-semibold text-gray-700">
+              {formData.id ? 'Editar Gestor' : 'Novo Gestor'}
+            </h3>
+            <button onClick={handleCloseModal} className="text-gray-400 hover:text-gray-600">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          
+          <form onSubmit={handleSave} className="space-y-6">
+            
+            {/* Credentials Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">Nome de Usuário</label>
+                <input 
+                  required
+                  type="text" 
+                  className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none"
+                  value={formData.username}
+                  onChange={e => setFormData({...formData, username: e.target.value})}
+                  placeholder="ex: gabriel"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                  <Lock className="h-3 w-3" /> Senha
+                </label>
+                <input 
+                  required
+                  type="text" 
+                  className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none"
+                  value={formData.password}
+                  onChange={e => setFormData({...formData, password: e.target.value})}
+                  placeholder="Digite a senha..."
+               />
+              </div>
+            </div>
+
+            {/* Identity Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">CPF</label>
+                <input
+                  required
+                  type="text"
+                  placeholder="000.000.000-00"
+                  className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none"
+                  value={formData.cpf}
+                  onChange={e => setFormData({...formData, cpf: e.target.value})}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">Email</label>
+                <input
+                  required
+                  type="email"
+                  placeholder="email@exemplo.com"
+                  className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary-500 outline-none"
+                  value={formData.email}
+                  onChange={e => setFormData({...formData, email: e.target.value})}
+                />
+              </div>
+            </div>
+
+            {/* Permissions Section */}
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <div className="flex items-center gap-2 mb-3 text-gray-700 font-semibold border-b border-gray-200 pb-2">
+                <Shield className="h-4 w-4" /> Permissões de Acesso
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-y-3 gap-x-6">
+                {permissionLabels.map((perm) => (
+                  <div key={perm.key} className="flex items-center justify-between">
+                    <span className="text-sm text-gray-700">{perm.label}</span>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        className="sr-only peer"
+                        checked={formData.permissoes?.[perm.key] === true}
+                        onChange={() => togglePermission(perm.key)}
+                      />
+                      <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-600"></div>
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 pt-4">
+              <button 
+                type="button"
+                onClick={handleCloseModal}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button 
+                type="submit"
+                className="flex items-center space-x-2 px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors shadow-sm"
+              >
+                <Save className="h-4 w-4" />
+                <span>Salvar Gestor</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* Painel de auditoria/consolidação removido */}
+
+          {/* Managers Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {managers.map(m => (
+            <div key={m.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow group relative">
+              <div className="flex justify-between items-start mb-4">
+                <div className="flex items-center space-x-3">
+                  <div className="bg-primary-50 p-2 rounded-lg">
+                    <Briefcase className="h-6 w-6 text-primary-600" />
+                  </div>
+                  <div className="overflow-hidden">
+                     <h3 className="font-bold text-gray-800 truncate" title={m.username}>{m.username}</h3>
+                     <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs font-mono bg-gray-100 px-2 py-0.5 rounded text-gray-600 border border-gray-200">
+                          Gestor
+                        </span>
+                     </div>
+                  </div>
+                </div>
+                <div className="flex space-x-1 flex-shrink-0">
+                  <button onClick={() => handleEdit(m)} className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded">
+                    <Edit2 className="h-4 w-4" />
+                  </button>
+                  {m.id !== 'master-001' && (
+                    <button onClick={() => handleDelete(m.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded">
+                        <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+              
+              <div className="mt-4">
+                <div className="flex items-center text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                  <Shield className="h-3 w-3 mr-1" />
+                  Acessos Liberados
+                </div>
+                <div className="flex flex-wrap gap-1 max-h-24 overflow-hidden">
+                  {permissionLabels.filter(p => m.permissoes[p.key]).map(p => (
+                    <span key={p.key} className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-green-50 text-green-700 border border-green-100">
+                      {p.label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

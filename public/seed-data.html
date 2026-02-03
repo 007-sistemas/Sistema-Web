@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seed Data - DigitAll</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 { color: #7c3aed; margin-bottom: 10px; }
+        .subtitle { color: #666; margin-bottom: 30px; }
+        button {
+            background: #7c3aed;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            margin: 10px 5px;
+            transition: all 0.3s;
+        }
+        button:hover { background: #6d28d9; transform: translateY(-2px); }
+        .danger { background: #ef4444; }
+        .danger:hover { background: #dc2626; }
+        .success { background: #10b981; }
+        .success:hover { background: #059669; }
+        .info-box {
+            background: #f0f9ff;
+            border-left: 4px solid #7c3aed;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .warning-box {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        pre {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+        .step {
+            background: #f8fafc;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+            border-left: 4px solid #7c3aed;
+        }
+        .step h3 { margin-top: 0; color: #7c3aed; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌱 Seed Data - DigitAll</h1>
+        <p class="subtitle">Popular banco de dados local com dados de teste</p>
+
+        <div class="warning-box">
+            <strong>⚠️ ATENÇÃO:</strong> Isso vai LIMPAR todos os dados existentes e criar dados de teste!
+        </div>
+
+        <div class="info-box">
+            <strong>📋 Dados que serão criados:</strong>
+            <ul>
+                <li><strong>1 Hospital:</strong> Hospital São Lucas</li>
+                <li><strong>5 Setores:</strong> UTI, Pronto Atendimento, Centro Cirúrgico, Ambulatório, Maternidade</li>
+                <li><strong>1 Cooperado:</strong> Dr. João Silva (matrícula: 001, senha: 123)</li>
+                <li><strong>1 Gestor:</strong> gabriel/gabriel (já existe)</li>
+                <li><strong>1 Justificativa Pendente:</strong> Para testar aprovação/rejeição</li>
+                <li><strong>2 Pontos Pendentes:</strong> Entrada e saída do plantão</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+            <button onclick="seedData()" class="success">
+                🌱 Popular Dados de Teste
+            </button>
+            <button onclick="clearData()" class="danger">
+                🗑️ Limpar Todos os Dados
+            </button>
+            <button onclick="viewData()">
+                👀 Ver Dados Atuais
+            </button>
+        </div>
+
+        <div class="step">
+            <h3>📝 Passo a Passo após Popular:</h3>
+            <ol>
+                <li>Clique em <strong>"Popular Dados de Teste"</strong></li>
+                <li>Acesse: <a href="http://localhost:3000" target="_blank">http://localhost:3000</a></li>
+                <li>Login como gestor: <strong>gabriel / gabriel</strong></li>
+                <li>Vá em <strong>"Justificativa de Plantão"</strong></li>
+                <li>Aprove ou rejeite a justificativa pendente</li>
+                <li>Acesse: <a href="http://localhost:3000/debug-justificativas.html" target="_blank">debug-justificativas.html</a></li>
+                <li>Verifique se os campos foram preenchidos!</li>
+            </ol>
+        </div>
+
+        <div id="output"></div>
+    </div>
+
+    <script>
+        function seedData() {
+            if (!confirm('⚠️ Isso vai LIMPAR todos os dados e criar dados de teste. Confirma?')) {
+                return;
+            }
+
+            try {
+                // Limpar tudo
+                localStorage.clear();
+
+                // 1. Criar Hospital
+                const hospital = {
+                    id: 'hosp-001',
+                    nome: 'Hospital São Lucas',
+                    cnpj: '12345678000190',
+                    endereco: 'Rua Principal, 100',
+                    telefone: '(11) 3333-4444',
+                    email: 'contato@saolucas.com.br',
+                    ativo: true
+                };
+                localStorage.setItem('biohealth_hospitais', JSON.stringify([hospital]));
+
+                // 2. Criar Cooperado
+                const cooperado = {
+                    id: 'coop-001',
+                    nome: 'Dr. João Silva',
+                    matricula: '001',
+                    cpf: '12345678900',
+                    email: 'joao@email.com',
+                    telefone: '(11) 99999-8888',
+                    categoriaProfissional: 'Clínico Geral',
+                    conselho: 'CRM',
+                    numeroConselho: '12345-SP',
+                    senha: '123',
+                    status: 'Ativo',
+                    biometrias: [],
+                    createdAt: new Date().toISOString()
+                };
+                localStorage.setItem('biohealth_cooperados', JSON.stringify([cooperado]));
+
+                // 3. Criar Pontos (entrada e saída) PENDENTES
+                const hoje = new Date();
+                const entradaTime = new Date(hoje);
+                entradaTime.setHours(8, 0, 0);
+                const saidaTime = new Date(hoje);
+                saidaTime.setHours(17, 0, 0);
+
+                const codigoBase = `MAN-${Date.now()}`;
+                const entradaId = crypto.randomUUID();
+                const saidaId = crypto.randomUUID();
+
+                const pontoEntrada = {
+                    id: entradaId,
+                    codigo: codigoBase,
+                    cooperadoId: 'coop-001',
+                    cooperadoNome: 'Dr. João Silva',
+                    timestamp: entradaTime.toISOString(),
+                    tipo: 'ENTRADA',
+                    local: 'Hospital São Lucas - UTI',
+                    hospitalId: 'hosp-001',
+                    setorId: '2',
+                    isManual: true,
+                    status: 'Pendente'
+                };
+
+                const pontoSaida = {
+                    id: saidaId,
+                    codigo: codigoBase,
+                    cooperadoId: 'coop-001',
+                    cooperadoNome: 'Dr. João Silva',
+                    timestamp: saidaTime.toISOString(),
+                    tipo: 'SAIDA',
+                    local: 'Hospital São Lucas - UTI',
+                    hospitalId: 'hosp-001',
+                    setorId: '2',
+                    isManual: true,
+                    status: 'Pendente',
+                    relatedId: entradaId
+                };
+
+                localStorage.setItem('biohealth_pontos', JSON.stringify([pontoEntrada, pontoSaida]));
+
+                // 4. Criar Justificativa PENDENTE
+                const justificativa = {
+                    id: crypto.randomUUID(),
+                    cooperadoId: 'coop-001',
+                    cooperadoNome: 'Dr. João Silva',
+                    pontoId: saidaId,
+                    motivo: 'Esquecimento',
+                    descricao: 'Esqueci de registrar o ponto',
+                    dataSolicitacao: new Date().toISOString(),
+                    status: 'Pendente',
+                    setorId: '2',
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+
+                localStorage.setItem('biohealth_justificativas', JSON.stringify([justificativa]));
+
+                // 5. Criar Audit Log vazio
+                localStorage.setItem('biohealth_audit', JSON.stringify([]));
+
+                // 6. Criar Setores
+                const setores = [
+                    { id: '1', nome: 'CENTRO CIRURGICO' },
+                    { id: '2', nome: 'UTI' },
+                    { id: '3', nome: 'PRONTO ATENDIMENTO' },
+                    { id: '4', nome: 'AMBULATORIO' },
+                    { id: '5', nome: 'MATERNIDADE' }
+                ];
+                localStorage.setItem('biohealth_setores', JSON.stringify(setores));
+
+                // 7. Criar Categorias
+                const categorias = [
+                    'Médico',
+                    'Enfermeiro',
+                    'Técnico de Enfermagem',
+                    'Fisioterapeuta'
+                ];
+                localStorage.setItem('biohealth_categorias', JSON.stringify(categorias));
+
+                document.getElementById('output').innerHTML = `
+                    <div style="background: #10b981; color: white; padding: 20px; border-radius: 8px; margin-top: 20px;">
+                        <h2 style="margin-top: 0;">✅ Dados Criados com Sucesso!</h2>
+                        <p><strong>Agora faça:</strong></p>
+                        <ol style="text-align: left;">
+                            <li>Acesse: <a href="http://localhost:3000" style="color: white; text-decoration: underline;">http://localhost:3000</a></li>
+                            <li>Login: <strong>gabriel / gabriel</strong></li>
+                            <li>Vá em "Justificativa de Plantão"</li>
+                            <li>Aprove ou rejeite a justificativa</li>
+                            <li>Veja o resultado em: <a href="http://localhost:3000/debug-justificativas.html" style="color: white; text-decoration: underline;">debug-justificativas.html</a></li>
+                        </ol>
+                    </div>
+                `;
+
+            } catch (error) {
+                document.getElementById('output').innerHTML = `
+                    <div style="background: #ef4444; color: white; padding: 20px; border-radius: 8px; margin-top: 20px;">
+                        <h2 style="margin-top: 0;">❌ Erro!</h2>
+                        <pre style="background: rgba(0,0,0,0.2);">${error.message}</pre>
+                    </div>
+                `;
+            }
+        }
+
+        function clearData() {
+            if (!confirm('⚠️ Tem certeza que deseja LIMPAR TODOS os dados?')) {
+                return;
+            }
+
+            localStorage.clear();
+
+            document.getElementById('output').innerHTML = `
+                <div style="background: #ef4444; color: white; padding: 20px; border-radius: 8px; margin-top: 20px;">
+                    <h2 style="margin-top: 0;">🗑️ Todos os dados foram limpos!</h2>
+                    <p>localStorage está vazio agora.</p>
+                </div>
+            `;
+        }
+
+        function viewData() {
+            const justificativas = JSON.parse(localStorage.getItem('biohealth_justificativas') || '[]');
+            const pontos = JSON.parse(localStorage.getItem('biohealth_pontos') || '[]');
+            const cooperados = JSON.parse(localStorage.getItem('biohealth_cooperados') || '[]');
+            const hospitais = JSON.parse(localStorage.getItem('biohealth_hospitais') || '[]');
+
+            document.getElementById('output').innerHTML = `
+                <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin-top: 20px;">
+                    <h2 style="margin-top: 0;">📊 Dados Atuais</h2>
+                    <pre>${JSON.stringify({
+                        justificativas: justificativas.length,
+                        pontos: pontos.length,
+                        cooperados: cooperados.length,
+                        hospitais: hospitais.length
+                    }, null, 2)}</pre>
+                    
+                    <h3>Justificativas:</h3>
+                    <pre>${JSON.stringify(justificativas, null, 2)}</pre>
+                    
+                    <h3>Pontos:</h3>
+                    <pre>${JSON.stringify(pontos, null, 2)}</pre>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

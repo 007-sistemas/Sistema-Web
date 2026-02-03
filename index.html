@@ -1,0 +1,126 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Idev - Controle de Produção</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              primary: {
+                50: '#faf5ff', 100: '#f3e8ff', 200: '#e9d5ff', 300: '#d8b4fe',
+                400: '#c084fc', 500: '#a855f7', 600: '#9333ea', 700: '#7e22ce',
+                800: '#6b21a8', 900: '#581c87',
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      /* Paleta dinâmica via CSS custom properties; StorageService/UserProfile atualiza --primary-color */
+      :root {
+        --primary-color: #7c3aed;
+      }
+      /* Mapear classes principais do Tailwind para usar a cor dinâmica */
+      .bg-primary-900 { background-color: color-mix(in srgb, var(--primary-color), #000 35%) !important; }
+      .bg-primary-800 { background-color: color-mix(in srgb, var(--primary-color), #000 25%) !important; }
+      .bg-primary-700 { background-color: color-mix(in srgb, var(--primary-color), #000 15%) !important; }
+      .bg-primary-600 { background-color: var(--primary-color) !important; }
+      .bg-primary-500 { background-color: color-mix(in srgb, var(--primary-color), #fff 10%) !important; }
+      .text-primary-900 { color: color-mix(in srgb, var(--primary-color), #000 35%) !important; }
+      .text-primary-800 { color: color-mix(in srgb, var(--primary-color), #000 25%) !important; }
+      .text-primary-700 { color: color-mix(in srgb, var(--primary-color), #000 15%) !important; }
+      .text-primary-600 { color: var(--primary-color) !important; }
+      .text-primary-500 { color: color-mix(in srgb, var(--primary-color), #fff 10%) !important; }
+      .border-primary-900 { border-color: color-mix(in srgb, var(--primary-color), #000 35%) !important; }
+      .border-primary-800 { border-color: color-mix(in srgb, var(--primary-color), #000 25%) !important; }
+      .border-primary-700 { border-color: color-mix(in srgb, var(--primary-color), #000 15%) !important; }
+      .border-primary-600 { border-color: var(--primary-color) !important; }
+      .border-primary-500 { border-color: color-mix(in srgb, var(--primary-color), #fff 10%) !important; }
+      /* Fallback para hover utilities comuns */
+      .hover\:bg-primary-700:hover { background-color: color-mix(in srgb, var(--primary-color), #000 15%) !important; }
+      .hover\:bg-primary-800:hover { background-color: color-mix(in srgb, var(--primary-color), #000 25%) !important; }
+      .hover\:text-primary-600:hover { color: var(--primary-color) !important; }
+      .focus\:ring-primary-500:focus { --tw-ring-color: var(--primary-color) !important; }
+      .focus\:border-primary-500:focus { border-color: var(--primary-color) !important; }
+      /* Dark mode base backgrounds */
+      .dark body { background-color: #0f172a; color: #e2e8f0; }
+      .dark .bg-white { background-color: #0b1224 !important; }
+      .dark .text-gray-900 { color: #e2e8f0 !important; }
+      .dark .text-gray-800 { color: #e2e8f0 !important; }
+      .dark .text-gray-700 { color: #cbd5e1 !important; }
+      .dark .text-gray-600 { color: #cbd5e1 !important; }
+      .dark .border-gray-100 { border-color: #1e293b !important; }
+      .dark .border-gray-200 { border-color: #273449 !important; }
+      .dark .bg-gray-50 { background-color: #0f172a !important; }
+      .dark .bg-gray-100 { background-color: #111827 !important; }
+      .dark .bg-gray-200 { background-color: #1f2937 !important; }
+      .dark .bg-gray-700 { background-color: #0f172a !important; }
+      /* Inputs e placeholders visíveis no dark */
+      .dark input,
+      .dark select,
+      .dark textarea {
+        background-color: #0f172a !important;
+        color: #e2e8f0 !important;
+        border-color: #334155 !important;
+      }
+      .dark input::placeholder,
+      .dark textarea::placeholder {
+        color: #94a3b8 !important;
+      }
+      .dark label { color: #e2e8f0 !important; }
+    </style>
+    
+    <!-- SDK Biometria Digital Persona -->
+    <!-- Caminhos relativos (.) para garantir carregamento local ou em subpastas -->
+    <script src="./js/es6-shim.js"></script>
+    <script src="./js/websdk.client.bundle.min.js"></script>
+    <script src="./js/fingerprint.sdk.min.js"></script>
+    
+    <script>
+      window.define = null;
+      console.log('Scripts de Biometria injetados via HTML');
+      
+      // Verificação robusta do carregamento
+      function checkFingerprintSdk() {
+        if(window.Fingerprint) {
+            console.log('✅ SDK Fingerprint carregado com sucesso.');
+        } else {
+            // ...existing code...
+            // Tenta verificar se o script falhou silenciosamente ou se está atrasado
+            setTimeout(function() {
+               if(window.Fingerprint) console.log('✅ SDK Fingerprint carregado (atrasado).');
+               // ...existing code...
+            }, 2000);
+        }
+      }
+      
+      window.addEventListener('load', checkFingerprintSdk);
+    </script>
+    
+    <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0",
+    "recharts": "https://aistudiocdn.com/recharts@^3.5.1",
+    "vite": "https://aistudiocdn.com/vite@^7.2.4",
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1",
+    "path": "https://aistudiocdn.com/path@^0.12.7"
+  }
+}
+</script>
+  </head>
+  <body class="bg-gray-50 text-gray-900 font-sans antialiased">
+    <div id="root"></div>
+    <script type="module" src="./index.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Justificativas - DigitAll</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 { color: #7c3aed; }
+        h2 { color: #333; margin-top: 30px; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background: #7c3aed;
+            color: white;
+        }
+        tr:nth-child(even) { background: #f9f9f9; }
+        .status-pendente { color: #f59e0b; font-weight: bold; }
+        .status-fechado { color: #10b981; font-weight: bold; }
+        .status-rejeitado { color: #ef4444; font-weight: bold; }
+        button {
+            background: #7c3aed;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #6d28d9; }
+        .clear-btn { background: #ef4444; }
+        .clear-btn:hover { background: #dc2626; }
+        pre {
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Debug: Justificativas e Pontos</h1>
+        <p><strong>Objetivo:</strong> Verificar se os dados estão sendo salvos corretamente no localStorage</p>
+        
+        <div>
+            <button onclick="loadDebugData()">🔄 Recarregar Dados</button>
+            <button onclick="clearLocalStorage()" class="clear-btn">🗑️ Limpar localStorage</button>
+            <button onclick="window.location.reload()">↻ Recarregar Página</button>
+        </div>
+
+        <h2>📋 Justificativas</h2>
+        <div id="justificativas-container"></div>
+
+        <h2>⏱️ Pontos (Registros)</h2>
+        <div id="pontos-container"></div>
+
+        <h2>📊 Estatísticas</h2>
+        <div id="stats-container"></div>
+
+        <h2>🔧 localStorage Raw</h2>
+        <pre id="raw-data"></pre>
+    </div>
+
+    <script>
+        function loadDebugData() {
+            // Justificativas
+            const justificativas = JSON.parse(localStorage.getItem('biohealth_justificativas') || '[]');
+            const justificativasHtml = justificativas.length === 0 
+                ? '<p>Nenhuma justificativa encontrada.</p>'
+                : `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Cooperado</th>
+                                <th>Motivo</th>
+                                <th>Status</th>
+                                <th>Aprovado Por</th>
+                                <th>Rejeitado Por</th>
+                                <th>Motivo Rejeição</th>
+                                <th>Ponto ID</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${justificativas.map(j => `
+                                <tr>
+                                    <td>${j.id.substring(0, 8)}...</td>
+                                    <td>${j.cooperadoNome}</td>
+                                    <td>${j.motivo}</td>
+                                    <td class="status-${j.status.toLowerCase()}">${j.status}</td>
+                                    <td>${j.aprovadoPor || '-'}</td>
+                                    <td>${j.rejeitadoPor || '-'}</td>
+                                    <td>${j.motivoRejeicao || '-'}</td>
+                                    <td>${j.pontoId ? j.pontoId.substring(0, 8) + '...' : '-'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            document.getElementById('justificativas-container').innerHTML = justificativasHtml;
+
+            // Pontos
+            const pontos = JSON.parse(localStorage.getItem('biohealth_pontos') || '[]');
+            const pontosPendentes = pontos.filter(p => p.status === 'Pendente');
+            
+            const pontosHtml = pontosPendentes.length === 0 
+                ? '<p>Nenhum ponto com status Pendente encontrado.</p>'
+                : `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Cooperado</th>
+                                <th>Tipo</th>
+                                <th>Data/Hora</th>
+                                <th>Status</th>
+                                <th>Validado Por</th>
+                                <th>Rejeitado Por</th>
+                                <th>Motivo Rejeição</th>
+                                <th>Related ID</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${pontosPendentes.map(p => `
+                                <tr>
+                                    <td>${p.id.substring(0, 8)}...</td>
+                                    <td>${p.cooperadoNome}</td>
+                                    <td>${p.tipo}</td>
+                                    <td>${new Date(p.timestamp).toLocaleString('pt-BR')}</td>
+                                    <td class="status-${p.status?.toLowerCase() || 'pendente'}">${p.status || 'Pendente'}</td>
+                                    <td>${p.validadoPor || '-'}</td>
+                                    <td>${p.rejeitadoPor || '-'}</td>
+                                    <td>${p.motivoRejeicao || '-'}</td>
+                                    <td>${p.relatedId ? p.relatedId.substring(0, 8) + '...' : '-'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            document.getElementById('pontos-container').innerHTML = pontosHtml;
+
+            // Estatísticas
+            const totalJustificativas = justificativas.length;
+            const justPendentes = justificativas.filter(j => j.status === 'Pendente').length;
+            const justAprovadas = justificativas.filter(j => j.status === 'Aprovada').length;
+            const justRejeitadas = justificativas.filter(j => j.status === 'Rejeitada').length;
+
+            const totalPontos = pontos.length;
+            const pontosPend = pontos.filter(p => p.status === 'Pendente').length;
+            const pontosFechados = pontos.filter(p => p.status === 'Fechado').length;
+            const pontosRejeitados = pontos.filter(p => p.status === 'Rejeitado').length;
+            const pontosComValidador = pontos.filter(p => p.validadoPor).length;
+            const pontosComRejeitador = pontos.filter(p => p.rejeitadoPor).length;
+
+            const statsHtml = `
+                <h3>Justificativas:</h3>
+                <ul>
+                    <li><strong>Total:</strong> ${totalJustificativas}</li>
+                    <li><strong>Pendentes:</strong> ${justPendentes}</li>
+                    <li><strong>Aprovadas:</strong> ${justAprovadas}</li>
+                    <li><strong>Rejeitadas:</strong> ${justRejeitadas}</li>
+                </ul>
+                
+                <h3>Pontos:</h3>
+                <ul>
+                    <li><strong>Total:</strong> ${totalPontos}</li>
+                    <li><strong>Pendentes:</strong> ${pontosPend}</li>
+                    <li><strong>Fechados:</strong> ${pontosFechados}</li>
+                    <li><strong>Rejeitados:</strong> ${pontosRejeitados}</li>
+                    <li><strong>Com validadoPor:</strong> ${pontosComValidador}</li>
+                    <li><strong>Com rejeitadoPor:</strong> ${pontosComRejeitador}</li>
+                </ul>
+            `;
+            document.getElementById('stats-container').innerHTML = statsHtml;
+
+            // Raw data
+            const rawData = {
+                justificativas: justificativas,
+                pontos_pendentes: pontosPendentes
+            };
+            document.getElementById('raw-data').textContent = JSON.stringify(rawData, null, 2);
+        }
+
+        function clearLocalStorage() {
+            if (confirm('⚠️ ATENÇÃO: Isso vai limpar TODOS os dados do localStorage (cooperados, pontos, justificativas, etc). Confirma?')) {
+                localStorage.clear();
+                alert('✅ localStorage limpo!');
+                loadDebugData();
+            }
+        }
+
+        // Carregar ao iniciar
+        loadDebugData();
+
+        // Auto-refresh a cada 5 segundos
+        setInterval(loadDebugData, 5000);
+    </script>
+</body>
+</html>
