@@ -550,10 +550,11 @@ export const exportToPDFByCooperado = async (
 
       // Informações institucionais (em branco, centralizadas)
       pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(10);
+      pdf.setFontSize(8.5);
       pdf.setTextColor(255, 255, 255);
       pdf.text('Cooperativa de Trabalho dos Profissionais de Enfermagem do Ceará e das Demais Áreas da Saúde', pageWidth / 2, 13, { align: 'center', maxWidth: pageWidth - 62 });
       pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(10);
       pdf.text('CNPJ: 03031687000110', pageWidth / 2, 18, { align: 'center' });
       const periodo = (filters.dataIni && filters.dataFim) ? `Período: ${filters.dataIni} a ${filters.dataFim}` : 'Período não informado';
       pdf.setFont('helvetica', 'normal');
