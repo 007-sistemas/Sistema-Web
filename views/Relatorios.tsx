@@ -821,7 +821,7 @@ export const Relatorios: React.FC = () => {
               <tr>
                 <th className="px-4 py-3 text-left text-sm font-semibold">Cooperado</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold">Categoria</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Hospital</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Unidade</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold">Setor</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold">Data</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold">Entrada</th>
