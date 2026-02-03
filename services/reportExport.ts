@@ -570,7 +570,7 @@ export const exportToPDFByCooperado = async (
 
 
       // Nome do profissional centralizado
-      yPosition = 40;
+      yPosition = 50;
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(16);
       pdf.setTextColor(106, 27, 154);
@@ -596,7 +596,7 @@ export const exportToPDFByCooperado = async (
 
       // === TABELA ===
       const tableColumns = [
-        { header: 'Hospital', dataKey: 'hospital' },
+        { header: 'Unidade', dataKey: 'hospital' },
         { header: 'Setor', dataKey: 'setor' },
         { header: 'Data', dataKey: 'data' },
         { header: 'Entrada', dataKey: 'entrada' },
