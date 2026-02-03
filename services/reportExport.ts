@@ -40,6 +40,15 @@ export interface JustificativaStats {
 }
 
 /**
+ * Formatar data de YYYY-MM-DD para DD/MM/YYYY
+ */
+const formatarData = (data: string): string => {
+  if (!data) return '';
+  const [ano, mes, dia] = data.split('-');
+  return `${dia}/${mes}/${ano}`;
+};
+
+/**
  * Exportar dados de relatório para Excel (.xlsx)
  */
 export const exportToExcel = async (
@@ -171,7 +180,7 @@ export const exportToPDF = async (
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(10);
     pdf.text('CNPJ: 03031687000110', pdf.internal.pageSize.getWidth() / 2, 17, { align: 'center' });
-    const periodo = (filters.dataIni && filters.dataFim) ? `Período: ${filters.dataIni} a ${filters.dataFim}` : 'Período não informado';
+    const periodo = (filters.dataIni && filters.dataFim) ? `Período: ${formatarData(filters.dataIni)} a ${formatarData(filters.dataFim)}` : 'Período não informado';
     pdf.setFont('helvetica', 'normal');
     pdf.text(periodo, pdf.internal.pageSize.getWidth() / 2, 23, { align: 'center' });
     const dataGeracao = new Date().toLocaleString('pt-BR');
@@ -351,8 +360,8 @@ const buildFilterText = (filters: ExportFilters): string => {
   const parts: string[] = [];
 
   if (filters.dataIni || filters.dataFim) {
-    const dataIni = filters.dataIni ? filters.dataIni : '--';
-    const dataFim = filters.dataFim ? filters.dataFim : '--';
+    const dataIni = filters.dataIni ? formatarData(filters.dataIni) : '--';
+    const dataFim = filters.dataFim ? formatarData(filters.dataFim) : '--';
     parts.push(`Período: ${dataIni} a ${dataFim}`);
   }
 
@@ -556,7 +565,7 @@ export const exportToPDFByCooperado = async (
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(10);
       pdf.text('CNPJ: 03031687000110', pageWidth / 2, 18, { align: 'center' });
-      const periodo = (filters.dataIni && filters.dataFim) ? `Período: ${filters.dataIni} a ${filters.dataFim}` : 'Período não informado';
+      const periodo = (filters.dataIni && filters.dataFim) ? `Período: ${formatarData(filters.dataIni)} a ${formatarData(filters.dataFim)}` : 'Período não informado';
       pdf.setFont('helvetica', 'normal');
       pdf.text(periodo, pageWidth / 2, 23, { align: 'center' });
       const dataGeracao = new Date().toLocaleString('pt-BR');
