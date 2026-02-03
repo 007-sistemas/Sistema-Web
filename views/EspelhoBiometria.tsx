@@ -44,6 +44,10 @@ export const EspelhoBiometria: React.FC = () => {
     return sameId || sameName;
   };
 
+  const isPendingStatus = (status?: string | null) => {
+    const normalized = (status || '').trim().toLowerCase();
+    return normalized === 'pendente' || normalized === 'aguardando autorização' || normalized === 'aguardando autorizacao';
+  };
   // Ref para evitar múltiplos loadData simultâneos
   const isLoadingRef = React.useRef(false);
 
@@ -92,8 +96,6 @@ export const EspelhoBiometria: React.FC = () => {
               }
               
               console.log('[EspelhoBiometria] 🔄 Recarregando dados após notificação...');
-              localStorage.removeItem('biohealth_pontos');
-              localStorage.removeItem('biohealth_justificativas');
               await loadData();
             }, 2000);
           }
@@ -262,6 +264,7 @@ export const EspelhoBiometria: React.FC = () => {
     const filtered = getFilteredLogs();
     const shifts: ShiftRow[] = [];
     const processedExits = new Set<string>();
+    const processedEntries = new Set<string>();
 
     // Ordenar por timestamp ascendente (mais antigo primeiro) para pareamento correto
     const sortedFiltered = filtered.sort((a, b) => 
@@ -282,41 +285,72 @@ export const EspelhoBiometria: React.FC = () => {
         : `${hospital?.nome || log.local || 'Não especificado'}${setorName ? ' - ' + setorName : ''}`;
     };
 
-    // 1. Parear cada ENTRADA com a próxima SAÍDA disponível
+    // 1. Parear cada ENTRADA com a próxima SAÍDA disponível (mesma lógica do Controle de Produção)
     entradas.forEach(entrada => {
-      // Procurar SAÍDA posterior não pareada
-      const saidaIndex = saidas.findIndex(s => 
-        new Date(s.timestamp).getTime() > new Date(entrada.timestamp).getTime() &&
-        !processedExits.has(s.id)
-      );
-
       let saidaPareada: RegistroPonto | undefined;
+      let saidaIndex = -1;
+
+      // 1ª prioridade: relatedId da entrada aponta para saída
+      if (entrada.relatedId) {
+        saidaIndex = saidas.findIndex(s => s.id === entrada.relatedId && !processedExits.has(s.id));
+      }
+
+      // 2ª prioridade: saída com relatedId apontando para esta entrada
+      if (saidaIndex === -1) {
+        saidaIndex = saidas.findIndex(s => s.relatedId === entrada.id && !processedExits.has(s.id));
+      }
+
+      // 3ª prioridade: mesmo código e timestamp posterior
+      if (saidaIndex === -1) {
+        saidaIndex = saidas.findIndex(s =>
+          s.codigo === entrada.codigo &&
+          new Date(s.timestamp).getTime() > new Date(entrada.timestamp).getTime() &&
+          !processedExits.has(s.id)
+        );
+      }
+
+      // 4ª prioridade: próxima saída cronológica
+      if (saidaIndex === -1) {
+        saidaIndex = saidas.findIndex(s =>
+          new Date(s.timestamp).getTime() > new Date(entrada.timestamp).getTime() &&
+          !processedExits.has(s.id)
+        );
+      }
       if (saidaIndex !== -1) {
         saidaPareada = saidas[saidaIndex];
         processedExits.add(saidaPareada.id);
       }
 
+      processedEntries.add(entrada.id);
+
+      const isManualVal = (val: any, status?: string) => val === true || val === 'true' || val === 1 || val === '1' || isPendingStatus(status);
+      const entradaManual = isManualVal((entrada as any).isManual, entrada.status);
+      const saidaManual = saidaPareada && isManualVal((saidaPareada as any).isManual, saidaPareada.status);
+
+      const aguardandoEntrada = isPendingStatus(entrada.status) || (!entrada.status && entradaManual);
+      const aguardandoSaida = saidaPareada && (isPendingStatus(saidaPareada.status) || (!saidaPareada.status && saidaManual));
+      const manualPair = entradaManual || saidaManual;
+      const hasApproval = (entrada.validadoPor && entrada.status === 'Fechado') || (saidaPareada && saidaPareada.validadoPor && saidaPareada.status === 'Fechado');
+
       let statusDisplay = 'Em Aberto';
       let statusDetails = '';
-      
-      if (saidaPareada) {
-        if (saidaPareada.status === 'Fechado' && saidaPareada.validadoPor) {
-          statusDisplay = 'Fechado';
-          statusDetails = saidaPareada.validadoPor;
-        } else if (saidaPareada.status === 'Rejeitado' && saidaPareada.rejeitadoPor) {
-          statusDisplay = 'Recusado';
-          statusDetails = `${saidaPareada.rejeitadoPor}${saidaPareada.motivoRejeicao ? ': ' + saidaPareada.motivoRejeicao : ''}`;
-        } else if (saidaPareada.status === 'Pendente') {
-          statusDisplay = 'Aguardando Autorização';
-        } else {
-          statusDisplay = saidaPareada.status || 'Fechado';
-        }
+
+      if (entrada.status === 'Rejeitado' || (saidaPareada?.status === 'Rejeitado')) {
+        statusDisplay = 'Recusado';
+        const rejPonto = entrada.status === 'Rejeitado' ? entrada : saidaPareada;
+        statusDetails = `${rejPonto?.rejeitadoPor || 'Gestor'}${rejPonto?.motivoRejeicao ? ': ' + rejPonto.motivoRejeicao : ''}`;
+      } else if (saidaPareada && saidaPareada.status === 'Fechado' && saidaPareada.validadoPor) {
+        statusDisplay = 'Fechado';
+        statusDetails = saidaPareada.validadoPor;
       } else if (entrada.status === 'Fechado' && entrada.validadoPor) {
         statusDisplay = 'Fechado';
         statusDetails = entrada.validadoPor;
-      } else if (entrada.status === 'Rejeitado' && entrada.rejeitadoPor) {
-        statusDisplay = 'Recusado';
-        statusDetails = `${entrada.rejeitadoPor}${entrada.motivoRejeicao ? ': ' + entrada.motivoRejeicao : ''}`;
+      } else if (manualPair && !hasApproval) {
+        statusDisplay = 'Aguardando Autorização';
+      } else if (aguardandoEntrada || aguardandoSaida) {
+        statusDisplay = 'Aguardando Autorização';
+      } else if (saidaPareada) {
+        statusDisplay = 'Fechado';
       }
 
       shifts.push({
@@ -334,16 +368,15 @@ export const EspelhoBiometria: React.FC = () => {
     // 2. Processar SAÍDAs órfãs (saídas sem entrada anterior)
     saidas.forEach(saida => {
       if (!processedExits.has(saida.id)) {
-        let statusDisplay = 'Fechado (S/E)';
+        let statusDisplay = 'Em Aberto';
         let statusDetails = '';
-        
         if (saida.status === 'Fechado' && saida.validadoPor) {
           statusDisplay = 'Fechado';
           statusDetails = saida.validadoPor;
         } else if (saida.status === 'Rejeitado' && saida.rejeitadoPor) {
           statusDisplay = 'Recusado';
           statusDetails = `${saida.rejeitadoPor}${saida.motivoRejeicao ? ': ' + saida.motivoRejeicao : ''}`;
-        } else if (saida.status === 'Pendente') {
+        } else if (isPendingStatus(saida.status)) {
           statusDisplay = 'Aguardando Autorização';
         }
 
@@ -589,8 +622,8 @@ export const EspelhoBiometria: React.FC = () => {
                   {/* Coluna Entrada */}
                   <td className="px-6 py-4 text-center font-mono font-bold bg-green-50/50">
                     {row.entry ? (
-                        <span className={row.entry.status === 'Pendente' ? 'text-amber-600 flex items-center justify-center gap-1' : 'text-green-700'}>
-                            {row.entry.status === 'Pendente' && <Clock className="h-3 w-3" />}
+                        <span className={isPendingStatus(row.entry.status) ? 'text-amber-600 flex items-center justify-center gap-1' : 'text-green-700'}>
+                            {isPendingStatus(row.entry.status) && <Clock className="h-3 w-3" />}
                             {new Date(row.entry.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                         </span>
                     ) : '--:--'}
@@ -599,8 +632,8 @@ export const EspelhoBiometria: React.FC = () => {
                   {/* Coluna Saída */}
                   <td className="px-6 py-4 text-center font-mono font-bold bg-red-50/50">
                     {row.exit ? (
-                        <span className={row.exit.status === 'Pendente' ? 'text-amber-600 flex items-center justify-center gap-1' : 'text-red-700'}>
-                            {row.exit.status === 'Pendente' && <Clock className="h-3 w-3" />}
+                        <span className={isPendingStatus(row.exit.status) ? 'text-amber-600 flex items-center justify-center gap-1' : 'text-red-700'}>
+                            {isPendingStatus(row.exit.status) && <Clock className="h-3 w-3" />}
                             {new Date(row.exit.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                         </span>
                     ) : (
@@ -611,7 +644,7 @@ export const EspelhoBiometria: React.FC = () => {
                   <td className="px-6 py-4 text-center">
                     <div className="flex flex-col items-center gap-1">
                       <span className={`px-3 py-1 rounded-full text-xs font-bold shadow-sm ${
-                          row.status.includes('Aguardando') ? 'bg-amber-100 text-amber-700 border border-amber-200' :
+                          isPendingStatus(row.status) ? 'bg-amber-100 text-amber-700 border border-amber-200' :
                           row.status.includes('Recusado') ? 'bg-red-100 text-red-700 border border-red-200' :
                           row.status.includes('Aberto') ? 'bg-amber-500 text-white' : 'bg-green-600 text-white'
                       }`}>
