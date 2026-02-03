@@ -144,6 +144,10 @@ export const Layout: React.FC<LayoutProps> = ({
     });
 
     const cadastroFiltered = cadastroNavItems.filter(item => {
+      // Setores e Turnos e Valores sempre visíveis para gestores autenticados
+      if (item.id === 'setores' || item.id === 'turnos-valores') {
+        return true;
+      }
       // Sem permissões definidas, não mostrar nada (mais seguro)
       if (!permissions) return false;
       return permissions[item.permissionKey as keyof HospitalPermissions] === true;
