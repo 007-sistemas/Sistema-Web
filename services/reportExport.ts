@@ -570,7 +570,7 @@ export const exportToPDFByCooperado = async (
 
 
       // Nome do profissional centralizado
-      yPosition = 50;
+      yPosition = 70;
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(16);
       pdf.setTextColor(106, 27, 154);
